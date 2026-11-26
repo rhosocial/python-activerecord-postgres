@@ -198,37 +198,6 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             return ()
         return self._POSTGRES_TYPE_DEFINITIONS
 
-    def supports_type_definition(
-        self,
-        definition_type: Type[TypeDefinition],
-    ) -> bool:
-        if not self.supports_type_objects():
-            return False
-        try:
-            return any(
-                issubclass(definition_type, supported)
-                for supported in self.supported_type_definitions()
-            )
-        except TypeError:
-            return False
-
-    def supports_type_alter_action(
-        self,
-        action_type: Type[TypeAlterAction],
-    ) -> bool:
-        if not self.supports_type_objects():
-            return False
-        try:
-            if not issubclass(action_type, self._POSTGRES_TYPE_ACTIONS):
-                return False
-        except TypeError:
-            return False
-        if issubclass(action_type, PostgresRenameEnumValueAction):
-            return self.version_at_least((10, 0, 0))
-        if issubclass(action_type, PostgresSetTypePropertiesAction):
-            return self.version_at_least((13, 0, 0))
-        return True
-
     def supports_create_type_if_not_exists(self) -> bool:
         return False
 
@@ -280,7 +249,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             raise UnsupportedFeatureError(self.name, "CREATE TYPE IF NOT EXISTS")
         if expr.or_replace and not self.supports_create_type_or_replace():
             raise UnsupportedFeatureError(self.name, "CREATE OR REPLACE TYPE")
-        if not self.supports_type_definition(type(expr.definition)):
+        if not issubclass(type(expr.definition), self.supported_type_definitions()):
             raise UnsupportedFeatureError(
                 self.name,
                 f"TYPE definition {expr.definition.definition_kind}",
@@ -344,7 +313,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         action_params: List[object] = []
         for action in expr.actions:
             self._validate_type_action_version(action)
-            if not self.supports_type_alter_action(type(action)):
+            if not isinstance(action, self._POSTGRES_TYPE_ACTIONS):
                 raise UnsupportedFeatureError(
                     self.name,
                     f"ALTER TYPE action {action.action_kind}",
@@ -416,7 +385,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         self,
         expr: TypeDefinition,
     ) -> Tuple[str, tuple]:
-        if not self.supports_type_definition(type(expr)):
+        if not issubclass(type(expr), self.supported_type_definitions()):
             raise UnsupportedFeatureError(
                 self.name,
                 f"TYPE definition {expr.definition_kind}",
@@ -465,7 +434,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         expr: TypeAlterAction,
     ) -> Tuple[str, tuple]:
         self._validate_type_action_version(expr)
-        if not self.supports_type_alter_action(type(expr)):
+        if not isinstance(expr, self._POSTGRES_TYPE_ACTIONS):
             raise UnsupportedFeatureError(
                 self.name,
                 f"ALTER TYPE action {expr.action_kind}",

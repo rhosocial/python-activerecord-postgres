@@ -314,9 +314,24 @@ class TestPostgresExplainConstruction:
         dialect = postgres_dialect
         assert dialect.supports_explain_plan() is True
         assert dialect.supports_explain_analyze() is True
-        for fmt in ("TEXT", "JSON", "XML", "YAML"):
-            assert dialect.supports_explain_format(fmt) is True, fmt
-        assert dialect.supports_explain_format("NOT_A_FORMAT") is False
+        assert dialect.supports_explain_verbose() is True
+        assert dialect.supports_explain_costs() is True
+        assert dialect.supports_explain_buffers() is True
+        assert dialect.supports_explain_timing() is True
+        assert dialect.supports_explain_settings() is True
+        assert dialect.supports_explain_wal() is True
+        for probe in (
+            "supports_explain_format_text",
+            "supports_explain_format_json",
+            "supports_explain_format_xml",
+            "supports_explain_format_yaml",
+        ):
+            assert getattr(dialect, probe)() is True, probe
+        for probe in (
+            "supports_explain_format_tree",
+            "supports_explain_format_traditional",
+        ):
+            assert getattr(dialect, probe)() is False, probe
 
     def test_plain_explain_rendering(self, postgres_dialect):
         dialect = postgres_dialect
@@ -339,7 +354,7 @@ class TestPostgresExplainConstruction:
     def test_json_format_rendering(self, postgres_dialect):
         dialect = postgres_dialect
         _require_explain(dialect)
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         sql, _ = _render(dialect, ExplainOptions(format=ExplainFormat.JSON))
         assert sql.startswith("EXPLAIN (FORMAT JSON)")
@@ -349,7 +364,7 @@ class TestPostgresExplainConstruction:
     def test_analyze_and_json_format_combined(self, postgres_dialect):
         dialect = postgres_dialect
         _require_explain(dialect)
-        if not dialect.supports_explain_analyze() or not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_analyze() or not dialect.supports_explain_format_json():
             pytest.skip("dialect lacks ANALYZE or FORMAT JSON")
         sql, _ = _render(dialect, ExplainOptions(analyze=True, format=ExplainFormat.JSON))
         assert "EXPLAIN (ANALYZE, FORMAT JSON)" in sql
@@ -383,7 +398,7 @@ class TestPostgresExplainResultInterpretation:
 
     def test_json_plan_exposes_plan_and_node_type(self, indexed_backend):
         dialect = indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(indexed_backend, _simple_query(dialect))
         assert isinstance(plan, list) and plan
@@ -395,7 +410,7 @@ class TestPostgresExplainResultInterpretation:
     def test_json_plan_category_filter(self, indexed_backend):
         """An indexed-column predicate still yields an interpretable JSON plan."""
         dialect = indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(indexed_backend, _category_query(dialect))
         types = _node_types(plan)
@@ -403,7 +418,7 @@ class TestPostgresExplainResultInterpretation:
 
     def test_json_plan_aggregate_node(self, indexed_backend):
         dialect = indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(indexed_backend, _aggregate_query(dialect))
         types = _node_types(plan)
@@ -411,7 +426,7 @@ class TestPostgresExplainResultInterpretation:
 
     def test_json_plan_join_node(self, indexed_backend):
         dialect = indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(indexed_backend, _join_query(dialect))
         types = _node_types(plan)
@@ -437,7 +452,7 @@ class TestAsyncPostgresExplainResultInterpretation:
     @pytest.mark.asyncio
     async def test_json_plan_exposes_node_type(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = await _async_json_plan(async_indexed_backend, _simple_query(dialect))
         root = plan[0]["Plan"]
@@ -447,7 +462,7 @@ class TestAsyncPostgresExplainResultInterpretation:
     @pytest.mark.asyncio
     async def test_json_plan_aggregate_node(self, async_indexed_backend):
         dialect = async_indexed_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = await _async_json_plan(async_indexed_backend, _aggregate_query(dialect))
         assert any("Aggregate" in t for t in _node_types(plan))
@@ -612,7 +627,7 @@ async def async_partition_backend(async_postgres_backend):
 class TestPostgresPartitionPruningEvidence:
     def test_range_predicate_prunes_unrelated_partitions(self, partition_backend):
         dialect = partition_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(
             partition_backend,
@@ -626,7 +641,7 @@ class TestPostgresPartitionPruningEvidence:
 
     def test_full_scan_lists_every_partition(self, partition_backend):
         dialect = partition_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = _json_plan(partition_backend, _partition_full_scan_query(dialect))
         names = _relation_names(plan)
@@ -638,7 +653,7 @@ class TestAsyncPostgresPartitionPruningEvidence:
     @pytest.mark.asyncio
     async def test_range_predicate_prunes_unrelated_partitions(self, async_partition_backend):
         dialect = async_partition_backend.dialect
-        if not dialect.supports_explain_format("JSON"):
+        if not dialect.supports_explain_format_json():
             pytest.skip("dialect does not support EXPLAIN FORMAT JSON")
         plan = await _async_json_plan(
             async_partition_backend,

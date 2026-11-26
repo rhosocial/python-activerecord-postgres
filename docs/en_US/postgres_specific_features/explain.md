@@ -192,8 +192,8 @@ dialect = backend.dialect
 if dialect.supports_explain_analyze():
     result = User.query().explain(analyze=True).all()
 
-# Check a specific format (all four formats always supported)
-if dialect.supports_explain_format("JSON"):
+# Check a specific format (all four PostgreSQL formats are always supported)
+if dialect.supports_explain_format_json():
     result = User.query().explain(format=ExplainFormat.JSON).all()
 ```
 
@@ -281,7 +281,8 @@ Other `ExplainOptions` fields (such as `verbose`, `buffers`, `timing`, `settings
 | Method | Return | Description |
 |---|---|---|
 | `supports_explain_analyze()` | `bool` | Always `True` for PostgreSQL |
-| `supports_explain_format(fmt)` | `bool` | `True` for `TEXT`, `XML`, `JSON`, `YAML` |
+| `supports_explain_format_text()`, `_json()`, `_xml()`, `_yaml()` | `bool` | `True`; `supports_explain_format_tree()` and `_traditional()` are `False` |
+| `supports_explain_verbose()`, `_costs()`, `_buffers()`, `_timing()`, `_settings()`, `_wal()` | `bool` | Always `True` for PostgreSQL |
 | `format_explain_statement(expr)` | `str` | Builds `EXPLAIN [(ANALYZE, FORMAT X)]` prefix |
 
 ## Best Practices

@@ -59,19 +59,18 @@ class PostgresLockingSupport(LockingSupport, Protocol):
         """
         ...
 
-    def supports_lock_strength(self, strength: Any) -> bool:
-        """Whether a specific lock strength is supported.
+    def supports_lock_strength_for_update(self) -> bool:
+        """Whether the FOR UPDATE lock strength is supported."""
+        ...
 
-        PostgreSQL lock strength support by version:
-        - FOR UPDATE: all versions
-        - FOR NO KEY UPDATE: PostgreSQL 9.0+
-        - FOR SHARE: PostgreSQL 9.0+
-        - FOR KEY SHARE: PostgreSQL 9.3+
+    def supports_lock_strength_no_key_update(self) -> bool:
+        """Whether the FOR NO KEY UPDATE lock strength is supported (PG 9.0+)."""
+        ...
 
-        Args:
-            strength: The LockStrength enum value to check.
+    def supports_lock_strength_share(self) -> bool:
+        """Whether the FOR SHARE lock strength is supported (PG 9.0+)."""
+        ...
 
-        Returns:
-            True if the lock strength is supported, False otherwise.
-        """
+    def supports_lock_strength_key_share(self) -> bool:
+        """Whether the FOR KEY SHARE lock strength is supported (PG 9.3+)."""
         ...

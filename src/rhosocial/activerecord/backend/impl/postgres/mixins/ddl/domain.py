@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Tuple, Type, TYPE_CHECKING
+from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_domain import DomainMixin
@@ -99,8 +99,11 @@ class PostgresDomainMixin(DomainMixin):
     def supports_domain_default(self) -> bool:
         return self.supports_domains()
 
-    def supports_domain_nullability(self, nullability: DomainNullability) -> bool:
-        return self.supports_domains() and nullability in set(DomainNullability)
+    def supports_domain_nullable(self) -> bool:
+        return self.supports_domains()
+
+    def supports_domain_not_null(self) -> bool:
+        return self.supports_domains()
 
     def supports_domain_checks(self) -> bool:
         return self.supports_domains()
@@ -113,17 +116,6 @@ class PostgresDomainMixin(DomainMixin):
 
     def supports_domain_collation(self) -> bool:
         return self.supports_domains()
-
-    def supports_alter_domain_action(
-        self,
-        action_type: Type[DomainAlterAction],
-    ) -> bool:
-        if not self.supports_domains():
-            return False
-        try:
-            return issubclass(action_type, self._POSTGRES_DOMAIN_ACTIONS)
-        except TypeError:
-            return False
 
     def supports_multiple_domain_alter_actions(self) -> bool:
         return False
@@ -210,8 +202,15 @@ class PostgresDomainMixin(DomainMixin):
                     f"unknown DOMAIN nullability {expr.nullability!r}; the members "
                     f"are {[m.value for m in DomainNullability]}"
                 ) from None
-        if nullability is not DomainNullability.UNSPECIFIED:
-            if not self.supports_domain_nullability(nullability):
+        if nullability is DomainNullability.NULLABLE:
+            if not self.supports_domain_nullable():
+                raise UnsupportedFeatureError(
+                    self.name,
+                    f"DOMAIN {nullability}",
+                )
+            parts.append(str(nullability))
+        elif nullability is DomainNullability.NOT_NULL:
+            if not self.supports_domain_not_null():
                 raise UnsupportedFeatureError(
                     self.name,
                     f"DOMAIN {nullability}",
@@ -244,8 +243,8 @@ class PostgresDomainMixin(DomainMixin):
         action_parts: List[str] = []
         action_params: List[Any] = []
         for action in expr.actions:
-            if not isinstance(action, _PostgresUnsupportedDomainAction) and not self.supports_alter_domain_action(
-                type(action)
+            if not isinstance(action, _PostgresUnsupportedDomainAction) and not isinstance(
+                action, self._POSTGRES_DOMAIN_ACTIONS
             ):
                 raise UnsupportedFeatureError(
                     self.name,
@@ -330,7 +329,7 @@ class PostgresDomainMixin(DomainMixin):
     ) -> Tuple[str, tuple]:
         if not self.supports_domains() or not self.supports_alter_domain():
             raise UnsupportedFeatureError(self.name, "ALTER DOMAIN action")
-        if not self.supports_alter_domain_action(type(expr)):
+        if not isinstance(expr, self._POSTGRES_DOMAIN_ACTIONS):
             raise UnsupportedFeatureError(
                 self.name,
                 f"ALTER DOMAIN action {expr.action_kind}",
@@ -347,11 +346,11 @@ class PostgresDomainMixin(DomainMixin):
                 raise UnsupportedFeatureError(self.name, "ALTER DOMAIN DROP DEFAULT")
             return "DROP DEFAULT", ()
         if isinstance(expr, SetDomainNotNullAction):
-            if not self.supports_domain_nullability(expr.nullability):
+            if not self.supports_domain_not_null():
                 raise UnsupportedFeatureError(self.name, "ALTER DOMAIN SET NOT NULL")
             return "SET NOT NULL", ()
         if isinstance(expr, DropDomainNotNullAction):
-            if not self.supports_domain_nullability(expr.nullability):
+            if not self.supports_domain_nullable():
                 raise UnsupportedFeatureError(self.name, "ALTER DOMAIN DROP NOT NULL")
             return "DROP NOT NULL", ()
         if isinstance(expr, PostgresAddDomainCheckAction):

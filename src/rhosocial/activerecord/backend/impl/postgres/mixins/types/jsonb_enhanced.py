@@ -389,39 +389,13 @@ class PostgresJSONBEnhancedMixin:
     that returns the wrong answer instead of an error.
     """
 
-    #: The JSON functions this backend declares, each with the version that
-    #: introduced it, so :meth:`supports_json_function` never claims a function
-    #: the server does not have. Before 12.0 the ``jsonb_path_query_*`` family
-    #: does not exist at all -- that is the entire reason for the second
-    #: spelling of a path below -- and the probe answered from a flat set with
-    #: no version in it, so it claimed all three on a 9.6 server.
-    #:
-    #: ``#>`` and ``#>>`` are deliberately absent: they are operators, and a
-    #: probe that takes a function name should not answer about one.
-    _JSON_FUNCTIONS_BY_VERSION = (
-        ((9, 3, 0), ("json_extract_path",)),
-        ((9, 4, 0), ("jsonb_extract_path",)),
-        ((9, 5, 0), ("json_extract_path_text",)),
-        (
-            (12, 0, 0),
-            ("jsonb_path_query", "jsonb_path_query_array", "jsonb_path_query_first"),
-        ),
-    )
-
-    def supports_json_function(self, function_name: str) -> bool:
-        """Whether a named JSON function exists on this server.
-
-        Gated per function rather than as one set, because the names did not
-        arrive together: ``json_extract_path`` is 9.3, ``jsonb_extract_path``
-        is 9.4, ``json_extract_path_text`` is 9.5 and the ``jsonb_path_query_*``
-        family is 12.0. A server has some of these and not others.
-        """
-        wanted = function_name.lower()
-        return any(
-            wanted in {name.lower() for name in names}
-            for introduced, names in self._JSON_FUNCTIONS_BY_VERSION
-            if self.version_at_least(introduced)
-        )
+    # A support switch takes no argument, so the version table this class used
+    # to answer per function name is gone. The two facts the formatter acts on
+    # are the switches it calls -- :meth:`supports_json_path` (the ``->`` and
+    # ``#>`` operators, 9.3) and :meth:`supports_sql_json_path` (the
+    # ``jsonb_path_query_*`` family, 12.0) -- so a server's version reaches the
+    # renderer through those, not through a function-name list. ``#>`` and
+    # ``#>>`` are operators, so no function switch ever spoke for them.
 
     def format_json_expression(self, expr: "JSONPathNode") -> Tuple[str, tuple]:
         """Render a JSON path access according to the expression's mode.

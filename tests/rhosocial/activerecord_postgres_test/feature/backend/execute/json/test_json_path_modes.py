@@ -462,38 +462,31 @@ def test_arrow_probe_matches_what_is_actually_emitted():
     assert "->>" in _text_expr(dialect, "arrow").to_sql()[0]
 
 
-@pytest.mark.parametrize(
-    "function, introduced",
-    [
-        ("json_extract_path", (9, 3, 0)),
-        ("jsonb_extract_path", (9, 4, 0)),
-        ("json_extract_path_text", (9, 5, 0)),
-        ("jsonb_path_query", (12, 0, 0)),
-        ("jsonb_path_query_first", (12, 0, 0)),
-        ("jsonb_path_query_array", (12, 0, 0)),
-    ],
-)
-def test_a_function_is_claimed_only_once_the_server_has_it(function, introduced):
-    """The probe answered from a flat name list, so it claimed 12.0+ functions
-    on 9.6. A caller asking whether ``jsonb_path_query_first`` exists got True
-    and then shipped SQL the server rejects."""
-    assert _dialect(introduced).supports_json_function(function) is True
-    if introduced > (9, 3, 0):
-        just_below = (introduced[0], introduced[1] - 1, 0)
-        assert _dialect(just_below).supports_json_function(function) is False
+def test_the_path_spelling_follows_the_switch_that_answers_for_it():
+    """A version claim about a path function used to come from a name list.
+
+    The two switches below are the ones ``format_json_expression`` calls, so a
+    server's version reaches the renderer through them and not through a
+    table of function names.
+    """
+    assert _dialect((9, 2, 0)).supports_json_path() is False
+    assert _dialect((9, 3, 0)).supports_json_path() is True
+    assert _dialect((11, 0, 0)).supports_sql_json_path() is False
+    assert _dialect((12, 0, 0)).supports_sql_json_path() is True
 
 
-def test_a_function_postgres_does_not_have_is_never_claimed():
-    dialect = _dialect((19, 0, 0))
-    for name in ("JSON_EXTRACT", "JSON_VALUE", "OPENJSON", "json_extract"):
-        assert dialect.supports_json_function(name) is False, name
+def test_the_json_path_language_is_used_only_once_the_server_has_it():
+    """The 12.0+ function must not reach SQL on a server that lacks it."""
+    old_sql, _ = _text_expr(_dialect((11, 0, 0)), "function").to_sql()
+    new_sql, _ = _text_expr(_dialect((12, 0, 0)), "function").to_sql()
+    assert "jsonb_path_query_first" not in old_sql
+    assert "#>>" in old_sql
+    assert "jsonb_path_query_first" in new_sql
 
 
-def test_operators_are_not_answered_as_functions():
-    """``#>`` is an operator. A probe that takes a function name saying yes to
-    one conflated the two, and it was the only reason ``#>>`` was in the list."""
-    dialect = _dialect((19, 0, 0))
-    assert dialect.supports_json_function("#>>") is False
+def test_no_support_switch_answers_for_a_function_name():
+    """A support switch takes no argument, so a name-based probe is gone."""
+    assert not hasattr(_dialect(), "supports_json_function")
 
 
 @pytest.mark.parametrize(

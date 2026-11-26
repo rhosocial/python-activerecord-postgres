@@ -29,14 +29,14 @@ class TestRowLevelLockStrength:
         """Test that FOR UPDATE is always supported."""
         dialect = postgres_backend_single.dialect
         assert dialect.supports_for_update() is True
-        assert dialect.supports_lock_strength(LockStrength.UPDATE) is True
+        assert dialect.supports_lock_strength_for_update() is True
 
     def test_supports_for_share(self, postgres_backend_single):
         """Test FOR SHARE support (PostgreSQL 9.0+)."""
         dialect = postgres_backend_single.dialect
         if dialect.version >= (9, 0, 0):
             assert dialect.supports_for_share() is True
-            assert dialect.supports_lock_strength(LockStrength.SHARE) is True
+            assert dialect.supports_lock_strength_share() is True
         else:
             assert dialect.supports_for_share() is False
 
@@ -45,7 +45,7 @@ class TestRowLevelLockStrength:
         dialect = postgres_backend_single.dialect
         if dialect.version >= (9, 0, 0):
             assert dialect.supports_for_no_key_update() is True
-            assert dialect.supports_lock_strength(LockStrength.NO_KEY_UPDATE) is True
+            assert dialect.supports_lock_strength_no_key_update() is True
         else:
             assert dialect.supports_for_no_key_update() is False
 
@@ -54,7 +54,7 @@ class TestRowLevelLockStrength:
         dialect = postgres_backend_single.dialect
         if dialect.version >= (9, 3, 0):
             assert dialect.supports_for_key_share() is True
-            assert dialect.supports_lock_strength(LockStrength.KEY_SHARE) is True
+            assert dialect.supports_lock_strength_key_share() is True
         else:
             assert dialect.supports_for_key_share() is False
 
@@ -186,7 +186,7 @@ class TestAsyncRowLevelLockStrength:
         """Test that FOR UPDATE is always supported (async)."""
         dialect = async_postgres_backend_single.dialect
         assert dialect.supports_for_update() is True
-        assert dialect.supports_lock_strength(LockStrength.UPDATE) is True
+        assert dialect.supports_lock_strength_for_update() is True
 
     async def test_async_supports_for_share(self, async_postgres_backend_single):
         """Test FOR SHARE support (async)."""

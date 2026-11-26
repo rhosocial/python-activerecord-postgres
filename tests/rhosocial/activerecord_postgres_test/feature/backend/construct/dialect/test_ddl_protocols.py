@@ -713,7 +713,7 @@ class TestTypeDomainProtocols:
             PostgresShellTypeDefinition,
         )
         assert dialect.supported_type_definitions() == definitions
-        assert all(dialect.supports_type_definition(item) for item in definitions)
+        assert all(item in definitions for item in dialect.supported_type_definitions())
 
     def test_type_capability_version_gates(self):
         old = PostgresDialect(version=(9, 5, 0))
@@ -746,10 +746,19 @@ class TestTypeDomainProtocols:
         pg100 = PostgresDialect(version=(10, 0, 0))
         pg12 = PostgresDialect(version=(12, 0, 0))
         pg13 = PostgresDialect(version=(13, 0, 0))
-        assert pg96.supports_type_alter_action(PostgresRenameEnumValueAction) is False
-        assert pg100.supports_type_alter_action(PostgresRenameEnumValueAction) is True
-        assert pg12.supports_type_alter_action(PostgresSetTypePropertiesAction) is False
-        assert pg13.supports_type_alter_action(PostgresSetTypePropertiesAction) is True
+        rename_96 = PostgresRenameEnumValueAction(pg96, "old", "new")
+        with pytest.raises(UnsupportedFeatureError, match="RENAME VALUE"):
+            pg96.format_type_alter_action(rename_96)
+        rename_100 = PostgresRenameEnumValueAction(pg100, "old", "new")
+        assert pg100.format_type_alter_action(rename_100) == (
+            "RENAME VALUE 'old' TO 'new'",
+            (),
+        )
+        settings_12 = PostgresSetTypePropertiesAction(pg12, {"RECEIVE": "public.recv"})
+        with pytest.raises(UnsupportedFeatureError, match="SET properties"):
+            pg12.format_type_alter_action(settings_12)
+        settings_13 = PostgresSetTypePropertiesAction(pg13, {"RECEIVE": "public.recv"})
+        assert pg13.format_type_alter_action(settings_13)[0].startswith("SET (")
 
     def test_domain_capability_gates_and_actions(self):
         old = PostgresDialect(version=(9, 5, 0))
@@ -766,7 +775,8 @@ class TestTypeDomainProtocols:
             baseline,
             DomainValueExpression(baseline) > Literal(baseline, 0, inline=True),
         )
-        assert baseline.supports_alter_domain_action(PostgresAddDomainCheckAction) is True
+        add_check = PostgresAddDomainCheckAction(baseline, check)
+        assert baseline.format_domain_alter_action(add_check)[0].startswith("ADD CHECK")
         assert isinstance(check, DomainCheckConstraint)
 
     def test_unsupported_94_rejects_unlogged(self):

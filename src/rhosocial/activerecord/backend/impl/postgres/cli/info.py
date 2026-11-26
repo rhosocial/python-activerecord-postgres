@@ -130,11 +130,12 @@ PROTOCOL_FAMILY_GROUPS: Dict[str, list] = {
     ],
 }
 
-# All possible test arguments for methods that require parameters
-SUPPORT_METHOD_ALL_ARGS: Dict[str, List[str]] = {
-    # ExplainSupport: all possible format types
-    "supports_explain_format": ["TEXT", "JSON", "XML", "YAML", "TREE", "DOT"],
-}
+# All possible test arguments for methods that require parameters.
+#
+# Empty on purpose: a support switch takes no argument, so this backend has no
+# parameterised probe left to exercise here. The generic arg-handling path below
+# stays for the shared capability report, which other backends still use.
+SUPPORT_METHOD_ALL_ARGS: Dict[str, List[str]] = {}
 
 
 def create_parser(subparsers):

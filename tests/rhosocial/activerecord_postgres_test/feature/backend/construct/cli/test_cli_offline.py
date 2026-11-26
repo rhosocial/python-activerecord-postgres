@@ -321,8 +321,8 @@ class _Proto:
     def is_gamma_available(self):
         return True
 
-    def supports_explain_format(self, fmt):
-        return fmt in ("TEXT", "JSON")
+    def supports_arg_probe(self, probe):
+        return probe in ("TEXT", "JSON")
 
     def supports_needs_arg(self, required):
         return True
@@ -341,8 +341,8 @@ class _ProtoDialect:
     def is_gamma_available(self):
         return 1
 
-    def supports_explain_format(self, fmt):
-        return fmt in ("TEXT", "JSON")
+    def supports_arg_probe(self, probe):
+        return probe in ("TEXT", "JSON")
 
     def supports_needs_arg(self, required):
         return True
@@ -366,22 +366,27 @@ class TestInfoHelpers:
         assert info_mod.get_protocol_support_methods(_Proto) == [
             "is_gamma_available",
             "supports_alpha",
+            "supports_arg_probe",
             "supports_beta",
-            "supports_explain_format",
             "supports_needs_arg",
         ]
 
-    def test_check_protocol_support(self):
+    def test_check_protocol_support(self, monkeypatch):
+        monkeypatch.setitem(
+            info_mod.SUPPORT_METHOD_ALL_ARGS,
+            "supports_arg_probe",
+            ["TEXT", "JSON", "DOT"],
+        )
         result = info_mod.check_protocol_support(_ProtoDialect(), _Proto)
         assert result["supports_alpha"] is True
         assert result["supports_beta"] is False
         assert result["is_gamma_available"] is True
         assert result["supports_needs_arg"] is False
-        explain = result["supports_explain_format"]
-        assert explain["supported"] == 2
-        assert explain["total"] == 6
-        assert explain["args"]["TEXT"] is True
-        assert explain["args"]["DOT"] is False
+        probe = result["supports_arg_probe"]
+        assert probe["supported"] == 2
+        assert probe["total"] == 3
+        assert probe["args"]["TEXT"] is True
+        assert probe["args"]["DOT"] is False
 
     def test_check_protocol_support_missing_method(self):
         class _Empty:
@@ -406,7 +411,7 @@ class TestInfoHelpers:
         info = info_mod._build_protocol_info(_ProtoDialect(), "G", [_Proto], 0)
         stats = info["_Proto"]
         assert set(stats) == {"supported", "total", "percentage"}
-        assert stats["total"] == 10
+        assert stats["total"] == 5
         assert stats["percentage"] == 40.0
 
     def test_build_protocol_info_verbose_includes_methods(self):
@@ -427,21 +432,17 @@ class TestInfoHelpers:
 
     @pytest.mark.parametrize(
         "method,expected",
-        [("supports_explain_format", "explain format"), ("supports_x", "x")],
+        [
+            ("supports_lock_strength_for_update", "lock strength for update"),
+            ("supports_x", "x"),
+        ],
     )
     def test_format_method_display(self, method, expected):
         assert info_mod._format_method_display(method) == expected
 
     def test_constants(self):
         assert info_mod.DIALECT_SPECIFIC_GROUPS == {"PostgreSQL Native", "PostgreSQL Extensions"}
-        assert info_mod.SUPPORT_METHOD_ALL_ARGS["supports_explain_format"] == [
-            "TEXT",
-            "JSON",
-            "XML",
-            "YAML",
-            "TREE",
-            "DOT",
-        ]
+        assert info_mod.SUPPORT_METHOD_ALL_ARGS == {}
 
 
 class TestInfoHandle:
@@ -1326,7 +1327,7 @@ class TestInfoRichDisplay:
                         "total": 1,
                         "methods": {
                             "supports_x": True,
-                            "supports_explain_format": {"args": {"TEXT": True, "YAML": False}},
+                            "supports_arg_probe": {"args": {"TEXT": True, "YAML": False}},
                         },
                     }
                 },
@@ -1349,7 +1350,7 @@ class TestInfoRichDisplay:
             "dialect-specific",
             "ProtoA",
             "ProtoB",
-            "explain format",
+            "arg probe",
         ):
             assert label in out
 

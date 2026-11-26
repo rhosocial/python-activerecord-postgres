@@ -193,7 +193,7 @@ if dialect.supports_explain_analyze():
     result = User.query().explain(analyze=True).all()
 
 # 检查特定格式（四种格式始终支持）
-if dialect.supports_explain_format("JSON"):
+if dialect.supports_explain_format_json():
     result = User.query().explain(format=ExplainFormat.JSON).all()
 ```
 
@@ -281,7 +281,8 @@ PostgreSQL 后端面向 PostgreSQL 9.6 及更高版本；本文档描述的所�
 | 方法 | 返回值 | 说明 |
 |---|---|---|
 | `supports_explain_analyze()` | `bool` | PostgreSQL 始终为 `True` |
-| `supports_explain_format(fmt)` | `bool` | `TEXT`、`XML`、`JSON`、`YAML` 均为 `True` |
+| `supports_explain_format_text()`、`_json()`、`_xml()`、`_yaml()` | `bool` | 均为 `True`；`supports_explain_format_tree()` 与 `_traditional()` 为 `False` |
+| `supports_explain_verbose()`、`_costs()`、`_buffers()`、`_timing()`、`_settings()`、`_wal()` | `bool` | PostgreSQL 始终为 `True` |
 | `format_explain_statement(expr)` | `str` | 构建 `EXPLAIN [(ANALYZE, FORMAT X)]` 前缀 |
 
 ## 最佳实践

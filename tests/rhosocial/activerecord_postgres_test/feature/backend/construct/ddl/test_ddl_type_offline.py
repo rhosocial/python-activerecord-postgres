@@ -134,48 +134,13 @@ class TestCapabilities:
             PostgresShellTypeDefinition,
         ],
     )
-    def test_supports_type_definition(self, definition):
-        assert _dialect(PG16).supports_type_definition(definition) is True
-        assert _dialect((9, 5, 0)).supports_type_definition(definition) is False
+    def test_type_definition_is_registered(self, definition):
+        assert definition in _dialect(PG16).supported_type_definitions()
+        assert definition not in _dialect((9, 5, 0)).supported_type_definitions()
 
     @pytest.mark.parametrize("bogus", [str, int, object])
     def test_rejects_unknown_definition(self, bogus):
-        assert _dialect(PG16).supports_type_definition(bogus) is False
-
-    @pytest.mark.parametrize(
-        "action",
-        [
-            PostgresRenameTypeAction,
-            PostgresSetTypeSchemaAction,
-            PostgresChangeTypeOwnerAction,
-            PostgresRenameTypeAttributeAction,
-            PostgresAddTypeAttributeAction,
-            PostgresDropTypeAttributeAction,
-            PostgresAlterTypeAttributeAction,
-            PostgresAddEnumValueAction,
-            PostgresRenameEnumValueAction,
-            PostgresSetTypePropertiesAction,
-        ],
-    )
-    def test_supports_all_actions_on_modern_server(self, action):
-        assert _dialect(PG16).supports_type_alter_action(action) is True
-
-    @pytest.mark.parametrize(
-        "action,version,expected",
-        [
-            (PostgresRenameEnumValueAction, PG96, False),
-            (PostgresRenameEnumValueAction, PG10, True),
-            (PostgresSetTypePropertiesAction, PG10, False),
-            (PostgresSetTypePropertiesAction, PG13, True),
-            (PostgresAddEnumValueAction, PG96, True),
-        ],
-    )
-    def test_version_gated_actions(self, action, version, expected):
-        assert _dialect(version).supports_type_alter_action(action) is expected
-
-    @pytest.mark.parametrize("bogus", [str, object])
-    def test_rejects_unknown_action(self, bogus):
-        assert _dialect(PG16).supports_type_alter_action(bogus) is False
+        assert bogus not in _dialect(PG16).supported_type_definitions()
 
 
 # ===========================================================================

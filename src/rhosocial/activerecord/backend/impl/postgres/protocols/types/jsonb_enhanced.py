@@ -62,16 +62,6 @@ class PostgresJSONBEnhancedSupport(JSONSupport, Protocol):
     - Numeric infinity in JSONB: PostgreSQL 17+
     """
 
-    def supports_json_function(self, function_name: str) -> bool:
-        """Whether a named JSON path function is available on this server.
-
-        Declared because a conformance check compares the rendered SQL against
-        the functions this dialect claims, and PostgreSQL spells them
-        jsonb_path_query_* rather than the core's MySQL-shaped JSON_EXTRACT. The
-        answer is gated per function, because they did not arrive together.
-        """
-        ...
-
     def supports_jsonb(self) -> bool:
         """Whether JSONB data type is supported.
 
