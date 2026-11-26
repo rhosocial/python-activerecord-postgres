@@ -317,6 +317,30 @@ PGVECTOR_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "vector_literal": FunctionVersionRequirement(extension="vector", ext_feature="type"),
 }
 
+PGROONGA_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "pgroonga_match": FunctionVersionRequirement(extension="pgroonga", ext_feature="match"),
+    "pgroonga_query": FunctionVersionRequirement(extension="pgroonga", ext_feature="query"),
+    "pgroonga_match_in": FunctionVersionRequirement(extension="pgroonga", ext_feature="match_in"),
+    "pgroonga_query_in": FunctionVersionRequirement(extension="pgroonga", ext_feature="query"),
+    "pgroonga_prefix": FunctionVersionRequirement(extension="pgroonga", ext_feature="prefix"),
+    "pgroonga_prefix_in": FunctionVersionRequirement(extension="pgroonga", ext_feature="prefix"),
+    "pgroonga_regexp": FunctionVersionRequirement(extension="pgroonga", ext_feature="regexp"),
+    "pgroonga_regexp_in": FunctionVersionRequirement(extension="pgroonga", ext_feature="regexp"),
+    "pgroonga_equal_query": FunctionVersionRequirement(extension="pgroonga", ext_feature="equal_query"),
+    "pgroonga_score": FunctionVersionRequirement(extension="pgroonga", ext_feature="score"),
+    "pgroonga_snippet_html": FunctionVersionRequirement(extension="pgroonga", ext_feature="snippet"),
+    "pgroonga_highlight_html": FunctionVersionRequirement(extension="pgroonga", ext_feature="snippet"),
+    "pgroonga_match_positions_byte": FunctionVersionRequirement(
+        extension="pgroonga", ext_feature="snippet"
+    ),
+    "pgroonga_match_positions_character": FunctionVersionRequirement(
+        extension="pgroonga", ext_feature="snippet"
+    ),
+    "pgroonga_query_escape": FunctionVersionRequirement(extension="pgroonga"),
+    "pgroonga_query_extract_keywords": FunctionVersionRequirement(extension="pgroonga"),
+    "pgroonga_command": FunctionVersionRequirement(extension="pgroonga"),
+}
+
 POSTGIS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "st_make_point": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
     "st_geom_from_text": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
@@ -358,6 +382,7 @@ _ALL_CATEGORIES = [
     UUID_FUNCTION_VERSIONS,
     HSTORE_FUNCTION_VERSIONS,
     PGVECTOR_FUNCTION_VERSIONS,
+    PGROONGA_FUNCTION_VERSIONS,
     POSTGIS_FUNCTION_VERSIONS,
 ]
 

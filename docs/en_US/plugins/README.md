@@ -8,6 +8,7 @@ PostgreSQL extension system allows installing additional modules, such as:
 - **PostGIS**: Spatial database functionality
 - **pgvector**: Vector similarity search (AI applications)
 - **pg_trgm**: Trigram similarity search
+- **PGroonga**: Multilingual full text search (Chinese/Japanese/Korean)
 - **hstore**: Key-value pair storage
 
 ## Introspection and Adaptation
@@ -87,6 +88,7 @@ The dialect maintains definitions for the following known extensions:
 | postgis | 2.0 | spatial | PostGIS spatial database extension |
 | vector | 0.1 | vector | pgvector vector similarity search |
 | pg_trgm | 1.0 | text | Trigram similarity search |
+| pgroonga | 2.0 | text | PGroonga multilingual full text search |
 | hstore | 1.0 | data | Key-value pair storage |
 | uuid-ossp | 1.0 | utility | UUID generation functions |
 | pgcrypto | 1.0 | security | Cryptographic functions |
@@ -101,6 +103,9 @@ CREATE EXTENSION postgis;
 
 -- Install pgvector
 CREATE EXTENSION vector;
+
+-- Install PGroonga (server-side package required)
+CREATE EXTENSION pgroonga;
 
 -- Install hstore
 CREATE EXTENSION hstore;
@@ -118,6 +123,7 @@ backend.introspect_and_adapt()
 - **[PostGIS](./postgis.md)**: Spatial database functionality
 - **[pgvector](./pgvector.md)**: Vector similarity search
 - **[pg_trgm](./pg_trgm.md)**: Trigram similarity
+- **[PGroonga](./pgroonga.md)**: Multilingual full text search
 - **[hstore](./hstore.md)**: Key-value storage
 
 💡 *AI Prompt:* "What advantages does PostgreSQL's extension mechanism have over MySQL's plugin system?"

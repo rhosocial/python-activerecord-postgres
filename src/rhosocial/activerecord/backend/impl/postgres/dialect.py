@@ -159,6 +159,7 @@ from .mixins import (
     PostgresPostgisRasterMixin,
     PostgresPgroutingMixin,
     PostgresPgTrgmMixin,
+    PostgresPgroongaMixin,
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresPartitionMixin,
@@ -522,6 +523,7 @@ class PostgresDialect(
     PostgresPostgisRasterMixin,
     PostgresPgroutingMixin,
     PostgresPgTrgmMixin,
+    PostgresPgroongaMixin,
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresVacuumMixin,

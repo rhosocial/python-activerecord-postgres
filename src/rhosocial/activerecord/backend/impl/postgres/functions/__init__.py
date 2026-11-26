@@ -24,6 +24,7 @@ Function modules and their corresponding PostgreSQL documentation:
 - pgcrypto: Cryptographic functions - https://www.postgresql.org/docs/current/pgcrypto.html
 - ltree: Label tree functions - https://www.postgresql.org/docs/current/ltree.html
 - pg_trgm: Trigram similarity functions - https://www.postgresql.org/docs/current/pgtrgm.html
+- pgroonga: Multilingual full text search (v2 operators, scoring, snippets) - https://pgroonga.github.io/reference/
 - fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
 - earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
 - hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
@@ -356,6 +357,27 @@ from .pg_trgm import (
     word_similarity,
     show_trgm,
     similarity_operator,
+)
+
+# pgroonga functions
+from .pgroonga import (
+    pgroonga_match,
+    pgroonga_query,
+    pgroonga_match_in,
+    pgroonga_query_in,
+    pgroonga_prefix,
+    pgroonga_prefix_in,
+    pgroonga_regexp,
+    pgroonga_regexp_in,
+    pgroonga_equal_query,
+    pgroonga_score,
+    pgroonga_snippet_html,
+    pgroonga_highlight_html,
+    pgroonga_match_positions_byte,
+    pgroonga_match_positions_character,
+    pgroonga_query_escape,
+    pgroonga_query_extract_keywords,
+    pgroonga_command,
 )
 
 # fuzzystrmatch functions
@@ -779,6 +801,24 @@ __all__ = [
     "word_similarity",
     "show_trgm",
     "similarity_operator",
+    # pgroonga functions
+    "pgroonga_match",
+    "pgroonga_query",
+    "pgroonga_match_in",
+    "pgroonga_query_in",
+    "pgroonga_prefix",
+    "pgroonga_prefix_in",
+    "pgroonga_regexp",
+    "pgroonga_regexp_in",
+    "pgroonga_equal_query",
+    "pgroonga_score",
+    "pgroonga_snippet_html",
+    "pgroonga_highlight_html",
+    "pgroonga_match_positions_byte",
+    "pgroonga_match_positions_character",
+    "pgroonga_query_escape",
+    "pgroonga_query_extract_keywords",
+    "pgroonga_command",
     # fuzzystrmatch functions
     "levenshtein",
     "levenshtein_less_equal",
