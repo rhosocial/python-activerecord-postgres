@@ -1212,6 +1212,12 @@ UNCONSTRUCTIBLE = (
     # UUID constant. `which` is required, but the filler's "x" is refused at
     # construction because __init__ accepts only 'nil' and 'max'.
     "rhosocial.activerecord.backend.expression.uuid.UUIDConstantExpression",
+    # PG_HINT_PLAN HINTS. Both nodes carry typed fields the generic filler
+    # cannot supply: an enum kind plus validated identifiers on the hint, and
+    # a statement expression plus a tuple of hints on the wrapper. Their SQL
+    # is covered by the dedicated construct tests instead.
+    "rhosocial.activerecord.backend.impl.postgres.expression.hint.PostgresHintExpression",
+    "rhosocial.activerecord.backend.impl.postgres.expression.hint.PostgresHintedQueryExpression",
     # POSTGRES ENUM COLUMN. type_name, schema and values all default to None, so
     # the filler supplies none of them and the type declares neither its name nor
     # its members.

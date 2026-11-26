@@ -317,6 +317,19 @@ PGVECTOR_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "vector_literal": FunctionVersionRequirement(extension="vector", ext_feature="type"),
 }
 
+PG_HINT_PLAN_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "pg_hint_plan_hinted_query": FunctionVersionRequirement(
+        extension="pg_hint_plan", ext_feature="hints"
+    ),
+    "load_pg_hint_plan": FunctionVersionRequirement(
+        extension="pg_hint_plan", ext_feature="hints"
+    ),
+}
+
+UNACCENT_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "unaccent": FunctionVersionRequirement(extension="unaccent", ext_feature="function"),
+}
+
 POSTGIS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "st_make_point": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
     "st_geom_from_text": FunctionVersionRequirement(extension="postgis", ext_feature="spatial_functions"),
@@ -358,6 +371,8 @@ _ALL_CATEGORIES = [
     UUID_FUNCTION_VERSIONS,
     HSTORE_FUNCTION_VERSIONS,
     PGVECTOR_FUNCTION_VERSIONS,
+    PG_HINT_PLAN_FUNCTION_VERSIONS,
+    UNACCENT_FUNCTION_VERSIONS,
     POSTGIS_FUNCTION_VERSIONS,
 ]
 

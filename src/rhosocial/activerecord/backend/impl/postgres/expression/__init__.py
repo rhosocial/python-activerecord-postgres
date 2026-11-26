@@ -178,7 +178,12 @@ from .types import (
     PostgresCidrType,
 )
 
+from .hint import PostgresHintedQueryExpression
+from .load_library import PostgresLoadLibraryExpression
+
 __all__ = [
+    "PostgresHintedQueryExpression",
+    "PostgresLoadLibraryExpression",
     "PostgresEnumType",
     "PostgresSettingsQuery",
     "PostgresActivityCountQuery",

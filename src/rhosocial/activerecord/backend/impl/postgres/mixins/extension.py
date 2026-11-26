@@ -128,6 +128,25 @@ class PostgresExtensionMixin:
                 "index": {"min_version": "1.0"},
             },
         },
+        "pg_hint_plan": {
+            "min_version": "1.3",
+            "description": "pg_hint_plan optimizer hints",
+            "category": "performance",
+            "documentation": "https://github.com/ossc-db/pg_hint_plan",
+            "repository": "https://github.com/ossc-db/pg_hint_plan",
+            "features": {
+                "hints": {"min_version": "1.3"},
+            },
+        },
+        "unaccent": {
+            "min_version": "1.0",
+            "description": "Accent-insensitive text normalization",
+            "category": "text",
+            "documentation": "https://www.postgresql.org/docs/current/unaccent.html",
+            "features": {
+                "function": {"min_version": "1.0"},
+            },
+        },
         "fuzzystrmatch": {
             "min_version": "1.0",
             "description": "Fuzzy string matching (Levenshtein, Soundex)",
