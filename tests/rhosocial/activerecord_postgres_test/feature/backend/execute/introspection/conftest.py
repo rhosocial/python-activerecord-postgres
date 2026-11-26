@@ -186,6 +186,27 @@ _CLEANUP_SEQUENCE_SQL = [
     "DROP SEQUENCE IF EXISTS seq_demo_id",
 ]
 
+#: A ``serial`` column, a loose sequence, and -- on PostgreSQL 10+, where the
+#: syntax exists -- an identity column. The neutral sequence-state family
+#: reports the owning column for the first two cases and no owner for the
+#: third, so all three are created together.
+_SEQUENCE_STATE_SQL = [
+    "DROP TABLE IF EXISTS seq_state_serial CASCADE",
+    "DROP SEQUENCE IF EXISTS seq_state_loose",
+    "CREATE TABLE seq_state_serial (id SERIAL PRIMARY KEY, amount INTEGER)",
+    "CREATE SEQUENCE seq_state_loose",
+]
+_SEQUENCE_STATE_IDENTITY_SQL = [
+    "DROP TABLE IF EXISTS seq_state_identity CASCADE",
+    "CREATE TABLE seq_state_identity ("
+    "id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY)",
+]
+_CLEANUP_SEQUENCE_STATE_SQL = [
+    "DROP TABLE IF EXISTS seq_state_identity CASCADE",
+    "DROP TABLE IF EXISTS seq_state_serial CASCADE",
+    "DROP SEQUENCE IF EXISTS seq_state_loose",
+]
+
 
 def _execute_sql_list(backend, sql_list):
     """Execute a list of SQL statements."""
@@ -309,5 +330,24 @@ async def async_backend_with_sequence(async_postgres_backend):
     try:
         async_postgres_backend.introspector.clear_cache()
         await _async_execute_sql_list(async_postgres_backend, _CLEANUP_SEQUENCE_SQL)
+    except Exception:
+        pass
+
+
+@pytest.fixture(scope="function")
+def backend_with_sequence_states(postgres_backend):
+    """Provide sequences that a column owns and one that nobody owns."""
+    postgres_backend.introspector.clear_cache()
+    _execute_sql_list(postgres_backend, _SEQUENCE_STATE_SQL)
+    version = postgres_backend.introspector.server_version
+    # ``GENERATED ALWAYS AS IDENTITY`` is PostgreSQL 10+; on an older server
+    # the identity case is simply not created, and the test skips it.
+    if version and tuple(version) >= (10, 0, 0):
+        _execute_sql_list(postgres_backend, _SEQUENCE_STATE_IDENTITY_SQL)
+    postgres_backend.introspector.clear_cache()
+    yield postgres_backend
+    try:
+        postgres_backend.introspector.clear_cache()
+        _execute_sql_list(postgres_backend, _CLEANUP_SEQUENCE_STATE_SQL)
     except Exception:
         pass

@@ -1327,7 +1327,12 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         rows: List[Dict[str, Any]],
         schema: str,
     ) -> List[SequenceState]:
-        """Turn each ``pg_class`` sequence row into its neutral state."""
+        """Turn each ``pg_class`` sequence row into its neutral state.
+
+        ``concat_ws`` ignores its NULL arguments, so a sequence nobody owns
+        reads back as the empty string rather than NULL; the neutral field is
+        optional, so an empty owner is reported as absent.
+        """
         found: List[SequenceState] = []
         for row in rows or []:
             name = row.get("name") or row.get("sequence_name")
@@ -1343,7 +1348,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
                 SequenceState(
                     name=str(name),
                     schema=row.get("schema_name") or schema,
-                    owned_by=row.get("owned_by"),
+                    owned_by=row.get("owned_by") or None,
                     start=start,
                     increment=increment,
                 )

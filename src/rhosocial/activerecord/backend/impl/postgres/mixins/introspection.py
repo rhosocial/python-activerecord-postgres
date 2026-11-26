@@ -490,6 +490,35 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
         return Literal(self, value)
 
+    def _catalog_oid(self, relation_name: str):
+        """The ``oid`` of a catalog relation, resolved from its name by ``regclass``.
+
+        ``pg_depend`` stores ``classid``/``refclassid`` as ``oid`` columns, so
+        a comparison against a bare name -- ``classid = 'pg_class'`` -- asks
+        the server to read text as an ``oid``, which it refuses with
+        ``invalid input syntax for type oid``. The name has to be turned into
+        the relation's oid first; ``regclass``'s input function is what does
+        that, so the column is compared against ``'pg_catalog.<name>'::regclass``.
+
+        The name is written schema-qualified because ``regclass`` resolves it
+        through the session's ``search_path``: a bare ``pg_class`` would answer
+        a caller's same-named relation if one shadowed the catalog.
+
+        Args:
+            relation_name: Unqualified catalog relation name, e.g. ``pg_class``.
+
+        Returns:
+            A cast node rendering ``'pg_catalog.<relation_name>'::regclass``.
+        """
+        from rhosocial.activerecord.backend.expression.core import CastExpression
+        from ..expression.types import PostgresRegClassType
+
+        return CastExpression(
+            self,
+            self._catalog_literal("pg_catalog." + relation_name),
+            PostgresRegClassType(self),
+        )
+
     def _catalog_select(
         self,
         select: "list",
@@ -3681,13 +3710,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                     self,
                     "eq",
                     self._catalog_column("classid", "d"),
-                    self._catalog_literal("pg_class"),
+                    self._catalog_oid("pg_class"),
                 ),
                 ComparisonPredicate(
                     self,
                     "eq",
                     self._catalog_column("refclassid", "d"),
-                    self._catalog_literal("pg_class"),
+                    self._catalog_oid("pg_class"),
                 ),
             ),
         )

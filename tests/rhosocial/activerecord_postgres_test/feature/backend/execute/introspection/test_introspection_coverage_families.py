@@ -532,6 +532,35 @@ class TestNeutralObjectState:
         assert "pg_sequence AS s" in sql
         assert params == ("public",)
 
+    def test_sequence_state_statement_resolves_the_dependency_class_oid(self):
+        """``pg_depend``'s ``oid`` columns are compared to a resolved name.
+
+        ``classid`` and ``refclassid`` are ``oid``-typed, so comparing one to
+        the bare text ``'pg_class'`` asks the server to read text as an
+        ``oid``. A live PostgreSQL answers ``invalid input syntax for type
+        oid`` for that, while a scripted executor hands back whatever rows the
+        fixture wrote -- which is why the spelling is pinned here, where no
+        server is involved. ``regclass`` is the type whose input function
+        turns a name into the relation's oid, so the comparison has to go
+        through it.
+
+        The name is schema-qualified because ``regclass`` resolves names
+        through ``search_path``: a bare ``pg_class`` would answer a caller's
+        same-named relation if one shadowed the catalog.
+        """
+        sql, _ = PostgresSequenceStateQueryStatement(
+            _dialect(), schema="public"
+        ).to_sql()
+
+        resolved = "'pg_catalog.pg_class'::REGCLASS"
+        assert f"d.classid = {resolved}" in sql
+        assert f"d.refclassid = {resolved}" in sql
+        # The spellings a live server rejects: a bare name compared directly,
+        # and the same name against the unqualified catalog relation.
+        assert "d.classid = 'pg_class'" not in sql
+        assert "d.refclassid = 'pg_class'" not in sql
+        assert "::REGCLASS" in sql
+
     def test_sequence_state_on_nine_drops_the_pg_sequence_join(self):
         sql, _ = PostgresSequenceStateQueryStatement(
             _dialect((9, 6, 0)), schema="public"
@@ -555,6 +584,30 @@ class TestNeutralObjectState:
         assert isinstance(states[0], SequenceState)
         assert states[0].owned_by == "public.orders.id"
         assert states[0].start == 1
+
+    def test_sequence_state_without_an_owner_reports_absence(self):
+        """``concat_ws`` yields ``''`` when every part is NULL, not NULL.
+
+        The projection builds ``schema.table.column`` from three columns that
+        are all NULL for a sequence nobody owns, and ``concat_ws`` skips NULL
+        arguments -- three skipped arguments leave the empty string. The
+        neutral field is optional, so the row has to read as "not owned"
+        rather than as a column named by nothing.
+        """
+        states = _parser().parse_sequence_states(
+            [
+                {
+                    "name": "loose_seq",
+                    "schema_name": "public",
+                    "owned_by": "",
+                    "start": 1,
+                    "increment": 1,
+                }
+            ],
+            "public",
+        )
+        assert len(states) == 1
+        assert states[0].owned_by is None
 
     def test_schema_list_statement_skips_the_system_namespaces(self):
         sql, params = PostgresSchemaListQueryStatement(_dialect()).to_sql()

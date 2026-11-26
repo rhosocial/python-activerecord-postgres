@@ -144,6 +144,59 @@ class TestGetSequenceInfo:
         assert introspector.sequence_exists("arx_no_seq") is False
 
 
+class TestSequenceStatesLive:
+    """Live coverage for the neutral sequence-state family.
+
+    Every row here comes from ``pg_class``/``pg_depend`` read against a real
+    server: a scripted executor answers the ownership join whether or not the
+    statement's catalogue comparisons are ones the server accepts, so only a
+    live read proves the family answers.
+    """
+
+    def test_serial_sequence_names_its_owning_column(self, backend_with_sequence_states):
+        states = backend_with_sequence_states.introspector.list_sequence_states()
+        owned = next(s for s in states if s.name == "seq_state_serial_id_seq")
+
+        assert owned.schema == "public"
+        assert owned.owned_by == "public.seq_state_serial.id"
+
+    def test_identity_sequence_names_its_owning_column(self, backend_with_sequence_states):
+        introspector = backend_with_sequence_states.introspector
+        version = introspector.server_version
+        if not version or tuple(version) < (10, 0, 0):
+            pytest.skip("identity columns are PostgreSQL 10+")
+
+        states = introspector.list_sequence_states()
+        owned = next(s for s in states if s.name == "seq_state_identity_id_seq")
+
+        assert owned.owned_by == "public.seq_state_identity.id"
+
+    def test_a_sequence_nobody_owns_has_no_owner(self, backend_with_sequence_states):
+        """``concat_ws`` answers ``''`` for an all-NULL owner; that is absence."""
+        states = backend_with_sequence_states.introspector.list_sequence_states()
+        loose = next(s for s in states if s.name == "seq_state_loose")
+
+        assert loose.owned_by is None
+
+    def test_state_carries_the_declared_start_and_increment(self, backend_with_sequence_states):
+        introspector = backend_with_sequence_states.introspector
+        version = introspector.server_version
+        if not version or tuple(version) < (10, 0, 0):
+            pytest.skip("pg_sequence is PostgreSQL 10+")
+
+        states = introspector.list_sequence_states()
+        serial = next(s for s in states if s.name == "seq_state_serial_id_seq")
+
+        assert serial.start == 1
+        assert serial.increment == 1
+
+    def test_states_are_cached_per_schema(self, backend_with_sequence_states):
+        first = backend_with_sequence_states.introspector.list_sequence_states()
+        second = backend_with_sequence_states.introspector.list_sequence_states()
+
+        assert first is second
+
+
 class TestMaterializedViewsLive:
     """Live coverage for the typed materialized view introspection surface."""
 
