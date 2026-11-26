@@ -30,6 +30,7 @@ import json
 
 from dataclasses import replace
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.introspection.base import (
     IntrospectorMixin,
     AbstractIntrospector,
@@ -235,6 +236,36 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
     SQL generation is delegated to the Dialect layer via Expression.to_sql()
     which calls PostgresIntrospectionCapabilityMixin.format_*_query() methods.
     """
+
+    #: Kinds whose catalog query is implemented by this backend.
+    ANSWERED_ITEM_KINDS = frozenset(
+        (
+            ItemKind.SCHEMA,
+            ItemKind.TYPE,
+            ItemKind.DOMAIN,
+            ItemKind.SEQUENCE,
+            ItemKind.EXTENSION,
+        )
+    )
+    #: Kinds PostgreSQL has no objects of: answering ``False`` is a definite
+    #: "there is none", not "cannot tell".
+    ABSENT_ITEM_KINDS = frozenset(
+        (
+            ItemKind.PARTITION_FUNCTION,
+            ItemKind.PARTITION_SCHEME,
+            ItemKind.FULLTEXT_CATALOG,
+        )
+    )
+    #: Kinds PostgreSQL does have, but this backend has no catalogue query
+    #: for. Refusing keeps an implementation gap from reading as absence.
+    UNQUERIED_ITEM_KINDS = frozenset(
+        (
+            ItemKind.FUNCTION,
+            ItemKind.TABLE,
+            ItemKind.INDEX,
+            ItemKind.TABLESPACE,
+        )
+    )
 
     @property
     def default_schema(self) -> str:
@@ -1109,11 +1140,12 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
         columns are NULL. ``scheme`` therefore comes from the parent's key, not
         from the number of children.
 
-        The neutral :class:`PartitionBound` carries the range upper endpoint,
-        the list values and the default/max-value flags. The lower endpoint and
-        the hash modulus/remainder have no slot of their own there, so they stay
-        structured in ``raw['partitions']`` beside the engine's original text
-        rather than being flattened into a field that means something else.
+        The neutral :class:`PartitionBound` now carries every structured fact
+        the server states: either the range endpoints, the list values or the
+        hash modulus/remainder, plus the default/max-value flags. The engine's
+        original text stays in ``raw['partitions']`` because it is the only
+        place a multi-column endpoint, an expression partition or a
+        ``MAXVALUE`` bound can be read verbatim.
         """
         if not rows:
             return None
@@ -1152,8 +1184,11 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             bounds.append(
                 PartitionBound(
                     name=str(name),
+                    lower=bound.lower if bound is not None else None,
                     upper=bound.upper if bound is not None else None,
                     values=tuple(bound.values) if bound is not None else (),
+                    modulus=bound.modulus if bound is not None else None,
+                    remainder=bound.remainder if bound is not None else None,
                     is_default=is_default,
                     is_maxvalue=is_maxvalue,
                     row_count=row_count,
@@ -1164,11 +1199,6 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
             detail.append(
                 {
                     "name": str(name),
-                    "lower": bound.lower if bound is not None else None,
-                    "upper": bound.upper if bound is not None else None,
-                    "values": list(bound.values) if bound is not None else [],
-                    "modulus": bound.modulus if bound is not None else None,
-                    "remainder": bound.remainder if bound is not None else None,
                     "text": bound.text if bound is not None else None,
                 }
             )
@@ -2116,12 +2146,16 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
     ) -> bool:
         """Whether a shared object of this kind exists.
 
-        Answered for the four kinds this backend promises: a schema, a type (or
-        a domain), a sequence and an extension. The other kinds in
-        :class:`ItemKind` have no PostgreSQL catalog to ask, and refusing is
-        clearer than answering a false that reads as "the object is absent".
+        Follows the neutral three-case rule: an absent kind answers ``False``
+        because the engine has no objects of it; an answered kind is queried;
+        a kind PostgreSQL has but this backend cannot query refuses rather
+        than answering a ``False`` that would read as absence. The three
+        groups are declared on the class, and an offline guard checks that
+        every :class:`ItemKind` belongs to exactly one of them.
         """
         kind = ItemKind(kind)
+        if kind in self.ABSENT_ITEM_KINDS:
+            return False
         if kind is ItemKind.SCHEMA:
             return name in self.list_schemas()
         if kind in (ItemKind.TYPE, ItemKind.DOMAIN):
@@ -2139,12 +2173,11 @@ class PostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AbstractIntrospector):
             )
         if kind is ItemKind.EXTENSION:
             return any(extension.name == name for extension in self.list_extensions())
-        from ..dialect.exceptions import UnsupportedFeatureError
-
         raise UnsupportedFeatureError(
             self.dialect.name,
             f"item_exists for {kind.value}",
-            "PostgreSQL has no catalog object of this kind.",
+            "PostgreSQL has objects of this kind, but this backend has no "
+            "catalogue query to confirm one.",
         )
 
     def list_routines(
@@ -2707,8 +2740,14 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
         name: str,
         schema: Optional[str] = None,
     ) -> bool:
-        """Whether a shared object of this kind exists (async counterpart)."""
+        """Whether a shared object of this kind exists (async counterpart).
+
+        Same three-case rule as the sync twin, using the class-declared
+        answered, absent and unqueried sets.
+        """
         kind = ItemKind(kind)
+        if kind in self.ABSENT_ITEM_KINDS:
+            return False
         if kind is ItemKind.SCHEMA:
             return name in await self.list_schemas()
         if kind in (ItemKind.TYPE, ItemKind.DOMAIN):
@@ -2729,12 +2768,11 @@ class AsyncPostgreSQLIntrospector(PostgreSQLIntrospectorMixin, AsyncAbstractIntr
                 extension.name == name
                 for extension in await self.list_extensions()
             )
-        from ..dialect.exceptions import UnsupportedFeatureError
-
         raise UnsupportedFeatureError(
             self.dialect.name,
             f"item_exists for {kind.value}",
-            "PostgreSQL has no catalog object of this kind.",
+            "PostgreSQL has objects of this kind, but this backend has no "
+            "catalogue query to confirm one.",
         )
 
     async def list_routines(

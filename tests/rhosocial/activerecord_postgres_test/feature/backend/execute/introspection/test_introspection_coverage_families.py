@@ -12,6 +12,7 @@ from typing import List
 
 import pytest
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.introspection.types import (
     ConstraintState,
     DerivedObjectState,
@@ -361,11 +362,59 @@ class TestPartitions:
             "orders_p2026_12",
         ]
         assert state.bounds[0].upper == "2026-12-01"
+        assert state.bounds[0].lower == "2026-11-01"
         assert state.bounds[0].row_count == 10
         assert state.bounds[1].row_count is None
-        # Lower and hash facts have no slot on the neutral bound; they stay
-        # structured beside the engine's own text.
-        assert state.raw["partitions"][0]["lower"] == "2026-11-01"
+        # The server's own spelling stays beside the decoded fields.
+        assert state.raw["partitions"][0]["text"] == (
+            "FOR VALUES FROM ('2026-11-01') TO ('2026-12-01')"
+        )
+
+    @pytest.mark.parametrize(
+        "partition_key,bound_text,expected",
+        [
+            (
+                "RANGE (created_at)",
+                "FOR VALUES FROM ('2026-11-01') TO ('2026-12-01')",
+                {"lower": "2026-11-01", "upper": "2026-12-01"},
+            ),
+            (
+                "LIST (status)",
+                "FOR VALUES IN ('active', 'pending')",
+                {"values": ("active", "pending")},
+            ),
+            (
+                "HASH (user_id)",
+                "FOR VALUES WITH (MODULUS 4, REMAINDER 1)",
+                {"modulus": 4, "remainder": 1},
+            ),
+            (
+                "LIST (status)",
+                "DEFAULT",
+                {"is_default": True, "values": ()},
+            ),
+        ],
+    )
+    def test_structured_bounds_land_on_the_neutral_fields(
+        self, partition_key, bound_text, expected
+    ):
+        rows = [
+            {
+                "parent_table": "orders",
+                "partition_key": partition_key,
+                "name": "orders_part",
+                "bound": bound_text,
+            }
+        ]
+        state = _parser().parse_partition_state(rows, "orders", "public")
+        assert state is not None
+        bound = state.bounds[0]
+        for field, value in expected.items():
+            assert getattr(bound, field) == value
+        # Decoded facts do not repeat in raw; only the server text does.
+        assert state.raw["partitions"] == [
+            {"name": "orders_part", "text": bound_text}
+        ]
 
     def test_a_default_partition_is_named_as_such(self):
         rows = [
@@ -767,6 +816,28 @@ class TestNeutralObjectState:
         assert introspector.item_exists(ItemKind.DOMAIN, "positive_total") is True
         assert introspector.item_exists(ItemKind.SEQUENCE, "orders_id_seq") is True
         assert introspector.item_exists(ItemKind.EXTENSION, "pgcrypto") is True
+
+    def test_every_item_kind_is_declared_exactly_once(self):
+        answered = PostgreSQLIntrospector.ANSWERED_ITEM_KINDS
+        absent = PostgreSQLIntrospector.ABSENT_ITEM_KINDS
+        unqueried = PostgreSQLIntrospector.UNQUERIED_ITEM_KINDS
+        groups = (answered, absent, unqueried)
+        for index, group in enumerate(groups):
+            for other in groups[index + 1 :]:
+                assert group.isdisjoint(other)
+        assert set().union(*groups) == set(ItemKind)
+
+    @pytest.mark.parametrize("kind", list(ItemKind))
+    def test_item_exists_answers_every_kind_without_a_server(self, kind):
+        introspector = _scripted([])
+        if kind in PostgreSQLIntrospector.ABSENT_ITEM_KINDS:
+            assert introspector.item_exists(kind, "missing") is False
+            assert introspector._executor.seen == []
+        elif kind in PostgreSQLIntrospector.UNQUERIED_ITEM_KINDS:
+            with pytest.raises(UnsupportedFeatureError):
+                introspector.item_exists(kind, "missing")
+        else:
+            assert introspector.item_exists(kind, "missing") is False
 
 
 class TestRoutines:
