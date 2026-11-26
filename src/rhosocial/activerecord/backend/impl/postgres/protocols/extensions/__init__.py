@@ -8,6 +8,8 @@ from .ltree import PostgresLtreeSupport
 from .intarray import PostgresIntarraySupport
 from .pg_trgm import PostgresPgTrgmSupport
 from .pgroonga import PostgresPgRoongaSupport
+from .pg_hint_plan import PostgresPgHintPlanSupport
+from .unaccent import PostgresUnaccentSupport
 from .earthdistance import PostgresEarthdistanceSupport
 from .tablefunc import PostgresTablefuncSupport
 from .pg_stat_statements import PostgresPgStatStatementsSupport
@@ -40,6 +42,8 @@ __all__ = [
     "PostgresIntarraySupport",
     "PostgresPgTrgmSupport",
     "PostgresPgRoongaSupport",
+    "PostgresPgHintPlanSupport",
+    "PostgresUnaccentSupport",
     "PostgresEarthdistanceSupport",
     "PostgresTablefuncSupport",
     "PostgresPgStatStatementsSupport",

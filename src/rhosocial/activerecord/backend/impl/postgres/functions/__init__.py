@@ -25,6 +25,8 @@ Function modules and their corresponding PostgreSQL documentation:
 - ltree: Label tree functions - https://www.postgresql.org/docs/current/ltree.html
 - pg_trgm: Trigram similarity functions - https://www.postgresql.org/docs/current/pgtrgm.html
 - pgroonga: Multilingual full text search (v2 operators, scoring, snippets) - https://pgroonga.github.io/reference/
+- pg_hint_plan: Optimizer hint phrase builders - https://github.com/ossc-db/pg_hint_plan
+- unaccent: Accent-insensitive text normalization - https://www.postgresql.org/docs/current/unaccent.html
 - fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
 - earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
 - hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
@@ -401,6 +403,26 @@ from .pgroonga import (
     pgroonga_query_extract_keywords,
     pgroonga_command,
 )
+
+# pg_hint_plan functions
+from .pg_hint_plan import (
+    hint_seq_scan,
+    hint_index_scan,
+    hint_bitmap_scan,
+    hint_no_seq_scan,
+    hint_hash_join,
+    hint_merge_join,
+    hint_nest_loop,
+    hint_leading,
+    hint_rows,
+    hint_parallel,
+    hint_set,
+    pg_hint_plan_hinted_query,
+    load_pg_hint_plan,
+)
+
+# unaccent functions
+from .unaccent import unaccent
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -872,6 +894,22 @@ __all__ = [
     "pgroonga_query_escape",
     "pgroonga_query_extract_keywords",
     "pgroonga_command",
+    # pg_hint_plan functions
+    "hint_seq_scan",
+    "hint_index_scan",
+    "hint_bitmap_scan",
+    "hint_no_seq_scan",
+    "hint_hash_join",
+    "hint_merge_join",
+    "hint_nest_loop",
+    "hint_leading",
+    "hint_rows",
+    "hint_parallel",
+    "hint_set",
+    "pg_hint_plan_hinted_query",
+    "load_pg_hint_plan",
+    # unaccent functions
+    "unaccent",
     # fuzzystrmatch functions
     "levenshtein",
     "levenshtein_less_equal",

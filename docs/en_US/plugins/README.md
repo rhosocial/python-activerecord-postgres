@@ -9,6 +9,8 @@ PostgreSQL extension system allows installing additional modules, such as:
 - **pgvector**: Vector similarity search (AI applications)
 - **pg_trgm**: Trigram similarity search
 - **PGroonga**: Multilingual full text search (Chinese/Japanese/Korean)
+- **pg_hint_plan**: Optimizer hints
+- **unaccent**: Accent-insensitive text normalization
 - **hstore**: Key-value pair storage
 
 ## Introspection and Adaptation
@@ -89,6 +91,8 @@ The dialect maintains definitions for the following known extensions:
 | vector | 0.1 | vector | pgvector vector similarity search |
 | pg_trgm | 1.0 | text | Trigram similarity search |
 | pgroonga | 2.0 | text | PGroonga multilingual full text search |
+| pg_hint_plan | 1.3 | performance | Optimizer hints via /*+ ... */ |
+| unaccent | 1.0 | text | Accent-insensitive text normalization |
 | hstore | 1.0 | data | Key-value pair storage |
 | uuid-ossp | 1.0 | utility | UUID generation functions |
 | pgcrypto | 1.0 | security | Cryptographic functions |
@@ -109,6 +113,10 @@ CREATE EXTENSION pgroonga;
 
 -- Install hstore
 CREATE EXTENSION hstore;
+
+-- Install pg_hint_plan and unaccent
+CREATE EXTENSION pg_hint_plan;
+CREATE EXTENSION unaccent;
 ```
 
 After installation, re-run introspection:
@@ -124,6 +132,8 @@ backend.introspect_and_adapt()
 - **[pgvector](./pgvector.md)**: Vector similarity search
 - **[pg_trgm](./pg_trgm.md)**: Trigram similarity
 - **[PGroonga](./pgroonga.md)**: Multilingual full text search
+- **[pg_hint_plan](./pg_hint_plan.md)**: Optimizer hints
+- **[unaccent](./unaccent.md)**: Accent-insensitive text
 - **[hstore](./hstore.md)**: Key-value storage
 
 💡 *AI Prompt:* "What advantages does PostgreSQL's extension mechanism have over MySQL's plugin system?"

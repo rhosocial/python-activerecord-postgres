@@ -441,6 +441,14 @@ EXAMPLES_META = {
         'max_version': '18',
         'note': 'Requires the pgroonga extension; available in postgres-exts images for PG12/14-18',
     },
+    'extensions/pg_hint_plan_unaccent.py': {
+        'title': 'pg_hint_plan and unaccent',
+        'dialect_protocols': [],
+        'priority': 4,
+        'min_version': '12',
+        'max_version': '18',
+        'note': 'Requires pg_hint_plan (PG12-18 postgres-exts images) and contrib unaccent',
+    },
     'schema_diff/table_changes.py': {
         'title': 'Schema Diff — Table Add/Remove',
         'dialect_protocols': [],
