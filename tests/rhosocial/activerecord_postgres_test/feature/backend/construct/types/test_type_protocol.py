@@ -637,5 +637,14 @@ class TestParseRoundTripSweep:
             dialect,
             registry,
             widening=self.WIDENING_ANSWERS,
+            # A *named* type renders the quoted identifier a DDL statement
+            # needs (``"mood"``), while ``parse_type`` parses the declarations
+            # a caller writes, whose domain deliberately excludes quotes
+            # (``type_name`` module: quotes there would be an injection smell).
+            # The two domains meet for every built-in type and cannot meet for
+            # a created one: the string also does not carry the labels, so the
+            # answer could only be a generic name. This is a domain boundary,
+            # not a spelling the dialect fails to recognise.
+            skip=("PostgresEnumColumnType",),
         )
         assert failures == [], "\n".join(failures)
