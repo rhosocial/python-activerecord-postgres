@@ -22,18 +22,16 @@ backend.execute(*load_pg_hint_plan(dialect).to_sql())
 
 ## 构造提示
 
-pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语句。builder 返回的是普通提示负载（`PostgresHint`），不拼接 SQL 字符串；只有 dialect formatter 负责渲染注释，注释附着在承载提示的语句上。
+pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语句。builder 返回的是普通字典负载（`HintPayload`），既不是 SQL 字符串也不是表达式节点；只有 dialect formatter 负责渲染注释，注释附着在承载提示的语句上。通过语句的 `hints=` 关键字传入负载：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresHintedQueryStatement,
-)
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading, hint_hash_join, hint_seq_scan,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
 
-query = PostgresHintedQueryStatement(
+query = QueryStatement(
     dialect,
     select=[...],
     from_=...,
@@ -48,25 +46,29 @@ sql, params = query.to_sql()
 backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQL))
 ```
 
-`PostgresHintedInsertStatement`、`PostgresHintedUpdateStatement`、`PostgresHintedDeleteStatement` 与 `PostgresHintedExplainStatement` 同样接受 `hints=` 关键字。其中 EXPLAIN 版本会把注释写在 `EXPLAIN` 关键字之前，这正是 pg_hint_plan 要求的位置：
+`InsertStatement`、`UpdateStatement`、`DeleteStatement` 与 `ExplainStatement` 同样接受 `hints=` 关键字。`ExplainStatement` 会把注释写在 `EXPLAIN` 关键字之前，这正是 pg_hint_plan 要求的位置：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresHintedExplainStatement,
-)
+from rhosocial.activerecord.backend.expression import ExplainStatement
 
-explained = PostgresHintedExplainStatement(
+explained = ExplainStatement(
     dialect, query, hints=(hint_seq_scan(dialect, "a"),)
 )
 sql, params = explained.to_sql()
 # /*+ SeqScan(a) */ EXPLAIN SELECT ...
 ```
 
-提示负载是键齐全的普通字典（`PostgresHint.as_dict()`），因此能随 artifact 序列化往返；它不是表达式节点，也不会单独渲染。
+若 `ExplainStatement` 包裹的语句自身已带提示，它会拒绝渲染（两个前缀会重叠，位置有歧义）。
+
+提示负载是键齐全的普通字典（不适用的字段为 `None`/`()`，可用 `make_hint_payload()` 构造），因此能随 artifact 序列化往返；它不是表达式节点，也不会单独渲染。方言若支持该注释语法就渲染它，不支持则对带提示的语句抛出 `UnsupportedFeatureError`，而不是悄悄丢弃提示：
+
+```python
+dialect.supports_statement_hints()   # 仅在 pg_hint_plan 可用时为 True
+```
 
 提示注释位于语句之前，因此执行带提示的查询时要显式传 `stmt_type`：后端无法从 SQL 首词推断语句类型。
 
-`PostgresHintedQueryStatement` 及其四个同类是 DSL 入口。可用 builder：`hint_seq_scan`、`hint_tid_scan`、`hint_index_scan`、`hint_index_only_scan`、`hint_bitmap_scan`、`hint_no_seq_scan`、`hint_no_index_scan`、`hint_hash_join`、`hint_merge_join`、`hint_nest_loop`、`hint_leading`、`hint_rows`、`hint_parallel`、`hint_set`。
+可用 builder：`hint_seq_scan`、`hint_tid_scan`、`hint_index_scan`、`hint_index_only_scan`、`hint_bitmap_scan`、`hint_no_seq_scan`、`hint_no_index_scan`、`hint_hash_join`、`hint_merge_join`、`hint_nest_loop`、`hint_leading`、`hint_rows`、`hint_parallel`、`hint_set`。
 
 标识符与 GUC 值都通过全匹配校验；注释终止符和语句分隔符会被拒绝。
 

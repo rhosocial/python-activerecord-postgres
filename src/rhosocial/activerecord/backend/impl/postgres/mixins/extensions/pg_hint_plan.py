@@ -14,6 +14,7 @@ from ...expression.hint import (
     CorrectionKind,
     HintKind,
     assert_hint_payload,
+    hint_payload,
 )
 from ...expression.load_library import PostgresLoadLibraryExpression
 
@@ -28,10 +29,13 @@ class PostgresPgHintPlanMixin:
     def _hint_phrase(self, hint: dict) -> str:
         """Render one hint payload as a pg_hint_plan phrase.
 
-        The payload's grammar is checked here as well as in the statement's
-        ``check_renderable``: a malformed payload is a caller error, so this
-        raises ``TypeError`` rather than producing partial hint text.
+        The payload's grammar is checked here rather than where the statement
+        was built: a node must always build, and a malformed payload is a
+        caller error, so this raises ``TypeError`` rather than producing
+        partial hint text.  A payload read back from an artifact may carry its
+        nested arrays as lists, so :func:`hint_payload` normalises it first.
         """
+        hint = hint_payload(hint)
         assert_hint_payload(hint)
         kind = HintKind(hint["kind"])
         arguments = []

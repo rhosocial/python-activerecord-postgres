@@ -15,6 +15,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     ColumnPrimaryKeyConstraint,
     CreateTableStatement,
+    ExplainStatement,
     InsertStatement,
     QueryStatement,
 )
@@ -24,10 +25,6 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
-    PostgresHintedExplainStatement,
-    PostgresHintedQueryStatement,
-)
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_index_scan,
     hint_seq_scan,
@@ -125,7 +122,7 @@ class TestHintPlanIntegration:
     def test_hinted_query_runs_and_binds(self, hint_env):
         backend, dialect, table = hint_env
         backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = PostgresHintedQueryStatement(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
@@ -155,13 +152,13 @@ class TestHintPlanIntegration:
             indexed = backend.fetch_one("EXPLAIN " + base, params)["QUERY PLAN"]
             assert "Index Scan" in indexed
 
-            seq_sql, seq_params = PostgresHintedExplainStatement(
+            seq_sql, seq_params = ExplainStatement(
                 dialect, query, hints=(hint_seq_scan(dialect, table),)
             ).to_sql()
             forced = backend.fetch_one(seq_sql, seq_params)["QUERY PLAN"]
             assert "Seq Scan" in forced
 
-            index_sql, index_params = PostgresHintedExplainStatement(
+            index_sql, index_params = ExplainStatement(
                 dialect,
                 query,
                 hints=(hint_index_scan(dialect, table, f"idx_{table}_name"),),
@@ -197,7 +194,7 @@ class TestAsyncIntegration:
         assert dialect.supports_pg_hint_plan()
         assert dialect.supports_unaccent()
         await backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = PostgresHintedQueryStatement(
+        query = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),

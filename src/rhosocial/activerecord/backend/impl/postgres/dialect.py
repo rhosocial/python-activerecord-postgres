@@ -619,6 +619,16 @@ class PostgresDialect(
         """
         return True
 
+    def supports_statement_hints(self) -> bool:
+        """Whether this dialect spells ``/*+ ... */`` hints on a statement.
+
+        PostgreSQL has the comment grammar when pg_hint_plan is installed, so
+        this answers with the extension probe.  A statement carrying hints on a
+        server without it is refused by ``BaseExpression._render`` rather than
+        rendered with a comment the planner would ignore.
+        """
+        return self.supports_pg_hint_plan()
+
     def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""
         from rhosocial.activerecord.backend.impl.postgres.schema.differ import (

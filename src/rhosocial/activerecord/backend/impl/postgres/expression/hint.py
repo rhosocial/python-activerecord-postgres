@@ -2,18 +2,17 @@
 """pg_hint_plan hint payloads.
 
 A hint is *text carried inside a comment*, not a statement.  So the payload is
-a plain dictionary: the builders return :class:`PostgresHint`, a frozen
-dataclass that is **not** an expression node, and the objects on the wire are
-the dictionaries :meth:`PostgresHint.as_dict` produces.  Only the dialect
-formatter renders them into the ``/*+ ... */`` comment.
+a plain dictionary: the builders return a ``dict`` with every key present (the
+``HintPayload`` ``TypedDict`` states that shape to a type checker), and only the
+dialect formatter renders it into the ``/*+ ... */`` comment.  There is no
+payload class: a hint declares no ``format_method`` and is never a node.
 
 Values are validated with Python's identifier contract -- no regex, no
 substring checks, no SQL text inspection anywhere in this module.
 """
 
-from dataclasses import dataclass
 from enum import Enum
-from typing import Optional, Sequence, Tuple, Union
+from typing import Optional, Sequence, Tuple, TypedDict, Union, cast
 
 
 class HintKind(str, Enum):
@@ -105,7 +104,7 @@ def resolve_correction_kind(value: object) -> Optional[CorrectionKind]:
 class HintGroup:
     """A nested join pair for ``Leading((a b) c)``.
 
-    An *input* spelling only.  :meth:`PostgresHint.as_dict` normalises it to
+    An *input* spelling only.  :func:`make_hint_payload` normalises it to
     ``tuple(group.tables)``, so nothing on the wire is a ``HintGroup`` -- the
     payload is a nested array and every reader can parse it.
     """
@@ -144,83 +143,93 @@ def _normalise_sequence_item(value: object) -> object:
     return value
 
 
-@dataclass(frozen=True)
-class PostgresHint:
-    """One pg_hint_plan hint phrase as typed values.
+#: One hint phrase as its wire/storage shape. A ``TypedDict`` because the
+#: payload is never instantiated as a class: the builders return a plain
+#: ``dict`` with every key present, and every reader (the formatter, the
+#: artifact codec) receives a mapping.
+class HintPayload(TypedDict):
+    kind: str
+    tables: Tuple[str, ...]
+    indexes: Tuple[str, ...]
+    sequence: Tuple[Union[str, Tuple[str, ...]], ...]
+    correction_kind: Optional[str]
+    correction_amount: Optional[Union[int, float]]
+    workers: Optional[int]
+    soft: Optional[bool]
+    guc: Optional[str]
+    guc_value: Optional[Union[str, int, float]]
 
-    This is a payload, not a node: it declares no ``format_method``, is never
-    registered as an expression kind, and never renders itself.  The builders
-    return it, the hinted statement carries its :meth:`as_dict` form, and the
-    dialect formatter is the only place a phrase becomes SQL text.
+
+def make_hint_payload(
+    kind: Union[HintKind, str],
+    *,
+    tables: Sequence[str] = (),
+    indexes: Sequence[str] = (),
+    sequence: Sequence[Union[str, HintGroup, Sequence[str]]] = (),
+    correction_kind: Optional[CorrectionKind] = None,
+    correction_amount: Optional[Union[int, float]] = None,
+    workers: Optional[int] = None,
+    soft: Optional[bool] = None,
+    guc: Optional[str] = None,
+    guc_value: Optional[Union[str, int, float]] = None,
+) -> HintPayload:
+    """One hint phrase as a plain dictionary with every key present.
+
+    This only *collects* -- an absent field is ``None`` (or ``()``), and the
+    values are stored as given.  Whether the phrase is renderable is
+    :func:`assert_hint_payload`'s answer, at render time.
+
+    ``HintKind``/``CorrectionKind`` members are written as the words they
+    carry, and a :class:`HintGroup` becomes the tuple of the names it holds:
+    the payload is language-neutral data, so no enum or host object travels.
     """
-
-    kind: HintKind
-    tables: Tuple[str, ...] = ()
-    indexes: Tuple[str, ...] = ()
-    sequence: Tuple[Union[str, HintGroup, Sequence[str]], ...] = ()
-    correction_kind: Optional[CorrectionKind] = None
-    correction_amount: Optional[Union[int, float]] = None
-    workers: Optional[int] = None
-    soft: Optional[bool] = None
-    guc: Optional[str] = None
-    guc_value: Optional[Union[str, int, float]] = None
-
-    def as_dict(self) -> dict:
-        """The payload a hinted statement carries, with every key present.
-
-        A dictionary -- not the dataclass -- is what travels: core's artifact
-        codec encodes only nested nodes, containers, dicts and JSON scalars, so
-        a dataclass would reach the scalar encoder and fail.  Keys are always
-        all there, ``None`` standing for an absent field, so a reader never has
-        to tell "absent" from "empty".
-        """
-        kind = self.kind.value if isinstance(self.kind, HintKind) else str(self.kind)
-        correction_kind = (
-            self.correction_kind.value
-            if isinstance(self.correction_kind, CorrectionKind)
-            else self.correction_kind
-        )
-        return {
-            "kind": kind,
-            "tables": _normalise_names(self.tables),
-            "indexes": _normalise_names(self.indexes),
-            "sequence": tuple(_normalise_sequence_item(item) for item in self.sequence),
-            "correction_kind": correction_kind,
-            "correction_amount": self.correction_amount,
-            "workers": self.workers,
-            "soft": self.soft,
-            "guc": self.guc,
-            "guc_value": self.guc_value,
-        }
+    return cast(
+        HintPayload,
+        {
+            "kind": kind.value if isinstance(kind, HintKind) else str(kind),
+            "tables": _normalise_names(tables),
+            "indexes": _normalise_names(indexes),
+            "sequence": tuple(_normalise_sequence_item(item) for item in sequence),
+            "correction_kind": (
+                correction_kind.value
+                if isinstance(correction_kind, CorrectionKind)
+                else correction_kind
+            ),
+            "correction_amount": correction_amount,
+            "workers": workers,
+            "soft": soft,
+            "guc": guc,
+            "guc_value": guc_value,
+        },
+    )
 
 
 def hint_payload(hint: object) -> dict:
     """A hint in its canonical dictionary form, with every key present.
 
-    Accepts either a :class:`PostgresHint` (what the builders return) or a
-    dictionary (what an artifact decodes).  An artifact hands back arrays where
-    the payload held tuples, so nested sequences are normalised to tuples here;
-    anything else is left for :func:`assert_hint_payload` to refuse.
+    Accepts the dictionary an artifact decodes (JSON and XML draw no
+    tuple/array distinction, so the payload's arrays may come back as lists).
+    Nested sequences are normalised to tuples here; anything else is left for
+    :func:`assert_hint_payload` to refuse.
     """
-    if isinstance(hint, PostgresHint):
-        return hint.as_dict()
-    if isinstance(hint, dict):
-        payload = {
-            field: hint.get(field) for field in HINT_FIELDS
-        }
-        payload["tables"] = _normalise_names(payload["tables"] if payload["tables"] is not None else ())
-        payload["indexes"] = _normalise_names(payload["indexes"] if payload["indexes"] is not None else ())
-        payload["sequence"] = tuple(
-            _normalise_sequence_item(item) for item in (payload["sequence"] or ())
-        )
-        correction_kind = payload["correction_kind"]
-        if isinstance(correction_kind, CorrectionKind):
-            payload["correction_kind"] = correction_kind.value
-        kind = payload["kind"]
-        if isinstance(kind, HintKind):
-            payload["kind"] = kind.value
-        return payload
-    return {"kind": None}
+    if not isinstance(hint, dict):
+        # Not a payload at all; leave the refusal to assert_hint_payload.
+        return {"kind": None}
+    payload = {
+        field: hint.get(field) for field in HINT_FIELDS
+    }
+    payload["tables"] = _normalise_names(payload["tables"] if payload["tables"] is not None else ())
+    payload["indexes"] = _normalise_names(payload["indexes"] if payload["indexes"] is not None else ())
+    payload["sequence"] = tuple(
+        _normalise_sequence_item(item) for item in (payload["sequence"] or ())
+    )
+    correction_kind = payload["correction_kind"]
+    if isinstance(correction_kind, CorrectionKind):
+        payload["correction_kind"] = correction_kind.value
+    kind = payload["kind"]
+    if isinstance(kind, HintKind):
+        payload["kind"] = kind.value
+    return payload
 
 
 #: Each kind's required parameters, checked by :func:`assert_hint_payload`.
@@ -250,7 +259,7 @@ def assert_hint_payload(hint: object) -> None:
     if not isinstance(hint, dict):
         raise TypeError(
             f"a hint payload must be a dict, got {type(hint).__name__}; "
-            f"build one with PostgresHint.as_dict()"
+            f"build one with make_hint_payload()"
         )
     missing = [field for field in HINT_FIELDS if field not in hint]
     if missing:
@@ -317,9 +326,10 @@ __all__ = [
     "HINT_FIELDS",
     "HintGroup",
     "HintKind",
-    "PostgresHint",
+    "HintPayload",
     "assert_hint_payload",
     "hint_payload",
+    "make_hint_payload",
     "resolve_correction_kind",
     "resolve_hint_kind",
 ]

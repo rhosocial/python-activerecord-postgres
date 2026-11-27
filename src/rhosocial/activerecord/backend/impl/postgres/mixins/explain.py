@@ -93,6 +93,15 @@ class PostgresExplainMixin:
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
 
+        # The hint comment belongs to exactly one statement.  A hinted EXPLAIN
+        # wraps a statement that may already carry its own hints, and both
+        # prefixes would then be written -- so that shape is refused rather
+        # than rendered ambiguously.
+        if getattr(expr.statement, "hints", ()):
+            raise TypeError(
+                "EXPLAIN cannot carry hints for a statement that already "
+                "carries its own: the comment position would be ambiguous"
+            )
         statement_sql, statement_params = expr.statement.to_sql()
         # pg_hint_plan reads the hint comment before the statement, and an
         # EXPLAIN is the statement as far as the planner is concerned, so the

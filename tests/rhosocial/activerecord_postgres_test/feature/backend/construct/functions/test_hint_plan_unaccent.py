@@ -1,11 +1,9 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/functions/test_hint_plan_unaccent.py
 """SQL construction tests for pg_hint_plan and unaccent factories."""
 
-import dataclasses
-import inspect
-
 import pytest
 
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import Column, QueryStatement
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import Literal
@@ -22,14 +20,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     CorrectionKind,
     HINT_FIELDS,
     HintGroup,
-    PostgresHint,
-)
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
-    PostgresHintedDeleteStatement,
-    PostgresHintedExplainStatement,
-    PostgresHintedInsertStatement,
-    PostgresHintedQueryStatement,
-    PostgresHintedUpdateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_bitmap_scan,
@@ -51,7 +41,19 @@ from rhosocial.activerecord.backend.impl.postgres.protocols.base import Postgres
 
 @pytest.fixture
 def dialect():
-    return PostgresDialect()
+    """A dialect that has pg_hint_plan available.
+
+    A hinted statement renders only on a dialect whose ``supports_statement_hints()``
+    answers true, which is the pg_hint_plan probe. The extension is simulated here
+    because these are construction tests: no server is contacted.
+    """
+    dialect = PostgresDialect()
+    dialect._extensions = {
+        "pg_hint_plan": PostgresExtensionInfo(
+            name="pg_hint_plan", installed=True, available=True, version="1.8.1"
+        )
+    }
+    return dialect
 
 
 @pytest.fixture
@@ -61,7 +63,7 @@ def query(dialect):
 
 def _hinted_query(dialect, hint):
     """The smallest statement that renders one hint phrase."""
-    return PostgresHintedQueryStatement(
+    return QueryStatement(
         dialect,
         select=[Column(dialect, "id")],
         from_=Table(dialect, "t"),
@@ -98,7 +100,7 @@ class TestHintBuilders:
 
     def test_nested_leading(self, dialect):
         hint = hint_leading(dialect, HintGroup("a", "b"), "c")
-        assert hint.as_dict()["sequence"] == (("a", "b"), "c")
+        assert hint["sequence"] == (("a", "b"), "c")
         assert _phrase(dialect, hint) == "Leading((a b) c)"
 
     @pytest.mark.parametrize("table", ["t;DROP TABLE t", "a b", "", "1bad"])
@@ -122,15 +124,14 @@ class TestHintBuilders:
 
 
 class TestHintPayload:
-    def test_a_hint_is_a_payload_not_a_node(self):
+    def test_a_hint_is_a_plain_dict_payload(self):
         hint = hint_seq_scan(PostgresDialect(), "t")
-        assert isinstance(hint, PostgresHint)
-        assert dataclasses.is_dataclass(hint)
+        assert isinstance(hint, dict), "the payload must be a dict on the wire"
         assert not isinstance(hint, BaseExpression), "a hint has no standalone SQL"
         assert not hasattr(hint, "format_method"), "a hint must not be dispatchable"
 
     def test_every_key_is_present(self, dialect):
-        payload = hint_seq_scan(dialect, "t").as_dict()
+        payload = hint_seq_scan(dialect, "t")
         assert set(payload) == set(HINT_FIELDS)
         assert payload["kind"] == "SeqScan"
         assert payload["tables"] == ("t",)
@@ -141,24 +142,24 @@ class TestHintPayload:
         assert payload["guc"] is None
 
     def test_rows_fills_the_correction_fields(self, dialect):
-        payload = hint_rows(dialect, CorrectionKind.ABSOLUTE, 100, "a", "b").as_dict()
+        payload = hint_rows(dialect, CorrectionKind.ABSOLUTE, 100, "a", "b")
         assert payload["correction_kind"] == "#"
         assert payload["correction_amount"] == 100
 
     def test_parallel_fills_the_worker_fields(self, dialect):
-        payload = hint_parallel(dialect, "t", 4, soft=False).as_dict()
+        payload = hint_parallel(dialect, "t", 4, soft=False)
         assert payload["workers"] == 4
         assert payload["soft"] is False
 
     def test_set_fills_the_guc_fields(self, dialect):
-        payload = hint_set(dialect, "enable_hashjoin", "off").as_dict()
+        payload = hint_set(dialect, "enable_hashjoin", "off")
         assert payload["guc"] == "enable_hashjoin"
         assert payload["guc_value"] == "off"
 
 
-class TestHintedStatements:
+class TestStatementHints:
     def test_query_prefix_and_params(self, dialect, query):
-        expr = PostgresHintedQueryStatement(
+        expr = QueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, "t"),
@@ -170,34 +171,34 @@ class TestHintedStatements:
 
     def test_multiple_hints_share_one_comment(self, dialect):
         hints = [hint_leading(dialect, "a", "b"), hint_hash_join(dialect, "a", "b")]
-        expr = PostgresHintedQueryStatement(
+        expr = QueryStatement(
             dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=tuple(hints)
         )
         assert expr.to_sql()[0] == '/*+ Leading(a b) HashJoin(a b) */ SELECT "id" FROM "t"'
 
     def test_a_dict_hint_is_accepted(self, dialect):
-        payload = hint_seq_scan(dialect, "t").as_dict()
-        expr = PostgresHintedQueryStatement(
+        payload = hint_seq_scan(dialect, "t")
+        expr = QueryStatement(
             dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=(payload,)
         )
         assert expr.to_sql()[0] == '/*+ SeqScan(t) */ SELECT "id" FROM "t"'
 
     def test_insert_update_delete(self, dialect):
         table = Table(dialect, "t")
-        inserts = PostgresHintedInsertStatement(
+        inserts = InsertStatement(
             dialect,
             table,
             ValuesSource(dialect, [[Literal(dialect, 1)]]),
             ["a"],
             hints=(hint_seq_scan(dialect, "t"),),
         )
-        updates = PostgresHintedUpdateStatement(
+        updates = UpdateStatement(
             dialect,
             table,
             {"a": Literal(dialect, 1)},
             hints=(hint_parallel(dialect, "t", 4),),
         )
-        deletes = PostgresHintedDeleteStatement(
+        deletes = DeleteStatement(
             dialect, table, hints=(hint_index_scan(dialect, "t", "i"),)
         )
         assert inserts.to_sql() == (
@@ -211,29 +212,37 @@ class TestHintedStatements:
         assert deletes.to_sql() == ('/*+ IndexScan(t i) */ DELETE FROM "t"', ())
 
     def test_explain_prefix(self, dialect, query):
-        expr = PostgresHintedExplainStatement(dialect, query, hints=(hint_seq_scan(dialect, "t"),))
+        expr = ExplainStatement(dialect, query, hints=(hint_seq_scan(dialect, "t"),))
         assert expr.to_sql() == ('/*+ SeqScan(t) */ EXPLAIN SELECT "id" FROM "t"', ())
 
     def test_explain_refuses_a_hinted_statement(self, dialect):
-        hinted = PostgresHintedQueryStatement(
+        hinted = QueryStatement(
             dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=(hint_seq_scan(dialect, "t"),)
         )
-        expr = PostgresHintedExplainStatement(dialect, hinted, hints=(hint_seq_scan(dialect, "t"),))
+        expr = ExplainStatement(dialect, hinted, hints=(hint_seq_scan(dialect, "t"),))
         with pytest.raises(TypeError):
             expr.to_sql()
+
+    def test_explain_refuses_a_hinted_statement_without_its_own_hints(self, dialect):
+        """Two comment positions cannot be resolved: the wrapped hints win the refusal."""
+        hinted = QueryStatement(
+            dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=(hint_seq_scan(dialect, "t"),)
+        )
+        with pytest.raises(TypeError):
+            ExplainStatement(dialect, hinted).to_sql()
 
     def test_load_statement(self, dialect):
         assert load_pg_hint_plan(dialect).to_sql() == ("LOAD 'pg_hint_plan'", ())
 
-    def test_empty_hints_rejected(self, dialect, query):
-        expr = PostgresHintedQueryStatement(
+    def test_empty_hints_render_the_plain_statement(self, dialect, query):
+        """An empty payload list is "no hints", not a refused statement."""
+        expr = QueryStatement(
             dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=()
         )
-        with pytest.raises(TypeError):
-            expr.to_sql()
+        assert expr.to_sql() == ('SELECT "id" FROM "t"', ())
 
     def test_non_hint_rejected(self, dialect):
-        expr = PostgresHintedQueryStatement(
+        expr = QueryStatement(
             dialect, [Column(dialect, "id")], Table(dialect, "t"), hints=("SeqScan(t)",)
         )
         with pytest.raises(TypeError):
@@ -247,37 +256,30 @@ class TestHintedStatements:
         assert ExplainStatement(dialect, query).to_sql() == ('EXPLAIN SELECT "id" FROM "t"', ())
 
 
-class TestSignatureParity:
-    """A core signature change must not drift silently.
+class TestStatementHintCapability:
+    """The support switch refuses hints on a dialect that does not spell them."""
 
-    The derived classes declare the base class's full ``__init__`` signature
-    because ``get_params()`` reads the parameters off the class's own
-    ``__init__``. If core adds, removes or renames a parameter, this test fails
-    until the derived class is updated.
-    """
-
-    @pytest.mark.parametrize(
-        ("derived", "base"),
-        [
-            (PostgresHintedQueryStatement, QueryStatement),
-            (PostgresHintedInsertStatement, InsertStatement),
-            (PostgresHintedUpdateStatement, UpdateStatement),
-            (PostgresHintedDeleteStatement, DeleteStatement),
-            (PostgresHintedExplainStatement, ExplainStatement),
-        ],
-    )
-    def test_derived_signature_is_base_plus_one_keyword_hint(self, derived, base):
-        base_params = list(inspect.signature(base.__init__).parameters.values())
-        derived_params = list(inspect.signature(derived.__init__).parameters.values())
-        assert derived_params[: len(base_params)] == base_params, (
-            f"{derived.__name__} no longer mirrors {base.__name__}'s signature"
+    def test_a_dialect_without_the_extension_refuses_hints(self):
+        dialect = PostgresDialect()
+        assert dialect.supports_statement_hints() is False
+        expr = QueryStatement(
+            dialect,
+            [Column(dialect, "id")],
+            Table(dialect, "t"),
+            hints=(hint_seq_scan(dialect, "t"),),
         )
-        extra = derived_params[len(base_params) :]
-        assert len(extra) == 1, f"{derived.__name__} declares extra parameters: {extra}"
-        hints = extra[0]
-        assert hints.name == "hints"
-        assert hints.kind is inspect.Parameter.KEYWORD_ONLY
-        assert hints.default == ()
+        with pytest.raises(UnsupportedFeatureError) as caught:
+            expr.to_sql()
+        assert "optimizer hints" in str(caught.value)
+
+    def test_a_plain_statement_renders_without_the_extension(self):
+        dialect = PostgresDialect()
+        query = QueryStatement(dialect, [Column(dialect, "id")], Table(dialect, "t"))
+        assert query.to_sql() == ('SELECT "id" FROM "t"', ())
+
+    def test_the_switch_delegates_to_the_extension_probe(self, dialect):
+        assert dialect.supports_statement_hints() is True
+        assert dialect.supports_pg_hint_plan() is True
 
 
 class TestUnaccent:

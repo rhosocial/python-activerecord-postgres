@@ -5,7 +5,7 @@ pg_hint_plan + unaccent: optimizer hints and accent-insensitive text.
 Demonstrates:
 1. Detect both extensions and enable them with expression objects
 2. LOAD pg_hint_plan in the session (needed without shared_preload_libraries)
-3. Build a hinted query carrying a typed hint payload
+3. Build a query carrying a hint payload on the statement itself
 4. Normalize text with unaccent() in a query
 """
 
@@ -45,7 +45,6 @@ from rhosocial.activerecord.backend.expression.statements import ValuesSource  #
 from rhosocial.activerecord.backend.expression.types import TextType  # noqa: E402
 from rhosocial.activerecord.backend.impl.postgres.expression import (  # noqa: E402
     PostgresCreateExtensionStatement,
-    PostgresHintedQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (  # noqa: E402
     PostgresSerialType,
@@ -103,7 +102,7 @@ query_args = dict(
     from_=Table(dialect, TABLE),
 )
 if dialect.supports_pg_hint_plan():
-    query = PostgresHintedQueryStatement(
+    query = QueryStatement(
         dialect, hints=(hint_seq_scan(dialect, TABLE),), **query_args
     )
 else:

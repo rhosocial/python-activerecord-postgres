@@ -22,19 +22,17 @@ backend.execute(*load_pg_hint_plan(dialect).to_sql())
 
 ## Building hints
 
-A pg_hint_plan hint is a comment carried by **one statement**, not a statement of its own. Builders return plain hint payloads (`PostgresHint`), never SQL strings; the dialect formatter is the only place that renders the comment, and it rides on the statement that carries the hints.
+A pg_hint_plan hint is a comment carried by **one statement**, not a statement of its own. The builders return plain dictionary payloads (`HintPayload`), never SQL strings and never expression nodes; the dialect formatter is the only place that renders the comment, and it rides on the statement that carries the hints. Pass the payloads through the statement's `hints=` keyword:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresHintedQueryStatement,
-)
+from rhosocial.activerecord.backend.expression import QueryStatement
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_seq_scan, hint_hash_join, hint_leading, hint_rows,
     hint_parallel, hint_set,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
 
-query = PostgresHintedQueryStatement(
+query = QueryStatement(
     dialect,
     select=[...],
     from_=...,
@@ -49,27 +47,31 @@ sql, params = query.to_sql()
 backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQL))
 ```
 
-The same `hints=` keyword is accepted by `PostgresHintedInsertStatement`, `PostgresHintedUpdateStatement`, `PostgresHintedDeleteStatement` and `PostgresHintedExplainStatement`. The last one writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
+The same `hints=` keyword is accepted by `InsertStatement`, `UpdateStatement`, `DeleteStatement` and `ExplainStatement`. `ExplainStatement` writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresHintedExplainStatement,
-)
+from rhosocial.activerecord.backend.expression import ExplainStatement
 
-explained = PostgresHintedExplainStatement(
+explained = ExplainStatement(
     dialect, query, hints=(hint_seq_scan(dialect, "a"),)
 )
 sql, params = explained.to_sql()
 # /*+ SeqScan(a) */ EXPLAIN SELECT ...
 ```
 
-A hint payload is a plain dictionary with every key present (`PostgresHint.as_dict()`), so it survives artifact serialization; it is not an expression node and never renders on its own.
+An `ExplainStatement` refuses a wrapped statement that already carries its own hints (two prefixes would be ambiguous).
+
+A hint payload is a plain dictionary with every key present (`None`/`()` where a field does not apply; `make_hint_payload()` builds one), so it survives artifact serialization; it is not an expression node and never renders on its own. The dialect that spells the comments renders them, and a dialect that does not refuses a hinted statement with `UnsupportedFeatureError` instead of dropping the hints:
+
+```python
+dialect.supports_statement_hints()   # True only when pg_hint_plan is available
+```
 
 The hint comment precedes the statement, so pass an explicit `stmt_type` when
 executing a hinted query: the backend cannot infer the statement type from the
 first word of the SQL.
 
-`PostgresHintedQueryStatement` and its four siblings are the DSL entry points. Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
+Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
 
 Identifiers and GUC values are validated with full matches; unsafe comment terminators and statement separators are rejected before rendering.
 

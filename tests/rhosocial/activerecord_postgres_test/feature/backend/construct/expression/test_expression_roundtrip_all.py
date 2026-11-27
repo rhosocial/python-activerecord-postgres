@@ -233,7 +233,6 @@ from rhosocial.activerecord.backend.expression.statements.dml import (
     MergeAction,
     MergeActionType,
     MergeStatement,
-    ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -314,14 +313,8 @@ from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import (
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     HintGroup,
     HintKind,
-    PostgresHint,
-)
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
-    PostgresHintedDeleteStatement,
-    PostgresHintedExplainStatement,
-    PostgresHintedInsertStatement,
-    PostgresHintedQueryStatement,
-    PostgresHintedUpdateStatement,
+    hint_payload,
+    make_hint_payload,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.pg_stat import (
     PostgresPgStatStatement,
@@ -344,7 +337,6 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading,
-    hint_seq_scan,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
     collect_expression_classes,
@@ -352,6 +344,30 @@ from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_r
     register_all,
     register_special_constructor,
 )
+
+
+@pytest.fixture
+def postgres_dialect():
+    """This module's dialect, with pg_hint_plan available.
+
+    The matrix includes a hinted ``QueryStatement``, and ``BaseExpression``
+    renders hints only on a dialect whose support switch answers true — that
+    is the whole point of the switch. These are construction tests, so no
+    server is contacted; the extension is simulated on the dialect the way
+    ``introspect_and_adapt()`` would record it.
+    """
+    from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+    from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
+        PostgresExtensionInfo,
+    )
+
+    dialect = PostgresDialect(version=(15, 0, 0))
+    dialect._extensions = {
+        "pg_hint_plan": PostgresExtensionInfo(
+            name="pg_hint_plan", installed=True, available=True, version="1.8.1"
+        )
+    }
+    return dialect
 
 
 def assert_params_equal(a, b, path="params"):
@@ -762,56 +778,18 @@ def register_specials():
 
     # -- pg_hint_plan: a hint payload rides on a statement -------------------
     # A hint is a comment carried by one statement, not a node of its own, so
-    # there is nothing to register for a hint: the five derived statements
-    # carry the payload. Each needs at least one well-formed hint, which the
-    # introspective guess cannot invent (its fillers would be ``()``), so each
-    # gets a real one here. The phrase registered for the query is the one a
-    # host object used to make unwritable: ``Leading`` with a nested join pair.
-    # The builder still accepts ``HintGroup``, but the payload normalises it to
-    # ``("a", "b")``, so the round-trip proves the nested array survives every
-    # reader.
+    # there is nothing to register for a hint: core's ``QueryStatement`` carries
+    # the payload through its ``hints`` keyword. The phrase registered here is
+    # the one a host object used to make unwritable: ``Leading`` with a nested
+    # join pair. The builder normalises ``HintGroup`` to ``("a", "b")``, so the
+    # round-trip proves the nested array survives every reader.
     register_special_constructor(
-        "hinted_statements.PostgresHintedQueryStatement",
-        lambda d: PostgresHintedQueryStatement(
+        "statements.dql.QueryStatement",
+        lambda d: QueryStatement(
             d,
             [Column(d, "a")],
             _table_obj(d),
             hints=(hint_leading(d, HintGroup("a", "b"), "c"),),
-        ),
-    )
-    register_special_constructor(
-        "hinted_statements.PostgresHintedInsertStatement",
-        lambda d: PostgresHintedInsertStatement(
-            d,
-            _table_obj(d),
-            ValuesSource(d, [[Literal(d, 1)]]),
-            ["a"],
-            hints=(hint_seq_scan(d, "t"),),
-        ),
-    )
-    register_special_constructor(
-        "hinted_statements.PostgresHintedUpdateStatement",
-        lambda d: PostgresHintedUpdateStatement(
-            d,
-            _table_obj(d),
-            {"a": Literal(d, 1)},
-            hints=(hint_seq_scan(d, "t"),),
-        ),
-    )
-    register_special_constructor(
-        "hinted_statements.PostgresHintedDeleteStatement",
-        lambda d: PostgresHintedDeleteStatement(
-            d,
-            _table_obj(d),
-            hints=(hint_seq_scan(d, "t"),),
-        ),
-    )
-    register_special_constructor(
-        "hinted_statements.PostgresHintedExplainStatement",
-        lambda d: PostgresHintedExplainStatement(
-            d,
-            _one_column_query(d),
-            hints=(hint_seq_scan(d, "t"),),
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------
@@ -1313,8 +1291,9 @@ UNCONSTRUCTIBLE = (
     # statement -- each carried a payload the introspective filler could not
     # supply (a type name, a query kind). Each now has a special constructor,
     # so the matrix renders them instead of skipping them. The pg_hint_plan
-    # nodes that used to be here are gone: a hint is a payload carried by one
-    # of the five hinted statements, and each of those has its own constructor.
+    # entries that used to be here are gone: a hint is a payload carried by
+    # core's ``QueryStatement`` through ``hints=``, and that query has a
+    # special constructor above.
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own
@@ -2244,7 +2223,7 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
 def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     """A ``Leading`` hint keeps its nested pair on every wire, byte for byte."""
     dialect = postgres_dialect
-    hinted = PostgresHintedQueryStatement(
+    hinted = QueryStatement(
         dialect,
         [Column(dialect, "a")],
         _table_obj(dialect),
@@ -2266,7 +2245,10 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
         ("xml", serialize_xml, deserialize_xml),
     ):
         restored = dec(enc(hinted), dialect, registry=MATRIX_REGISTRY)
-        assert restored.hints == hinted.hints, channel
+        # A wire has no tuple/array distinction, so the payload is compared in
+        # its canonical form: the same keys and the same arrays, whichever
+        # container came back.
+        assert hint_payload(restored.hints[0]) == hint_payload(hinted.hints[0]), channel
         restored_sql, restored_params = restored.to_sql()
         assert restored_sql == sql, channel
         assert list(restored_params) == list(params), channel
@@ -2275,12 +2257,12 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     # when SQL is asked for: the constructor collects even a pair the renderer
     # will refuse.
     for bad_pair in ((), ("a", "b c"), (1,)):
-        unvalidated = PostgresHintedQueryStatement(
+        unvalidated = QueryStatement(
             dialect,
             [Column(dialect, "a")],
             _table_obj(dialect),
             hints=(
-                PostgresHint(HintKind.LEADING, sequence=(bad_pair, "c")),
+                make_hint_payload(HintKind.LEADING, sequence=(bad_pair, "c")),
             ),
         )
         with pytest.raises(TypeError):
