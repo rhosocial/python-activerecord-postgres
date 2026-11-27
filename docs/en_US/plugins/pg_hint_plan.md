@@ -110,7 +110,38 @@ The hint comment precedes the statement, so pass an explicit `stmt_type` when
 executing a hinted query: the backend cannot infer the statement type from the
 first word of the SQL.
 
-Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
+### Hint vocabulary (26 kinds)
+
+| Kind | Builder | Gate |
+|---|---|---|
+| `SeqScan` | `hint_seq_scan` | — |
+| `TidScan` | `hint_tid_scan` | — |
+| `IndexScan` | `hint_index_scan` | — |
+| `IndexOnlyScan` | `hint_index_only_scan` | — |
+| `BitmapScan` | `hint_bitmap_scan` | — |
+| `IndexScanRegexp` | `hint_index_scan_regexp` | — |
+| `IndexOnlyScanRegexp` | `hint_index_only_scan_regexp` | — |
+| `BitmapScanRegexp` | `hint_bitmap_scan_regexp` | — |
+| `NoSeqScan` | `hint_no_seq_scan` | — |
+| `NoTidScan` | `hint_no_tid_scan` | — |
+| `NoIndexScan` | `hint_no_index_scan` | — |
+| `NoIndexOnlyScan` | `hint_no_index_only_scan` | — |
+| `NoBitmapScan` | `hint_no_bitmap_scan` | — |
+| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 2.0 |
+| `NestLoop` | `hint_nest_loop` | — |
+| `HashJoin` | `hint_hash_join` | — |
+| `MergeJoin` | `hint_merge_join` | — |
+| `NoNestLoop` | `hint_no_nest_loop` | — |
+| `NoHashJoin` | `hint_no_hash_join` | — |
+| `NoMergeJoin` | `hint_no_merge_join` | — |
+| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 |
+| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 |
+| `Leading` | `hint_leading` | — |
+| `Rows` | `hint_rows` | — |
+| `Parallel` | `hint_parallel` | — |
+| `Set` | `hint_set` | — |
+
+A `*Regexp` builder takes POSIX patterns after the target and stores them in the payload's `indexes` field; `DisableIndex` takes index names there. Gated kinds build normally and are refused at render time with `UnsupportedFeatureError` (the error names the server or extension version in force).
 
 ## What a hint target is
 
@@ -140,6 +171,8 @@ Identifiers and GUC values are validated with full matches; unsafe comment termi
 dialect.supports_pg_hint_plan()          # extension installed and version >= 1.3
 dialect.get_extension_version("pg_hint_plan")
 ```
+
+The version gates above use `dialect.version` (server, for `Memoize`/`NoMemoize`) and `get_extension_version("pg_hint_plan")` (extension, for `DisableIndex`).
 
 ## See also
 

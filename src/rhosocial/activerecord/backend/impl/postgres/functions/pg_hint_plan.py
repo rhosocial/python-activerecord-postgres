@@ -71,14 +71,63 @@ def hint_bitmap_scan(dialect: "SQLDialectBase", table: HintTarget, *indexes: str
     return make_hint_payload(HintKind.BITMAP_SCAN, tables=(hint_target(table),), indexes=indexes)
 
 
+def hint_index_scan_regexp(
+    dialect: "SQLDialectBase", table: HintTarget, *regexps: str
+) -> "HintPayload":
+    """``IndexScanRegexp(table [POSIX Regexp ...])``."""
+    return make_hint_payload(
+        HintKind.INDEX_SCAN_REGEXP, tables=(hint_target(table),), indexes=regexps
+    )
+
+
+def hint_index_only_scan_regexp(
+    dialect: "SQLDialectBase", table: HintTarget, *regexps: str
+) -> "HintPayload":
+    """``IndexOnlyScanRegexp(table [POSIX Regexp ...])``."""
+    return make_hint_payload(
+        HintKind.INDEX_ONLY_SCAN_REGEXP, tables=(hint_target(table),), indexes=regexps
+    )
+
+
+def hint_bitmap_scan_regexp(
+    dialect: "SQLDialectBase", table: HintTarget, *regexps: str
+) -> "HintPayload":
+    """``BitmapScanRegexp(table [POSIX Regexp ...])``."""
+    return make_hint_payload(
+        HintKind.BITMAP_SCAN_REGEXP, tables=(hint_target(table),), indexes=regexps
+    )
+
+
 def hint_no_seq_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPayload":
     """``NoSeqScan(table)``."""
     return make_hint_payload(HintKind.NO_SEQ_SCAN, tables=(hint_target(table),))
 
 
+def hint_no_tid_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPayload":
+    """``NoTidScan(table)``."""
+    return make_hint_payload(HintKind.NO_TID_SCAN, tables=(hint_target(table),))
+
+
 def hint_no_index_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPayload":
     """``NoIndexScan(table)``."""
     return make_hint_payload(HintKind.NO_INDEX_SCAN, tables=(hint_target(table),))
+
+
+def hint_no_index_only_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPayload":
+    """``NoIndexOnlyScan(table)``."""
+    return make_hint_payload(HintKind.NO_INDEX_ONLY_SCAN, tables=(hint_target(table),))
+
+
+def hint_no_bitmap_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPayload":
+    """``NoBitmapScan(table)``."""
+    return make_hint_payload(HintKind.NO_BITMAP_SCAN, tables=(hint_target(table),))
+
+
+def hint_disable_index(
+    dialect: "SQLDialectBase", table: HintTarget, *indexes: str
+) -> "HintPayload":
+    """``DisableIndex(table index ...)`` (pg_hint_plan 2.0+)."""
+    return make_hint_payload(HintKind.DISABLE_INDEX, tables=(hint_target(table),), indexes=indexes)
 
 
 def hint_hash_join(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
@@ -94,6 +143,31 @@ def hint_merge_join(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayl
 def hint_nest_loop(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
     """``NestLoop(table table ...)``."""
     return make_hint_payload(HintKind.NEST_LOOP, tables=_targets(tables))
+
+
+def hint_no_hash_join(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
+    """``NoHashJoin(table table ...)``."""
+    return make_hint_payload(HintKind.NO_HASH_JOIN, tables=_targets(tables))
+
+
+def hint_no_merge_join(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
+    """``NoMergeJoin(table table ...)``."""
+    return make_hint_payload(HintKind.NO_MERGE_JOIN, tables=_targets(tables))
+
+
+def hint_no_nest_loop(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
+    """``NoNestLoop(table table ...)``."""
+    return make_hint_payload(HintKind.NO_NEST_LOOP, tables=_targets(tables))
+
+
+def hint_memoize(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
+    """``Memoize(table table ...)`` (PostgreSQL 17+)."""
+    return make_hint_payload(HintKind.MEMOIZE, tables=_targets(tables))
+
+
+def hint_no_memoize(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
+    """``NoMemoize(table table ...)`` (PostgreSQL 17+)."""
+    return make_hint_payload(HintKind.NO_MEMOIZE, tables=_targets(tables))
 
 
 def hint_leading(
@@ -155,11 +229,23 @@ __all__ = [
     "hint_index_scan",
     "hint_index_only_scan",
     "hint_bitmap_scan",
+    "hint_index_scan_regexp",
+    "hint_index_only_scan_regexp",
+    "hint_bitmap_scan_regexp",
     "hint_no_seq_scan",
+    "hint_no_tid_scan",
     "hint_no_index_scan",
+    "hint_no_index_only_scan",
+    "hint_no_bitmap_scan",
+    "hint_disable_index",
     "hint_hash_join",
     "hint_merge_join",
     "hint_nest_loop",
+    "hint_no_hash_join",
+    "hint_no_merge_join",
+    "hint_no_nest_loop",
+    "hint_memoize",
+    "hint_no_memoize",
     "hint_leading",
     "hint_rows",
     "hint_parallel",

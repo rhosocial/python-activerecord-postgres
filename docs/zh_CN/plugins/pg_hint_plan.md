@@ -107,7 +107,38 @@ dialect.supports_pg_hint_plan()   # 仅在 pg_hint_plan 可用时为 True
 
 提示注释位于语句之前，因此执行带提示的查询时要显式传 `stmt_type`：后端无法从 SQL 首词推断语句类型。
 
-可用 builder：`hint_seq_scan`、`hint_tid_scan`、`hint_index_scan`、`hint_index_only_scan`、`hint_bitmap_scan`、`hint_no_seq_scan`、`hint_no_index_scan`、`hint_hash_join`、`hint_merge_join`、`hint_nest_loop`、`hint_leading`、`hint_rows`、`hint_parallel`、`hint_set`。
+### 提示词表（26 种）
+
+| 提示 | Builder | 版本门槛 |
+|---|---|---|
+| `SeqScan` | `hint_seq_scan` | — |
+| `TidScan` | `hint_tid_scan` | — |
+| `IndexScan` | `hint_index_scan` | — |
+| `IndexOnlyScan` | `hint_index_only_scan` | — |
+| `BitmapScan` | `hint_bitmap_scan` | — |
+| `IndexScanRegexp` | `hint_index_scan_regexp` | — |
+| `IndexOnlyScanRegexp` | `hint_index_only_scan_regexp` | — |
+| `BitmapScanRegexp` | `hint_bitmap_scan_regexp` | — |
+| `NoSeqScan` | `hint_no_seq_scan` | — |
+| `NoTidScan` | `hint_no_tid_scan` | — |
+| `NoIndexScan` | `hint_no_index_scan` | — |
+| `NoIndexOnlyScan` | `hint_no_index_only_scan` | — |
+| `NoBitmapScan` | `hint_no_bitmap_scan` | — |
+| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 2.0 |
+| `NestLoop` | `hint_nest_loop` | — |
+| `HashJoin` | `hint_hash_join` | — |
+| `MergeJoin` | `hint_merge_join` | — |
+| `NoNestLoop` | `hint_no_nest_loop` | — |
+| `NoHashJoin` | `hint_no_hash_join` | — |
+| `NoMergeJoin` | `hint_no_merge_join` | — |
+| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 |
+| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 |
+| `Leading` | `hint_leading` | — |
+| `Rows` | `hint_rows` | — |
+| `Parallel` | `hint_parallel` | — |
+| `Set` | `hint_set` | — |
+
+`*Regexp` builder 在目标之后接受 POSIX 正则，存入负载的 `indexes` 字段；`DisableIndex` 在同一字段放索引名。有版本门槛的提示仍可正常构造，仅在渲染时以 `UnsupportedFeatureError` 拒绝，异常中会点明当前服务端或扩展版本。
 
 ## 提示目标是什么
 
@@ -137,6 +168,8 @@ hint_seq_scan(dialect, Table(dialect, "orders", schema_name="sales"))
 dialect.supports_pg_hint_plan()          # 扩展已装且版本 >= 1.3
 dialect.get_extension_version("pg_hint_plan")
 ```
+
+上述版本门槛分别用 `dialect.version`（服务端，`Memoize`/`NoMemoize`）和 `get_extension_version("pg_hint_plan")`（扩展，`DisableIndex`）探测。
 
 ## 另见
 

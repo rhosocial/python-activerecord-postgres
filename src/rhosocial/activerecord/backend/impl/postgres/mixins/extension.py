@@ -156,6 +156,7 @@ class PostgresExtensionMixin:
             "repository": "https://github.com/ossc-db/pg_hint_plan",
             "features": {
                 "hints": {"min_version": "1.3"},
+                "disable_index": {"min_version": "2.0"},
             },
         },
         "unaccent": {

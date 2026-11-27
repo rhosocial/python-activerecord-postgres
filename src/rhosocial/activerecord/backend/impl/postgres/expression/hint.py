@@ -47,11 +47,23 @@ class HintKind(str, Enum):
     INDEX_SCAN = "IndexScan"
     INDEX_ONLY_SCAN = "IndexOnlyScan"
     BITMAP_SCAN = "BitmapScan"
+    INDEX_SCAN_REGEXP = "IndexScanRegexp"
+    INDEX_ONLY_SCAN_REGEXP = "IndexOnlyScanRegexp"
+    BITMAP_SCAN_REGEXP = "BitmapScanRegexp"
     NO_SEQ_SCAN = "NoSeqScan"
+    NO_TID_SCAN = "NoTidScan"
     NO_INDEX_SCAN = "NoIndexScan"
+    NO_INDEX_ONLY_SCAN = "NoIndexOnlyScan"
+    NO_BITMAP_SCAN = "NoBitmapScan"
+    DISABLE_INDEX = "DisableIndex"
     HASH_JOIN = "HashJoin"
     MERGE_JOIN = "MergeJoin"
     NEST_LOOP = "NestLoop"
+    NO_HASH_JOIN = "NoHashJoin"
+    NO_MERGE_JOIN = "NoMergeJoin"
+    NO_NEST_LOOP = "NoNestLoop"
+    MEMOIZE = "Memoize"
+    NO_MEMOIZE = "NoMemoize"
     LEADING = "Leading"
     ROWS = "Rows"
     PARALLEL = "Parallel"
@@ -72,6 +84,8 @@ class CorrectionKind(str, Enum):
 #: Every key a hint payload carries, in the order the artifact writes them.
 #: A dictionary on the wire always has all of them; an absent value is ``None``
 #: (or an empty sequence), which is what makes the payload self-describing.
+#: For the ``*Regexp`` kinds, ``indexes`` holds the POSIX patterns instead of
+#: index names -- they occupy the same slot after the resolved target.
 HINT_FIELDS = (
     "kind",
     "tables",
@@ -347,14 +361,41 @@ _REQUIRES_TABLES = (
     HintKind.INDEX_SCAN,
     HintKind.INDEX_ONLY_SCAN,
     HintKind.BITMAP_SCAN,
+    HintKind.INDEX_SCAN_REGEXP,
+    HintKind.INDEX_ONLY_SCAN_REGEXP,
+    HintKind.BITMAP_SCAN_REGEXP,
     HintKind.NO_SEQ_SCAN,
+    HintKind.NO_TID_SCAN,
     HintKind.NO_INDEX_SCAN,
+    HintKind.NO_INDEX_ONLY_SCAN,
+    HintKind.NO_BITMAP_SCAN,
+    HintKind.DISABLE_INDEX,
     HintKind.HASH_JOIN,
     HintKind.MERGE_JOIN,
     HintKind.NEST_LOOP,
+    HintKind.NO_HASH_JOIN,
+    HintKind.NO_MERGE_JOIN,
+    HintKind.NO_NEST_LOOP,
+    HintKind.MEMOIZE,
+    HintKind.NO_MEMOIZE,
     HintKind.ROWS,
     HintKind.PARALLEL,
 )
+
+#: Kinds whose ``indexes`` field carries POSIX regexps rather than index names.
+_REGEXP_KINDS = frozenset(
+    {
+        HintKind.INDEX_SCAN_REGEXP,
+        HintKind.INDEX_ONLY_SCAN_REGEXP,
+        HintKind.BITMAP_SCAN_REGEXP,
+    }
+)
+
+
+def _assert_hint_pattern(value: str) -> None:
+    """A regexp argument is free text, but may never end the hint comment."""
+    if not isinstance(value, str) or not value or _HINT_COMMENT_END in value:
+        raise TypeError(f"Invalid pg_hint_plan regexp: {value!r}")
 
 
 def assert_hint_payload(hint: object) -> None:
@@ -379,7 +420,10 @@ def assert_hint_payload(hint: object) -> None:
         if not isinstance(values, tuple):
             raise TypeError(f"{field}s must be a sequence of identifiers, got {values!r}")
         for value in values:
-            _assert_identifier(value, field)
+            if field == "index" and kind in _REGEXP_KINDS:
+                _assert_hint_pattern(value)
+            else:
+                _assert_identifier(value, field)
     for item in hint["sequence"]:
         if isinstance(item, str):
             _assert_identifier(item, "join target")
