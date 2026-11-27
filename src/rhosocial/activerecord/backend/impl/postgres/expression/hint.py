@@ -55,6 +55,41 @@ def _require_identifier(value: str, field: str) -> str:
     return value
 
 
+def _assert_identifier(value: str, field: str) -> None:
+    """The render-time form of :func:`_require_identifier`.
+
+    A malformed payload is a caller error, so the expression's
+    :meth:`check_renderable` reports it as ``TypeError``; the constructor only
+    collects.
+    """
+    if not isinstance(value, str) or not value.isidentifier():
+        raise TypeError(f"Invalid pg_hint_plan {field}: {value!r}")
+
+
+def _resolve_hint_kind(value: object) -> Optional[HintKind]:
+    """The :class:`HintKind` a member or its wire spelling names, or ``None``."""
+    if isinstance(value, HintKind):
+        return value
+    if isinstance(value, str):
+        try:
+            return HintKind(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _resolve_correction_kind(value: object) -> Optional[CorrectionKind]:
+    """The :class:`CorrectionKind` a member or its wire spelling names, or ``None``."""
+    if isinstance(value, CorrectionKind):
+        return value
+    if isinstance(value, str):
+        try:
+            return CorrectionKind(value)
+        except ValueError:
+            return None
+    return None
+
+
 class HintGroup:
     """A nested join pair for ``Leading((a b) c)``."""
 
@@ -85,45 +120,62 @@ class PostgresHintExpression(BaseExpression):
         guc_value: Optional[Union[str, int, float]] = None,
     ):
         super().__init__(dialect)
-        if not isinstance(kind, HintKind):
-            raise TypeError(f"kind must be a HintKind, got {type(kind).__name__}")
+        # Collect only. The hint's vocabulary and identifier contracts are
+        # checked by :meth:`check_renderable` when SQL is asked for, so a hint
+        # read back from an artifact always builds and a caller error is
+        # reported as one.
         self.kind = kind
-        self.tables = tuple(_require_identifier(table, "table") for table in tables)
-        self.indexes = tuple(_require_identifier(index, "index") for index in indexes)
+        self.tables = tuple(tables)
+        self.indexes = tuple(indexes)
         self.groups = tuple(groups)
-        if any(not isinstance(group, HintGroup) for group in self.groups):
-            raise TypeError("groups must contain HintGroup values")
         self.sequence = tuple(sequence)
-        for item in self.sequence:
-            if isinstance(item, str):
-                _require_identifier(item, "join target")
-            elif not isinstance(item, HintGroup):
-                raise TypeError("sequence must contain table names or HintGroup values")
-        if correction_kind is not None:
-            if not isinstance(correction_kind, CorrectionKind):
-                raise TypeError("correction_kind must be a CorrectionKind")
-            if not isinstance(correction_amount, (int, float)) or isinstance(
-                correction_amount, bool
-            ):
-                raise ValueError("correction_amount must be a number")
-        elif correction_amount is not None:
-            raise ValueError("correction_amount requires correction_kind")
-        if workers is not None and (not isinstance(workers, int) or workers < 0):
-            raise ValueError("Parallel worker count must be a non-negative integer")
-        if soft is not None and not isinstance(soft, bool):
-            raise TypeError(f"soft must be a bool, got {type(soft).__name__}")
-        if guc is not None:
-            _require_identifier(guc, "GUC name")
-        if guc_value is not None and not isinstance(guc_value, (str, int, float)):
-            raise TypeError("guc_value must be a string or number")
-        if isinstance(guc_value, str):
-            _require_identifier(guc_value, "GUC value")
         self.correction_kind = correction_kind
         self.correction_amount = correction_amount
         self.workers = workers
         self.soft = soft
         self.guc = guc
         self.guc_value = guc_value
+
+    def check_renderable(self) -> None:
+        """The phrase's grammar: a hint name and its typed identifiers."""
+        if _resolve_hint_kind(self.kind) is None:
+            raise TypeError(
+                f"{type(self).__name__}.kind must name a HintKind, got {self.kind!r}"
+            )
+        for field, values in (("table", self.tables), ("index", self.indexes)):
+            for value in values:
+                _assert_identifier(value, field)
+        for group in self.groups:
+            if not isinstance(group, HintGroup):
+                raise TypeError("groups must contain HintGroup values")
+        for item in self.sequence:
+            if isinstance(item, str):
+                _assert_identifier(item, "join target")
+            elif not isinstance(item, HintGroup):
+                raise TypeError("sequence must contain table names or HintGroup values")
+        if self.correction_kind is not None:
+            if _resolve_correction_kind(self.correction_kind) is None:
+                raise TypeError("correction_kind must be a CorrectionKind")
+            if not isinstance(self.correction_amount, (int, float)) or isinstance(
+                self.correction_amount, bool
+            ):
+                raise TypeError("correction_amount must be a number")
+        elif self.correction_amount is not None:
+            raise TypeError("correction_amount requires correction_kind")
+        if self.workers is not None and (
+            not isinstance(self.workers, int) or self.workers < 0
+        ):
+            raise TypeError("Parallel worker count must be a non-negative integer")
+        if self.soft is not None and not isinstance(self.soft, bool):
+            raise TypeError(f"soft must be a bool, got {type(self.soft).__name__}")
+        if self.guc is not None:
+            _assert_identifier(self.guc, "GUC name")
+        if self.guc_value is not None and not isinstance(
+            self.guc_value, (str, int, float)
+        ):
+            raise TypeError("guc_value must be a string or number")
+        if isinstance(self.guc_value, str):
+            _assert_identifier(self.guc_value, "GUC value")
 
     @property
     def format_method(self) -> str:
@@ -136,13 +188,17 @@ class PostgresHintedQueryExpression(BaseExpression):
 
     def __init__(self, dialect: "SQLDialectBase", query, hints: Tuple[PostgresHintExpression, ...]):
         super().__init__(dialect)
-        values = tuple(hints)
-        if not values:
-            raise ValueError("At least one hint is required")
-        if any(not isinstance(hint, PostgresHintExpression) for hint in values):
-            raise TypeError("hints must contain PostgresHintExpression values")
+        # Collect only; the non-empty list of hints is checked when SQL is
+        # asked for, so an artifact always builds.
         self.query = query
-        self.hints = values
+        self.hints = tuple(hints)
+
+    def check_renderable(self) -> None:
+        """A hinted query needs at least one hint, and hints are typed hints."""
+        if not self.hints:
+            raise TypeError("At least one hint is required")
+        if any(not isinstance(hint, PostgresHintExpression) for hint in self.hints):
+            raise TypeError("hints must contain PostgresHintExpression values")
 
     @property
     def format_method(self) -> str:

@@ -50,7 +50,8 @@ class PostgresPgHintPlanMixin:
                 f"format_pg_hint expects a PostgresHintExpression, got {type(expr).__name__}"
             )
         arguments = []
-        if expr.kind is HintKind.LEADING:
+        kind = HintKind(expr.kind)
+        if kind is HintKind.LEADING:
             for item in expr.sequence:
                 if isinstance(item, HintGroup):
                     arguments.append("(" + " ".join(item.tables) + ")")
@@ -69,8 +70,8 @@ class PostgresPgHintPlanMixin:
             if expr.guc_value is not None:
                 arguments.append(str(expr.guc_value))
         if not arguments:
-            raise ValueError(f"{expr.kind.value} needs at least one parameter")
-        return str(expr.kind) + "(" + " ".join(arguments) + ")", ()
+            raise ValueError(f"{kind.value} needs at least one parameter")
+        return str(kind) + "(" + " ".join(arguments) + ")", ()
 
     def format_pg_hint_plan_hinted_query(
         self, expr: PostgresHintedQueryExpression

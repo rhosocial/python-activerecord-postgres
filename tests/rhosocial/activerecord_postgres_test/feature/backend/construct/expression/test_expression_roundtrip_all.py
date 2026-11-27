@@ -12,8 +12,8 @@ by what they hold. ``test_value_kind_plane`` asserts that plane (wire name,
 payload type, round-trip) because the class matrix sees only one row for it
 whatever the payloads are.
 
-Current census, for the record: 559 registered classes, 557 constructible, 2
-pinned unconstructible, 498 rendered, 36 refused as unsupported, 20 classified
+Current census, for the record: 619 registered classes, 619 constructible, 0
+pinned unconstructible, 555 rendered, 41 refused as unsupported, 20 classified
 non-renders, 3 with no formatter declared. The two gap tables
 (``_CODEC_GAPS`` / ``_CODEC_RENDER_GAPS``) are the only places a parameter may
 be lost, each pinned per class *and* channel with its exception type.
@@ -310,8 +310,17 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
 from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import (
     PostgresEnumType,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
+    HintKind,
+    PostgresHintedQueryExpression,
+    PostgresHintExpression,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.pg_stat import (
+    PostgresPgStatStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresArrayType,
+    PostgresEnumColumnType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.values import (
     PostgresHstoreValue,
@@ -737,6 +746,35 @@ def register_specials():
         lambda d: PostgresAlterTableSettingsStatement(
             d, table_name="t", mode=LoggingMode.LOGGED
         ),
+    )
+
+    # -- pg_hint_plan: a closed hint kind plus typed identifiers ------------
+    # The kind is an enum member and the identifiers have to satisfy Python's
+    # identifier contract, so the guess's placeholder string names neither. The
+    # wrapper additionally needs a real statement and at least one real hint.
+    register_special_constructor(
+        "hint.PostgresHintExpression",
+        lambda d: PostgresHintExpression(
+            d, HintKind.INDEX_SCAN, tables=("t",), indexes=("idx",)
+        ),
+    )
+    register_special_constructor(
+        "hint.PostgresHintedQueryExpression",
+        lambda d: PostgresHintedQueryExpression(
+            d,
+            _one_column_query(d),
+            (PostgresHintExpression(d, HintKind.SEQ_SCAN, tables=("t",)),),
+        ),
+    )
+    # -- pg_stat_statements: one of the closed standard query kinds ---------
+    register_special_constructor(
+        "pg_stat.PostgresPgStatStatement",
+        lambda d: PostgresPgStatStatement(d, "stats", limit=10),
+    )
+    # -- the named enum column type: a name plus its labels -----------------
+    register_special_constructor(
+        "types.PostgresEnumColumnType",
+        lambda d: PostgresEnumColumnType(d, type_name="mood", values=["sad", "ok"]),
     )
 
     # -- PostgreSQL statements whose required slot is a non-empty member ----
@@ -1203,8 +1241,8 @@ register_specials()
 
 #: Classes the generic introspective constructor cannot build.
 #:
-#: Each entry is a real coverage gap, named here so it is visible rather than
-#: lost. ``test_unconstructible_list_is_exact`` pins the tuple in both
+#: Each entry would be a real coverage gap, named here so it is visible rather
+#: than lost. ``test_unconstructible_list_is_exact`` pins the tuple in both
 #: directions, so a class that gains a constructor fails here until this entry is
 #: removed, and a class that starts failing to build fails here too -- neither can
 #: become a quiet skip.
@@ -1223,29 +1261,11 @@ UNCONSTRUCTIBLE = (
     # ``test_unconstructible_list_is_exact`` observes right now, and it is pinned
     # in both directions so the first class that needs an exemption fails CI.
     #
-    # Two are exempt, each for the same underlying reason: a required value
-    # sits behind a defaulted parameter, and the filler skips defaulted ones.
-    # (``CustomType`` used to be here for the same reason -- ``raw`` was
-    # keyword-only -- and now has a constructor, so it is covered instead.)
-    #
-    # UUID constant. This left the list when `UUIDConstantExpression.__init__`
-    # stopped validating `which`: an unknown word is now a `TypeError` from
-    # the formatter, so the node itself always constructs and the filler's
-    # "x" reaches the matrix rather than being refused early.
-    # PG_HINT_PLAN HINTS. Both nodes carry typed fields the generic filler
-    # cannot supply: an enum kind plus validated identifiers on the hint, and
-    # a statement expression plus a tuple of hints on the wrapper. Their SQL
-    # is covered by the dedicated construct tests instead.
-    "rhosocial.activerecord.backend.impl.postgres.expression.hint.PostgresHintExpression",
-    "rhosocial.activerecord.backend.impl.postgres.expression.hint.PostgresHintedQueryExpression",
-    # POSTGRES ENUM COLUMN. type_name, schema and values all default to None, so
-    # the filler supplies none of them and the type declares neither its name nor
-    # its members.
-    "rhosocial.activerecord.backend.impl.postgres.expression.types.PostgresEnumColumnType",
-    # PG STAT STATEMENT. `query_kind` is required, but the filler's "x" is
-    # refused by the closed QUERY_KINDS vocabulary; construct via the factories
-    # in functions.pg_stat_statements instead.
-    "rhosocial.activerecord.backend.impl.postgres.expression.pg_stat.PostgresPgStatStatement",
+    # The last four -- the two pg_hint_plan nodes, the named enum column type and
+    # the pg_stat_statements statement -- each carried a payload the introspective
+    # filler could not supply (an enum kind, a statement plus hints, a type name,
+    # a query kind). Each now has a special constructor, so the matrix renders
+    # them instead of skipping them.
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own

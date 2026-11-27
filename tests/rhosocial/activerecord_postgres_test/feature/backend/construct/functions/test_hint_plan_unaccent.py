@@ -66,18 +66,22 @@ class TestHintBuilders:
 
     @pytest.mark.parametrize("table", ["t;DROP TABLE t", "a b", "", "1bad"])
     def test_untrusted_identifiers_rejected(self, dialect, table):
-        with pytest.raises(ValueError):
-            hint_seq_scan(dialect, table)
+        # The constructor collects; the renderer refuses the identifier.
+        hint = hint_seq_scan(dialect, table)
+        with pytest.raises((ValueError, TypeError)):
+            hint.to_sql()
 
     @pytest.mark.parametrize("amount", ["100", None, True])
     def test_bad_rows_amount_rejected(self, dialect, amount):
+        hint = hint_rows(dialect, CorrectionKind.ABSOLUTE, amount, "a")
         with pytest.raises((ValueError, TypeError)):
-            hint_rows(dialect, CorrectionKind.ABSOLUTE, amount, "a")
+            hint.to_sql()
 
     @pytest.mark.parametrize("guc,value", [("bad-name", "1"), ("valid", "1;2")])
     def test_bad_guc_rejected(self, dialect, guc, value):
-        with pytest.raises(ValueError):
-            hint_set(dialect, guc, value)
+        hint = hint_set(dialect, guc, value)
+        with pytest.raises((ValueError, TypeError)):
+            hint.to_sql()
 
 
 class TestHintedQuery:
@@ -96,12 +100,14 @@ class TestHintedQuery:
         assert load_pg_hint_plan(dialect).to_sql() == ("LOAD 'pg_hint_plan'", ())
 
     def test_empty_hints_rejected(self, dialect, query):
-        with pytest.raises(ValueError):
-            dialect.build_hinted_query(query, [])
+        expr = dialect.build_hinted_query(query, [])
+        with pytest.raises((ValueError, TypeError)):
+            expr.to_sql()
 
     def test_non_hint_rejected(self, dialect, query):
+        expr = dialect.build_hinted_query(query, ["SeqScan(t)"])
         with pytest.raises(TypeError):
-            dialect.build_hinted_query(query, ["SeqScan(t)"])
+            expr.to_sql()
 
 
 class TestUnaccent:

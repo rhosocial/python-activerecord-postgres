@@ -24,13 +24,18 @@ class PostgresPgStatStatement(BaseExpression):
         queryid: Optional[int] = None,
     ):
         super().__init__(dialect)
-        if query_kind not in self.QUERY_KINDS:
-            raise ValueError(f"Unsupported pg_stat query kind: {query_kind!r}")
+        # Collect only; the closed QUERY_KINDS vocabulary is checked when SQL
+        # is asked for, so a statement read back from an artifact always builds.
         self.query_kind = query_kind
         self.limit = limit
         self.sort_by = sort_by
         self.descending = descending
         self.queryid = queryid
+
+    def check_renderable(self) -> None:
+        """The statement's kind must name one of the standard queries."""
+        if not isinstance(self.query_kind, str) or self.query_kind not in self.QUERY_KINDS:
+            raise TypeError(f"Unsupported pg_stat query kind: {self.query_kind!r}")
 
     @property
     def format_method(self) -> str:

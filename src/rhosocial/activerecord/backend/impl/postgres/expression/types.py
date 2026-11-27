@@ -149,15 +149,21 @@ class PostgresEnumColumnType(EnumType):
         schema: Optional[str] = None,
         values: Optional[list] = None,
     ):
-        if not type_name:
-            raise ValueError(
+        # Collect only. Whether the type has a name -- PostgreSQL refers to an
+        # enum by the name given to CREATE TYPE -- is checked when SQL is asked
+        # for, so a type read back from an artifact always builds.
+        super().__init__(dialect, values=values)
+        self.type_name = type_name
+        self.schema = schema
+
+    def check_renderable(self) -> None:
+        """A column cannot state a PostgreSQL enum without the type's name."""
+        if not isinstance(self.type_name, str) or not self.type_name.strip():
+            raise TypeError(
                 "PostgresEnumColumnType requires a type_name: PostgreSQL refers "
                 "to an enum by the name given to CREATE TYPE, so a column "
                 "cannot state one without it"
             )
-        super().__init__(dialect, values=values)
-        self.type_name = type_name
-        self.schema = schema
 
     # Identity is the *named type* plus its labels: two columns pointing at
     # different enums are different columns even if the label lists happen to
