@@ -228,6 +228,14 @@ class PostgresMaterializedViewMixin(ViewMixin):
             raise UnsupportedFeatureError(self.name, "CREATE MATERIALIZED VIEW")
         self._check_with_data_clause_support(expr)
 
+        if getattr(expr.query, "hints", ()):
+            raise TypeError(
+                f"{type(expr).__name__}: the embedded query carries optimizer hints. "
+                "A hint comment belongs to the outermost statement -- it is a comment "
+                "on the statement as a whole, and two blocks are rejected -- so the "
+                "hints must be given to this statement, not to the query it wraps."
+            )
+
         parts = ["CREATE MATERIALIZED VIEW"]
 
         # IF NOT EXISTS exists only on the PostgreSQL subclass; the core

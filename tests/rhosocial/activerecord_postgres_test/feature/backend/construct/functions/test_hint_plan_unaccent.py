@@ -7,9 +7,16 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression import Column, QueryStatement
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.objects import Index, Table, View
+from rhosocial.activerecord.backend.expression.objects import Index, MaterializedView, Table, View
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    CreateTableAsStatement,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_view import (
+    CreateMaterializedViewStatement,
+    RefreshMaterializedViewStatement,
+)
 from rhosocial.activerecord.backend.expression.statements.dml import (
     DeleteStatement,
     InsertStatement,
@@ -47,8 +54,11 @@ def dialect():
     A hinted statement renders only on a dialect whose ``supports_statement_hints()``
     answers true, which is the pg_hint_plan probe. The extension is simulated here
     because these are construction tests: no server is contacted.
+
+    The version is pinned past every gate the statements below consult:
+    materialized views need 9.3+ and ``IF NOT EXISTS`` / ``CONCURRENTLY`` 9.4+.
     """
-    dialect = PostgresDialect()
+    dialect = PostgresDialect(version=(16, 0, 0))
     dialect._extensions = {
         "pg_hint_plan": PostgresExtensionInfo(
             name="pg_hint_plan", installed=True, available=True, version="1.8.1"
@@ -69,6 +79,13 @@ def _hinted_query(dialect, hint):
         select=[Column(dialect, "id")],
         from_=Table(dialect, "t"),
         hints=(hint,),
+    )
+
+
+def _plain_query(dialect):
+    """The same query without hints: a wrapper must reproduce its bytes."""
+    return QueryStatement(
+        dialect, select=[Column(dialect, "id")], from_=Table(dialect, "t")
     )
 
 
@@ -333,6 +350,85 @@ class TestStatementHints:
 
     def test_explain_of_a_plain_statement_has_no_prefix(self, dialect, query):
         assert ExplainStatement(dialect, query).to_sql() == ('EXPLAIN SELECT "id" FROM "t"', ())
+
+
+class TestHintedDdlStatements:
+    """The head hint also rides on statements PostgreSQL plans when it runs.
+
+    Measured against pg_hint_plan 1.8.1 on PG 18: ``CREATE TABLE ... AS``,
+    ``CREATE MATERIALIZED VIEW ... AS`` and ``REFRESH MATERIALIZED VIEW`` each
+    report ``used hint`` for a head comment and choose a different plan. Without
+    hints the statements below are the exact bytes this backend produced before
+    hints existed, so the prefix is the only change.
+    """
+
+    def test_create_table_as_prefix(self, dialect):
+        plain = CreateTableAsStatement(
+            dialect, Table(dialect, "ct"), _plain_query(dialect)
+        )
+        assert plain.to_sql() == ('CREATE TABLE "ct" AS SELECT "id" FROM "t"', ())
+
+        hinted = CreateTableAsStatement(
+            dialect,
+            Table(dialect, "ct"),
+            _plain_query(dialect),
+            hints=(hint_seq_scan(dialect, "t"),),
+        )
+        assert hinted.to_sql() == (
+            '/*+ SeqScan(t) */ CREATE TABLE "ct" AS SELECT "id" FROM "t"',
+            (),
+        )
+
+    def test_create_materialized_view_prefix(self, dialect):
+        plain = CreateMaterializedViewStatement(
+            dialect, MaterializedView(dialect, "mv"), _plain_query(dialect)
+        )
+        assert plain.to_sql() == (
+            'CREATE MATERIALIZED VIEW "mv" AS SELECT "id" FROM "t"',
+            (),
+        )
+
+        hinted = CreateMaterializedViewStatement(
+            dialect,
+            MaterializedView(dialect, "mv"),
+            _plain_query(dialect),
+            hints=(hint_seq_scan(dialect, "t"),),
+        )
+        assert hinted.to_sql() == (
+            '/*+ SeqScan(t) */ CREATE MATERIALIZED VIEW "mv" AS SELECT "id" FROM "t"',
+            (),
+        )
+
+    def test_refresh_materialized_view_prefix(self, dialect):
+        plain = RefreshMaterializedViewStatement(dialect, MaterializedView(dialect, "mv"))
+        assert plain.to_sql() == ('REFRESH MATERIALIZED VIEW "mv"', ())
+
+        hinted = RefreshMaterializedViewStatement(
+            dialect,
+            MaterializedView(dialect, "mv"),
+            hints=(hint_seq_scan(dialect, "mv"),),
+        )
+        assert hinted.to_sql() == (
+            '/*+ SeqScan(mv) */ REFRESH MATERIALIZED VIEW "mv"',
+            (),
+        )
+
+    def test_create_table_as_refuses_a_hinted_query(self, dialect):
+        """A hint belongs to the statement, not the query it wraps."""
+        nested = _hinted_query(dialect, hint_seq_scan(dialect, "t"))
+        expr = CreateTableAsStatement(dialect, Table(dialect, "ct"), nested)
+        with pytest.raises(TypeError) as caught:
+            expr.to_sql()
+        assert "outermost statement" in str(caught.value)
+
+    def test_create_materialized_view_refuses_a_hinted_query(self, dialect):
+        nested = _hinted_query(dialect, hint_seq_scan(dialect, "t"))
+        expr = CreateMaterializedViewStatement(
+            dialect, MaterializedView(dialect, "mv"), nested
+        )
+        with pytest.raises(TypeError) as caught:
+            expr.to_sql()
+        assert "outermost statement" in str(caught.value)
 
 
 class TestStatementHintCapability:

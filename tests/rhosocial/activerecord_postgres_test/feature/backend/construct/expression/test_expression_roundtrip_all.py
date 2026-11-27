@@ -216,6 +216,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnConstraint,
     ColumnDefinition,
     ColumnGeneratedConstraint,
+    CreateTableAsStatement,
     ForeignKeyConstraint,
     ReferencesClause,
     TableCheckConstraint,
@@ -223,6 +224,10 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     ColumnNotNullConstraint,
     TableExcludeConstraint,
     TablePrimaryKeyConstraint,
+)
+from rhosocial.activerecord.backend.expression.statements.ddl_view import (
+    CreateMaterializedViewStatement,
+    RefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.ddl_trigger import (
     CreateTriggerStatement,
@@ -337,6 +342,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading,
+    hint_seq_scan,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
     collect_expression_classes,
@@ -798,6 +804,36 @@ def register_specials():
                     NamedRelationRef(d, _table_obj(d, "c"), alias="c", alias_need_quote=False),
                 ),
             ),
+        ),
+    )
+    # The three composite statements that became hint-carrying with core's
+    # ``f8c16ce0``. A hint is a payload on the outermost statement, so each is
+    # built with one rather than in its plain form: the matrix must prove the
+    # hint survives every encoding and that the prefix survives with it.
+    register_special_constructor(
+        "statements.ddl_table.CreateTableAsStatement",
+        lambda d: CreateTableAsStatement(
+            d,
+            _table_obj(d, "ct"),
+            _one_column_query(d),
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "statements.ddl_view.CreateMaterializedViewStatement",
+        lambda d: CreateMaterializedViewStatement(
+            d,
+            MaterializedView(d, "mv"),
+            _one_column_query(d),
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "statements.ddl_view.RefreshMaterializedViewStatement",
+        lambda d: RefreshMaterializedViewStatement(
+            d,
+            MaterializedView(d, "mv"),
+            hints=(hint_seq_scan(d, "mv"),),
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------

@@ -60,6 +60,22 @@ sql, params = explained.to_sql()
 
 若 `ExplainStatement` 包裹的语句自身已带提示，它会拒绝渲染（两个前缀会重叠，位置有歧义）。
 
+`hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`CreateTableAsStatement`（`CREATE TABLE ... AS`）、`CreateMaterializedViewStatement`（`CREATE MATERIALIZED VIEW ... AS`）与 `RefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
+
+```python
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    CreateTableAsStatement,
+)
+
+ctas = CreateTableAsStatement(
+    dialect, Table(dialect, "ct"), query, hints=(hint_seq_scan(dialect, "t"),)
+)
+sql, params = ctas.to_sql()
+# /*+ SeqScan(t) */ CREATE TABLE "ct" AS SELECT ...
+```
+
+对这三条语句，提示要交给**语句本身**，而不是它所包裹的查询：pg_hint_plan 拒绝一个语句中出现两个注释块，formatter 也会按名拒绝带提示的被包裹查询。`CREATE VIEW` 是唯一不能携带提示的语句：它在创建时不被规划，pg_hint_plan 会忽略该注释（实测：完全没有日志行）；应改为提示读取该视图的查询。
+
 提示负载是键齐全的普通字典（不适用的字段为 `None`/`()`，可用 `make_hint_payload()` 构造），因此能随 artifact 序列化往返；它不是表达式节点，也不会单独渲染。方言若支持该注释语法就渲染它，不支持则对带提示的语句抛出 `UnsupportedFeatureError`，而不是悄悄丢弃提示：
 
 ```python

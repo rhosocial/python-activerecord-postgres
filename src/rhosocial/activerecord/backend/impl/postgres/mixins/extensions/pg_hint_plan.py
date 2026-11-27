@@ -80,10 +80,18 @@ class PostgresPgHintPlanMixin:
 class PostgresHintedStatementsMixin:
     """Prefix a statement's SQL with its pg_hint_plan comment.
 
-    Each override calls the core formatter through ``super()`` and only adds
-    the comment when the statement carries hints.  This mixin therefore has to
-    precede the core DQL/DML mixins in the dialect's base list; see the bundle
-    rule in ``dialect.py``.
+    Each override calls the formatter below it through ``super()`` -- core's
+    for the DQL/DML statements and for CTAS, PostgreSQL's own for the two
+    materialized-view statements -- and only adds the comment when the
+    statement carries hints.  This mixin therefore has to precede every class
+    it overrides in the dialect's base list: ``TableMixin`` (which carries the
+    core CTAS formatter), ``PostgresMaterializedViewMixin`` and the core
+    DQL/DML mixins.  See the bundle rule in ``dialect.py``.
+
+    pg_hint_plan honours a head hint on all seven: a DQL or DML statement,
+    ``CREATE TABLE ... AS``, ``CREATE MATERIALIZED VIEW ... AS``, ``REFRESH
+    MATERIALIZED VIEW`` and ``EXPLAIN``.  ``CREATE VIEW`` is absent on purpose:
+    it is not planned at creation time, so a hint there would be inert.
     """
 
     def format_query_statement(self, expr) -> Tuple[str, tuple]:
@@ -109,6 +117,46 @@ class PostgresHintedStatementsMixin:
 
     def format_delete_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_delete_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_create_table_as_statement(self, expr) -> Tuple[str, tuple]:
+        """Prefix ``CREATE TABLE ... AS`` with its head hint.
+
+        PostgreSQL has no formatter of its own for CTAS, so ``super()`` is
+        core's portable implementation.  The head hint is honoured by the
+        planner because the statement is planned when it runs (measured
+        against pg_hint_plan 1.8.1 on PG 18: ``used hint`` and the plan
+        changes).
+        """
+        sql, params = super().format_create_table_as_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_create_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
+        """Prefix ``CREATE MATERIALIZED VIEW ... AS`` with its head hint.
+
+        ``super()`` is ``PostgresMaterializedViewMixin``'s PostgreSQL-specific
+        builder (grammar order, storage parameters, tablespace), so the SQL
+        this wraps is the same bytes that formatter produced.
+        """
+        sql, params = super().format_create_materialized_view_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_refresh_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
+        """Prefix ``REFRESH MATERIALIZED VIEW`` with its head hint.
+
+        ``super()`` is ``PostgresMaterializedViewMixin``'s version-gated
+        version, which delegates to core for the statement text.
+        """
+        sql, params = super().format_refresh_materialized_view_statement(expr)
         hints = getattr(expr, "hints", ())
         if not hints:
             return sql, params

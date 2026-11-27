@@ -61,6 +61,31 @@ sql, params = explained.to_sql()
 
 An `ExplainStatement` refuses a wrapped statement that already carries its own hints (two prefixes would be ambiguous).
 
+The same `hints=` keyword is accepted by the three statements PostgreSQL plans
+when it runs them: `CreateTableAsStatement` (`CREATE TABLE ... AS`),
+`CreateMaterializedViewStatement` (`CREATE MATERIALIZED VIEW ... AS`) and
+`RefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured
+against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment
+and picks a different plan:
+
+```python
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    CreateTableAsStatement,
+)
+
+ctas = CreateTableAsStatement(
+    dialect, Table(dialect, "ct"), query, hints=(hint_seq_scan(dialect, "t"),)
+)
+sql, params = ctas.to_sql()
+# /*+ SeqScan(t) */ CREATE TABLE "ct" AS SELECT ...
+```
+
+For those three, give the hint to the **statement**, not to the query it wraps:
+a second comment block is rejected by pg_hint_plan, and the formatter refuses a
+wrapped hinted query by name. `CREATE VIEW` is the one statement that cannot
+carry a hint at all: it is not planned at creation time, so pg_hint_plan ignores
+the comment (measured: no log line); hint the query that reads the view instead.
+
 A hint payload is a plain dictionary with every key present (`None`/`()` where a field does not apply; `make_hint_payload()` builds one), so it survives artifact serialization; it is not an expression node and never renders on its own. The dialect that spells the comments renders them, and a dialect that does not refuses a hinted statement with `UnsupportedFeatureError` instead of dropping the hints:
 
 ```python

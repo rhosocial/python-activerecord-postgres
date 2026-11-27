@@ -40,6 +40,9 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresSetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewSchemaAction,
 )
+from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pg_hint_plan import (
+    PostgresHintedStatementsMixin,
+)
 from rhosocial.activerecord.backend.impl.postgres.mixins.materialized_view import (
     PostgresMaterializedViewMixin,
 )
@@ -90,10 +93,26 @@ class TestMaterializedViewMixinResolution:
         mro = PostgresDialect.__mro__
         assert mro.index(PostgresMaterializedViewMixin) < mro.index(ViewMixin)
 
-    def test_create_mv_formatter_owned_by_pg_mixin(self):
-        """T-02: CREATE MATERIALIZED VIEW must be formatted by the PG mixin."""
-        owner = _dialect().format_create_materialized_view_statement.__qualname__
-        assert owner.startswith("PostgresMaterializedViewMixin.")
+    def test_create_mv_formatter_is_pg_body_under_the_hint_wrapper(self):
+        """T-02: CREATE MATERIALIZED VIEW's PG body is live under the hint wrapper.
+
+        ``PostgresHintedStatementsMixin`` owns the entry point now that the
+        statement can carry a head hint; it prefixes the comment and delegates
+        through ``super()``. The PG body must still win over core's -- the
+        storage-option clause below is the proof, because core's formatter has
+        no ``WITH (storage_parameter ...)`` arm.
+        """
+        dialect = _dialect()
+        mro = PostgresDialect.__mro__
+        assert mro.index(PostgresHintedStatementsMixin) < mro.index(
+            PostgresMaterializedViewMixin
+        ), "the hint wrapper must precede the PG body it wraps"
+        assert (
+            "format_create_materialized_view_statement"
+            in PostgresMaterializedViewMixin.__dict__
+        )
+        sql, _ = _create(dialect, storage_options={"fillfactor": 70}).to_sql()
+        assert "WITH (fillfactor = 70)" in sql
 
     def test_drop_mv_formatter_owned_by_pg_mixin(self):
         """T-03: the DROP path is PG-owned (schema aware) and keeps the core SQL shape."""
@@ -116,12 +135,22 @@ class TestMaterializedViewMixinResolution:
         """T-04: a declared PG-only capability must have a PG-owned formatter behind it.
 
         This is the generic guard against "capability probe says True but the
-        formatter never runs" (the exact shape of the G1 defect).
+        formatter never runs" (the exact shape of the G1 defect). The hint
+        wrapper is the entry point when pg_hint_plan owns the statement's
+        prefix; the clause rendered below proves the PG body behind it ran.
         """
         dialect = _dialect()
         assert getattr(dialect, capability)() is True
         owner = getattr(dialect, formatter).__qualname__
-        assert owner.startswith("PostgresMaterializedViewMixin.")
+        assert owner.startswith(
+            ("PostgresHintedStatementsMixin.", "PostgresMaterializedViewMixin.")
+        ), owner
+        if capability == "supports_materialized_view_tablespace":
+            sql, _ = _create(dialect, tablespace="fast").to_sql()
+            assert 'TABLESPACE "fast"' in sql
+        else:
+            sql, _ = _create(dialect, storage_options={"fillfactor": 70}).to_sql()
+            assert "WITH (fillfactor = 70)" in sql
 
 
 class TestCreateMaterializedViewFormatting:

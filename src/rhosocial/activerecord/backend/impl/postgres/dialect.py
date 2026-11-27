@@ -382,6 +382,14 @@ class PostgresDialect(
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
+    # One bundle, five core statement mixins: this overrides the four DQL/DML
+    # formatters, the CTAS formatter and the two materialized-view formatters.
+    # Each overridden statement's provider comes after it here -- TableMixin
+    # (CreateTableAsMixin), PostgresMaterializedViewMixin and DQLMixin/DMLMixin
+    # -- and a mixin placed after the class it overrides never wins. It calls
+    # PostgresPgHintPlanMixin's private comment helper through ``self``, so that
+    # mixin's later position does not matter for method lookup.
+    PostgresHintedStatementsMixin,
     PostgresMaterializedViewMixin,  # Before ViewMixin to override format_*_materialized_view_*
     ViewMixin,
     SchemaMixin,
@@ -480,12 +488,6 @@ class PostgresDialect(
     PredicateMixin,
     ExpressionMixin,
     DateTimeMixin,
-    # A backend mixin goes immediately before the core mixin it overrides (see
-    # the bundle rule above). This one overrides DQLMixin's and DMLMixin's four
-    # statement formatters, and DQLMixin precedes DMLMixin here, so one position
-    # ahead of DQLMixin puts it ahead of both -- and after PostgresPgHintPlanMixin,
-    # which owns the private comment helper it calls.
-    PostgresHintedStatementsMixin,
     DQLMixin,
     DMLMixin,
     DDLColumnMixin,
