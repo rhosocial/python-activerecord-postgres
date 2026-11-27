@@ -114,40 +114,6 @@ class AlterDomainActionType(str, Enum):
     RENAME_TO = "RENAME TO"
 
 
-def _domain_actions_for(
-    action: "AlterDomainActionType",
-    dialect: "SQLDialectBase",
-    new_value: Any,
-    new_name: Optional[str],
-) -> List["DomainAlterAction"]:
-    """The one action *action* names, built from the values it needs.
-
-    Shared by the enum path and the word path so a read artifact -- which
-    carries ``"SET DEFAULT"``, not the member -- resolves to the same node a
-    caller writing the member gets.
-    """
-    if action is AlterDomainActionType.SET_DEFAULT:
-        normalized_default: Any = new_value
-        if isinstance(new_value, str):
-            warnings.warn(
-                "Raw ALTER DOMAIN DEFAULT strings are deprecated; pass a scalar "
-                "or expression",
-                DeprecationWarning,
-                stacklevel=3,
-            )
-            normalized_default = PostgresLegacySqlExpression(
-                dialect,
-                new_value,
-                "new_value",
-            )
-        return [SetDomainDefaultAction(dialect, normalized_default)]
-    if action is AlterDomainActionType.DROP_DEFAULT:
-        return [DropDomainDefaultAction(dialect)]
-    if new_name is None:
-        raise ValueError("new_name is required for RENAME TO")
-    return [RenameDomainAction(dialect, new_name)]
-
-
 class PostgresAddDomainCheckAction(AddDomainCheckAction):
     def __init__(
         self,
@@ -353,24 +319,12 @@ class PostgresAlterDomainExpression(AlterDomainStatement):
         resolved_schema = schema if schema is not None else schema_name
         if schema is not None and schema_name is not None and schema != schema_name:
             raise ValueError("schema and schema_name must match when both are provided")
-        if isinstance(action, DomainAlterAction):
-            actions = [action]
-        elif isinstance(action, AlterDomainActionType):
-            actions = _domain_actions_for(action, dialect, new_value, new_name)
-        elif isinstance(action, str):
-            # A read artifact carries the word, not the member (§10: the
-            # constructor is where a wide entry is narrowed). Resolve it to the
-            # member it names so the branches below are the only ones that
-            # decide what an action means.
-            try:
-                actions = _domain_actions_for(
-                    AlterDomainActionType(action), dialect, new_value, new_name
-                )
-            except ValueError:
-                actions = [_PostgresUnsupportedDomainAction(dialect, action)]
-        else:
-            actions = [_PostgresUnsupportedDomainAction(dialect, action)]
-        super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema), actions)
+        if not isinstance(action, DomainAlterAction):
+            raise TypeError(
+                "PostgresAlterDomainExpression.action must be a DomainAlterAction, "
+                f"got {type(action).__name__}"
+            )
+        super().__init__(dialect, Domain(dialect, name, schema_name=resolved_schema), action)
         self.schema = resolved_schema
         self.schema_name = resolved_schema
         self.action = action

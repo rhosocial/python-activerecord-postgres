@@ -63,7 +63,7 @@ class TestAddColumnIfNotExists:
             if_not_exists=True,
         )
         expr = AlterTableStatement(
-            dialect, table=Table(dialect, 'users'), actions=[action]
+            dialect, table=Table(dialect, 'users'), action=action
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "users"' in sql
@@ -197,7 +197,7 @@ class TestRenameColumnAndTable:
         expr = AlterTableStatement(
             dialect,
             table=Table(dialect, 'orders'),
-            actions=[RenameColumnAction(dialect, old_name="id", new_name="order_id")],
+            action=RenameColumnAction(dialect, old_name="id", new_name="order_id"),
         )
         sql, params = expr.to_sql()
         assert 'ALTER TABLE "orders"' in sql

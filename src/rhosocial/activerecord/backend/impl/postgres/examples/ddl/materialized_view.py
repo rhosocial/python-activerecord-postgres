@@ -491,19 +491,14 @@ for row in result.data or []:
 # PostgreSQL supports exactly five ALTER MATERIALIZED VIEW actions.
 # SET TABLESPACE is NOT one of them: a materialized view cannot be
 # relocated to another tablespace after creation.
-# Multiple actions render as separate statements joined with ";\n".
+# One action per statement; several changes are several statements.
 
 alter_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
-    actions=[
-        PostgresSetMaterializedViewPropertiesAction(
-            dialect, {PostgresStorageParameter.FILLFACTOR: 85}
-        ),
-        PostgresResetMaterializedViewPropertiesAction(
-            dialect, [PostgresStorageParameter.AUTOVACUUM_ENABLED]
-        ),
-    ],
+    action=PostgresSetMaterializedViewPropertiesAction(
+        dialect, {PostgresStorageParameter.FILLFACTOR: 85}
+    ),
 )
 sql, params = alter_mv.to_sql()
 print(f"\nALTER SET/RESET SQL:\n{sql}")
@@ -512,7 +507,7 @@ backend.execute(sql, params, options=ddl_options)
 rename_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
-    actions=[PostgresRenameMaterializedViewAction(dialect, 'sales_summary_v2')],
+    action=PostgresRenameMaterializedViewAction(dialect, 'sales_summary_v2'),
 )
 sql, params = rename_mv.to_sql()
 print(f"\nALTER RENAME SQL: {sql}")
@@ -522,7 +517,7 @@ backend.execute(sql, params, options=ddl_options)
 set_schema_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
-    actions=[PostgresSetMaterializedViewSchemaAction(dialect, 'public')],
+    action=PostgresSetMaterializedViewSchemaAction(dialect, 'public'),
 )
 sql, params = set_schema_mv.to_sql()
 print(f"\nALTER SET SCHEMA SQL: {sql}")
@@ -532,7 +527,7 @@ backend.execute(sql, params, options=ddl_options)
 owner_mv = PostgresAlterMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary_v2'),
-    actions=[PostgresChangeMaterializedViewOwnerAction(dialect, 'CURRENT_USER')],
+    action=PostgresChangeMaterializedViewOwnerAction(dialect, 'CURRENT_USER'),
 )
 sql, params = owner_mv.to_sql()
 print(f"\nALTER OWNER TO SQL: {sql}")

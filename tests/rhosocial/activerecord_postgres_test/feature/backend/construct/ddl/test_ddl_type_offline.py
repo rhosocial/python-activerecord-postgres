@@ -76,7 +76,6 @@ class TestCapabilities:
             "supports_alter_type",
             "supports_drop_type",
             "supports_drop_type_if_exists",
-            "supports_multiple_type_alter_actions",
             "supports_drop_type_cascade",
             "supports_drop_type_restrict",
             "supports_type_if_exists",
@@ -106,7 +105,6 @@ class TestCapabilities:
             "supports_alter_type",
             "supports_drop_type",
             "supports_drop_type_if_exists",
-            "supports_multiple_type_alter_actions",
             "supports_drop_type_cascade",
             "supports_drop_type_restrict",
         ],
@@ -479,28 +477,25 @@ class TestAlterActions:
 class TestAlterStatement:
     def test_single_action(self):
         statement = AlterTypeStatement(
-            _dialect(), _type("mood"), [PostgresAddEnumValueAction(_dialect(), "x")]
+            _dialect(), _type("mood"), PostgresAddEnumValueAction(_dialect(), "x")
         )
         assert _dialect().format_alter_type_statement(statement) == (
             "ALTER TYPE \"mood\" ADD VALUE 'x'",
             (),
         )
 
-    def test_multiple_combinable_actions(self):
+    def test_single_attribute_action(self):
         statement = AlterTypeStatement(
             _dialect(),
             _type("addr"),
-            [
-                PostgresAddTypeAttributeAction(_dialect(), "a", _data_type("TEXT")),
-                PostgresDropTypeAttributeAction(_dialect(), "b"),
-            ],
+            PostgresAddTypeAttributeAction(_dialect(), "a", _data_type("TEXT")),
         )
         assert _dialect().format_alter_type_statement(statement) == (
-            'ALTER TYPE "addr" ADD ATTRIBUTE "a" TEXT, DROP ATTRIBUTE "b"',
+            'ALTER TYPE "addr" ADD ATTRIBUTE "a" TEXT',
             (),
         )
 
-    def test_multiple_non_combinable_actions_rejected(self):
+    def test_a_list_of_actions_is_not_an_action(self):
         statement = AlterTypeStatement(
             _dialect(),
             _type("mood"),
@@ -509,14 +504,14 @@ class TestAlterStatement:
                 PostgresRenameTypeAction(_dialect(), "b"),
             ],
         )
-        with pytest.raises(UnsupportedFeatureError, match="multiple ALTER TYPE actions"):
+        with pytest.raises(TypeError, match="TypeAlterAction"):
             _dialect().format_alter_type_statement(statement)
 
     def test_if_exists_unsupported(self):
         statement = AlterTypeStatement(
             _dialect(),
             _type("mood"),
-            [PostgresAddEnumValueAction(_dialect(), "x")],
+            PostgresAddEnumValueAction(_dialect(), "x"),
             if_exists=True,
         )
         with pytest.raises(UnsupportedFeatureError, match="IF EXISTS"):
@@ -524,7 +519,7 @@ class TestAlterStatement:
 
     def test_statement_type_must_be_type_object(self):
         statement = AlterTypeStatement(
-            _dialect(), MagicMock(), [PostgresAddEnumValueAction(_dialect(), "x")]
+            _dialect(), MagicMock(), PostgresAddEnumValueAction(_dialect(), "x")
         )
         with pytest.raises(TypeError, match="must be a Type"):
             _dialect().format_alter_type_statement(statement)

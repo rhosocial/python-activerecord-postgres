@@ -134,12 +134,6 @@ class TestDomainExpression:
         ).to_sql()
         assert sql == 'ALTER DOMAIN "posint" SET DEFAULT 0'
 
-    def test_alter_rename(self, dialect):
-        sql, _ = PostgresAlterDomainExpression(
-            dialect, "posint", AlterDomainActionType.RENAME_TO, new_name="posint2"
-        ).to_sql()
-        assert sql == 'ALTER DOMAIN "posint" RENAME TO "posint2"'
-
     def test_drop(self, dialect):
         sql, _ = PostgresDropDomainExpression(
             dialect, "posint", if_exists=True, cascade=True
@@ -159,24 +153,6 @@ class TestDomainExpression:
             constraints=["CHECK (VALUE > 0)"],
         ).to_sql()
         assert sql == 'CREATE DOMAIN "posint" AS DECIMAL CHECK (VALUE > 0)'
-
-    def test_alter_drop_default(self, dialect):
-        sql, _ = PostgresAlterDomainExpression(
-            dialect, "posint", AlterDomainActionType.DROP_DEFAULT
-        ).to_sql()
-        assert sql == 'ALTER DOMAIN "posint" DROP DEFAULT'
-
-    def test_alter_set_default_with_schema(self, dialect):
-        sql, _ = PostgresAlterDomainExpression(
-            dialect, "posint", AlterDomainActionType.SET_DEFAULT,
-            schema="app", new_value="1",
-        ).to_sql()
-        assert sql == 'ALTER DOMAIN "app"."posint" SET DEFAULT 1'
-
-    def test_alter_unsupported_action_raises(self, dialect):
-        expr = PostgresAlterDomainExpression(dialect, "posint", "RANDOM")
-        with pytest.raises(ValueError, match="Unsupported ALTER DOMAIN"):
-            expr.to_sql()
 
     def test_drop_restrict(self, dialect):
         sql, _ = PostgresDropDomainExpression(
@@ -304,15 +280,6 @@ class TestDomainExpression:
             ).to_sql()
             assert sql == f'ALTER DOMAIN "app"."amount" {expected}'
             assert params == ()
-
-    def test_domain_actions_are_not_combinable(self, dialect):
-        expression = AlterDomainStatement(
-            dialect,
-            Domain(dialect, 'amount'),
-            [DropDomainDefaultAction(dialect), SetDomainNotNullAction(dialect)],
-        )
-        with pytest.raises(UnsupportedFeatureError, match="multiple ALTER DOMAIN actions"):
-            expression.to_sql()
 
     def test_drop_domain_flags(self, dialect):
         sql, _ = PostgresDropDomainExpression(
@@ -647,30 +614,10 @@ class TestTypeDDLExpressions:
             sql, params = AlterTypeStatement(
                 dialect,
                 Type(dialect, 'status', schema_name='app'),
-                [action],
+                action,
             ).to_sql()
             assert sql == f'ALTER TYPE "app"."status" {expected}'
             assert params == ()
-
-    def test_composite_actions_can_be_combined(self, dialect):
-        actions = [
-            PostgresAddTypeAttributeAction(dialect, "active", IntegerType(dialect)),
-            PostgresDropTypeAttributeAction(dialect, "legacy"),
-        ]
-        sql, params = AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
-        assert sql == (
-            'ALTER TYPE "app"."address" ADD ATTRIBUTE "active" INTEGER, '
-            'DROP ATTRIBUTE "legacy"'
-        )
-        assert params == ()
-
-    def test_mixed_type_actions_cannot_be_combined(self, dialect):
-        actions = [
-            PostgresAddTypeAttributeAction(dialect, "active", IntegerType(dialect)),
-            PostgresRenameTypeAction(dialect, "new_address"),
-        ]
-        with pytest.raises(UnsupportedFeatureError, match="multiple ALTER TYPE actions"):
-            AlterTypeStatement(dialect, Type(dialect, 'address', schema_name='app'), actions).to_sql()
 
     def test_type_version_boundaries(self):
         enum = PostgresEnumTypeDefinition(PostgresDialect(version=(9, 6, 0)), ["a"])
@@ -683,26 +630,26 @@ class TestTypeDDLExpressions:
             AlterTypeStatement(
                 PostgresDialect(version=(9, 6, 0)),
                 Type(PostgresDialect(version=(9, 6, 0)), 'status'),
-                [rename],
+                rename,
             ).to_sql()
         sql, _ = AlterTypeStatement(
             PostgresDialect(version=(10, 0, 0)),
             Type(PostgresDialect(version=(10, 0, 0)), 'status'),
-            [PostgresRenameEnumValueAction(
+            PostgresRenameEnumValueAction(
                 PostgresDialect(version=(10, 0, 0)),
                 "a",
                 "b",
-            )],
+            ),
         ).to_sql()
         assert sql == 'ALTER TYPE "status" RENAME VALUE \'a\' TO \'b\''
         with pytest.raises(UnsupportedFeatureError, match="SET properties"):
             AlterTypeStatement(
                 PostgresDialect(version=(12, 0, 0)),
                 Type(PostgresDialect(version=(12, 0, 0)), 'box'),
-                [PostgresSetTypePropertiesAction(
+                PostgresSetTypePropertiesAction(
                     PostgresDialect(version=(12, 0, 0)),
                     {"STORAGE": "plain"},
-                )],
+                ),
             ).to_sql()
         assert enum.labels == ["a"]
 

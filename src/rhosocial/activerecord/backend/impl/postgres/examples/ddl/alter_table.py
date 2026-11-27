@@ -100,7 +100,7 @@ add_email_action = AddColumnAction(
 add_email_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
-    actions=[add_email_action],
+    action=add_email_action,
 )
 
 sql, params = add_email_expr.to_sql()
@@ -125,7 +125,7 @@ add_age_action = AddColumnAction(
 add_age_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
-    actions=[add_age_action],
+    action=add_age_action,
 )
 
 sql, params = add_age_expr.to_sql()
@@ -142,7 +142,7 @@ rename_action = RenameColumnAction(
 rename_expr = AlterTableStatement(
     dialect=dialect,
     table=Table(dialect, 'users'),
-    actions=[rename_action],
+    action=rename_action,
 )
 
 sql, params = rename_expr.to_sql()

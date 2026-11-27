@@ -159,11 +159,11 @@ class PostgresMaterializedViewSupport(Protocol):
     ) -> Tuple[str, tuple]:
         """Format ALTER MATERIALIZED VIEW statement.
 
-        Supports RENAME TO, SET SCHEMA, SET (), RESET () and OWNER TO actions.
-        Multiple actions are joined with ``";\\n"``.
+        Supports RENAME TO, SET SCHEMA, SET (), RESET () and OWNER TO actions;
+        one action per statement.
 
         Args:
-            expr: PostgresAlterMaterializedViewStatement with the actions to apply
+            expr: PostgresAlterMaterializedViewStatement with the action to apply
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

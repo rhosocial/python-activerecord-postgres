@@ -154,8 +154,8 @@ class PostgresTableConstraintChangeSuggestionMixin:
         if_exists = self.supports_drop_constraint_if_exists()
         for name in removed:
             action = DropTableConstraintAction(self, name, if_exists=if_exists)
-            chain.append(AlterTableStatement(self, table, [action]))
+            chain.append(AlterTableStatement(self, table, action))
         for name in added:
             action = AddTableConstraintAction(self, replacements[name])
-            chain.append(AlterTableStatement(self, table, [action]))
+            chain.append(AlterTableStatement(self, table, action))
         return TableConstraintChangeSuggestion(operations=tuple(chain))

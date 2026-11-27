@@ -74,16 +74,12 @@ snapshot_before = builder.build(schema="public")
 
 # Add a column between name and email — shifts ordinal positions
 # but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
-    AddColumnAction(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect)))
-])
+add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), AddColumnAction(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect))))
 sql, params = add_age.to_sql()
 backend.execute(sql, params)
 
 # Now drop it — column set is identical
-drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), [
-    DropColumnAction(dialect, "age")
-])
+drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), DropColumnAction(dialect, "age"))
 sql, params = drop_age.to_sql()
 backend.execute(sql, params)
 

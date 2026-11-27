@@ -210,9 +210,6 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
     def supports_drop_type_if_exists(self) -> bool:
         return self.supports_type_objects()
 
-    def supports_multiple_type_alter_actions(self) -> bool:
-        return self.supports_type_objects()
-
     def supports_drop_type_cascade(self) -> bool:
         return self.supports_type_objects()
 
@@ -298,34 +295,24 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             raise UnsupportedFeatureError(self.name, "ALTER TYPE")
         if expr.if_exists and not self.supports_alter_type_if_exists():
             raise UnsupportedFeatureError(self.name, "ALTER TYPE IF EXISTS")
-        if len(expr.actions) > 1 and not self.supports_multiple_type_alter_actions():
-            raise UnsupportedFeatureError(self.name, "multiple ALTER TYPE actions")
-        if len(expr.actions) > 1 and any(
-            not isinstance(action, self._COMBINABLE_TYPE_ACTIONS)
-            for action in expr.actions
-        ):
+        action = expr.action
+        if not isinstance(action, TypeAlterAction):
+            raise TypeError(
+                f"AlterTypeStatement.action must be a TypeAlterAction implementation, "
+                f"got {type(action).__name__}"
+            )
+        self._validate_type_action_version(action)
+        if not isinstance(action, self._POSTGRES_TYPE_ACTIONS):
             raise UnsupportedFeatureError(
                 self.name,
-                "multiple ALTER TYPE actions",
-                suggestion="PostgreSQL combines only composite attribute actions",
+                f"ALTER TYPE action {action.action_kind}",
             )
-        action_parts: List[str] = []
-        action_params: List[object] = []
-        for action in expr.actions:
-            self._validate_type_action_version(action)
-            if not isinstance(action, self._POSTGRES_TYPE_ACTIONS):
-                raise UnsupportedFeatureError(
-                    self.name,
-                    f"ALTER TYPE action {action.action_kind}",
-                )
-            action_sql, params = action.to_sql()
-            action_parts.append(action_sql)
-            action_params.extend(params)
+        action_sql, action_params = action.to_sql()
         parts = ["ALTER TYPE"]
         if expr.if_exists:
             parts.append("IF EXISTS")
         parts.append(expr.type.to_sql()[0])
-        parts.append(", ".join(action_parts))
+        parts.append(action_sql)
         return " ".join(parts), tuple(action_params)
 
     def format_postgres_drop_type_name_expression(self, expr) -> Tuple[str, tuple]:

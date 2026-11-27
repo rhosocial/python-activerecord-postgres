@@ -660,7 +660,7 @@ class PostgresAlterEnumAddValueExpression(AlterTypeStatement):
             if_not_exists=if_not_exists,
         )
         super().__init__(
-            dialect, Type(dialect, type_name, schema_name=schema), [action]
+            dialect, Type(dialect, type_name, schema_name=schema), action
         )
         self.type_name = type_name
         self.new_value = new_value
@@ -696,7 +696,7 @@ class PostgresAlterEnumTypeRenameValueExpression(AlterTypeStatement):
         super().__init__(
             dialect,
             Type(dialect, type_name, schema_name=schema),
-            [PostgresRenameEnumValueAction(dialect, old_value, new_value)],
+            PostgresRenameEnumValueAction(dialect, old_value, new_value),
         )
         self.type_name = type_name
         self.old_value = old_value

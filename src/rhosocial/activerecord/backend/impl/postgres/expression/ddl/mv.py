@@ -345,47 +345,43 @@ class PostgresChangeMaterializedViewOwnerAction(PostgresMaterializedViewAlterAct
 
 
 class PostgresAlterMaterializedViewStatement(BaseExpression):
-    """Expression for ``ALTER MATERIALIZED VIEW``.
+    """One ``ALTER MATERIALIZED VIEW`` statement carrying exactly one action.
+
+    One expression renders one statement, and that statement carries one action;
+    a caller with several changes builds one statement per action and orders
+    them itself. PostgreSQL's grammar allows one action per statement anyway, so
+    the earlier ``";\\n"``-joined form was several statements in one expression.
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
         ...     PostgresAlterMaterializedViewStatement,
         ...     PostgresRenameMaterializedViewAction,
-        ...     PostgresSetMaterializedViewPropertiesAction,
         ... )
         >>> dialect = PostgresDialect(version=(15, 0, 0))
         >>> alter = PostgresAlterMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "sales_summary"),
-        ...     actions=[
-        ...         PostgresRenameMaterializedViewAction(dialect, "sales_summary_v2"),
-        ...         PostgresSetMaterializedViewPropertiesAction(dialect, {"fillfactor": 90}),
-        ...     ],
+        ...     action=PostgresRenameMaterializedViewAction(dialect, "sales_summary_v2"),
         ... )
         >>> alter.to_sql()[0]
-        'ALTER MATERIALIZED VIEW "sales_summary" RENAME TO "sales_summary_v2";\\n\\
-ALTER MATERIALIZED VIEW "sales_summary" SET (FILLFACTOR = 90)'
+        'ALTER MATERIALIZED VIEW "sales_summary" RENAME TO "sales_summary_v2"'
     """
 
     def __init__(
         self,
         dialect: "SQLDialectBase",
         view: MaterializedView,
-        actions: Sequence[PostgresMaterializedViewAlterAction],
+        action: PostgresMaterializedViewAlterAction,
     ) -> None:
         super().__init__(dialect)
-        action_list = list(actions or [])
-        if not action_list:
-            raise ValueError("actions must contain at least one PostgresMaterializedViewAlterAction")
-        for action in action_list:
-            if not isinstance(action, PostgresMaterializedViewAlterAction):
-                raise TypeError(
-                    "actions must contain PostgresMaterializedViewAlterAction instances, "
-                    f"got {type(action).__name__}"
-                )
+        if not isinstance(action, PostgresMaterializedViewAlterAction):
+            raise TypeError(
+                "action must be a PostgresMaterializedViewAlterAction instance, "
+                f"got {type(action).__name__}"
+            )
         self.view = view
-        self.actions = action_list
+        self.action = action
 
     @property
     def format_method(self) -> str:

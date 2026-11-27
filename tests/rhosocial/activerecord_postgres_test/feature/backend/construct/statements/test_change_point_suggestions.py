@@ -162,8 +162,8 @@ def test_constraint_drop_chain_renders_alter_table_drop_constraint_if_exists():
     assert isinstance(operations, tuple) and len(operations) == 1
     statement = operations[0]
     assert isinstance(statement, AlterTableStatement)
-    assert len(statement.actions) == 1
-    assert isinstance(statement.actions[0], DropTableConstraintAction)
+    assert statement.action is not None
+    assert isinstance(statement.action, DropTableConstraintAction)
     assert _sql(operations) == ['ALTER TABLE "events" DROP CONSTRAINT IF EXISTS "uq_created"']
 
 
@@ -175,8 +175,8 @@ def test_constraint_add_reuses_live_table_constraint_node():
     )
     operations = dialect.suggest_table_constraint_change(point).operations
     assert isinstance(operations, tuple) and len(operations) == 1
-    assert isinstance(operations[0].actions[0], AddTableConstraintAction)
-    assert operations[0].actions[0].constraint is live
+    assert isinstance(operations[0].action, AddTableConstraintAction)
+    assert operations[0].action.constraint is live
     assert _sql(operations) == ['ALTER TABLE "events" ADD CONSTRAINT "uq_created" UNIQUE ("created_at")']
 
 
@@ -260,8 +260,8 @@ def test_constraint_add_from_enriched_declaration_renders_spellable_kind(
     assert isinstance(operations, tuple) and len(operations) == 1
     statement = operations[0]
     assert isinstance(statement, AlterTableStatement)
-    assert len(statement.actions) == 1
-    action = statement.actions[0]
+    assert statement.action is not None
+    action = statement.action
     assert isinstance(action, AddTableConstraintAction)
     assert action.constraint is live
     assert _sql(operations) == [expected]
@@ -348,9 +348,9 @@ def test_constraint_modification_drops_then_adds_one_action_per_statement():
     )
     operations = dialect.suggest_table_constraint_change(point).operations
     assert isinstance(operations, tuple) and len(operations) == 2
-    assert [len(statement.actions) for statement in operations] == [1, 1]
-    assert isinstance(operations[0].actions[0], DropTableConstraintAction)
-    assert operations[1].actions[0].constraint is new
+    assert [statement.action is not None for statement in operations] == [True, True]
+    assert isinstance(operations[0].action, DropTableConstraintAction)
+    assert operations[1].action.constraint is new
     assert _sql(operations) == [
         'ALTER TABLE "events" DROP CONSTRAINT IF EXISTS "uq"',
         'ALTER TABLE "events" ADD CONSTRAINT "uq" UNIQUE ("email")',
@@ -385,7 +385,7 @@ def test_constraint_drop_from_enriched_declaration_stays_safe():
     operations = dialect.suggest_table_constraint_change(point).operations
     assert isinstance(operations, tuple) and len(operations) == 1
     assert isinstance(operations[0], AlterTableStatement)
-    assert isinstance(operations[0].actions[0], DropTableConstraintAction)
+    assert isinstance(operations[0].action, DropTableConstraintAction)
     assert _sql(operations) == ['ALTER TABLE "events" DROP CONSTRAINT IF EXISTS "uq_created"']
     assert all("DROP TABLE" not in sql.upper() for sql in _sql(operations))
 

@@ -140,6 +140,6 @@ class EnumTypeMixin:
         statement = AlterTypeStatement(
             dialect,
             Type(dialect, expr.type_name, schema_name=expr.schema),
-            [action],
+            action,
         )
         return self.format_alter_type_statement(statement)

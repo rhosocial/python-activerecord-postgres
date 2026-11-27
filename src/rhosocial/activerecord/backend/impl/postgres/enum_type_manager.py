@@ -125,7 +125,7 @@ class EnumTypeManager:
         expr = AlterTypeStatement(
             dialect=self._backend.dialect,
             type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
-            actions=[action],
+            action=action,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)
@@ -152,7 +152,7 @@ class EnumTypeManager:
         expr = AlterTypeStatement(
             dialect=self._backend.dialect,
             type=Type(self._backend.dialect, enum_type.name, schema_name=enum_type.schema),
-            actions=[action],
+            action=action,
         )
         sql, params = expr.to_sql()
         self._backend.execute(sql, params)

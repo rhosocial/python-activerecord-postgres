@@ -351,13 +351,13 @@ class PostgresMaterializedViewMixin(ViewMixin):
     def format_alter_materialized_view_statement(
         self, expr: "PostgresAlterMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
-        """Format ALTER MATERIALIZED VIEW statement.
+        """Format an ALTER MATERIALIZED VIEW statement carrying one action.
 
-        Each action renders as its own ``ALTER MATERIALIZED VIEW <target> <action>``
-        statement; multiple actions are joined with ``";\\n"``.
+        One expression renders one statement, and that statement carries one
+        action; the caller builds one statement per action and orders them.
 
         Args:
-            expr: PostgresAlterMaterializedViewStatement with the actions to apply
+            expr: PostgresAlterMaterializedViewStatement with the action to apply
 
         Returns:
             Tuple of (SQL statement, parameters tuple); ``params`` is always empty.
@@ -370,13 +370,10 @@ class PostgresMaterializedViewMixin(ViewMixin):
             raise UnsupportedFeatureError(self.name, "ALTER MATERIALIZED VIEW")
 
         target = self._format_materialized_view_name(expr)
-        rendered = []
-        for action in expr.actions:
-            action_sql, action_params = self.format_postgres_materialized_view_alter_action(
-                action
-            )
-            rendered.append(f"ALTER MATERIALIZED VIEW {target} {action_sql}")
-        return ";\n".join(rendered), ()
+        action_sql, action_params = self.format_postgres_materialized_view_alter_action(
+            expr.action
+        )
+        return f"ALTER MATERIALIZED VIEW {target} {action_sql}", ()
 
     def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.

@@ -146,7 +146,7 @@ class TestSchemaQualifiedMaterializedView:
         alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "sales_summary", schema_name="mv_reporting"),
-            actions=[PostgresSetMaterializedViewSchemaAction(mv_backend.dialect, "public")],
+            action=PostgresSetMaterializedViewSchemaAction(mv_backend.dialect, "public"),
         )
         sql, params = alter.to_sql()
         mv_backend.execute(sql, params, options=DDL)
@@ -162,7 +162,7 @@ class TestAlterMaterializedView:
         alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
-            actions=[PostgresRenameMaterializedViewAction(mv_backend.dialect, "mv_sales_renamed")],
+            action=PostgresRenameMaterializedViewAction(mv_backend.dialect, "mv_sales_renamed"),
         )
         sql, params = alter.to_sql()
         mv_backend.execute(sql, params, options=DDL)
@@ -175,11 +175,9 @@ class TestAlterMaterializedView:
         alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
-            actions=[
-                PostgresSetMaterializedViewPropertiesAction(
+            action=PostgresSetMaterializedViewPropertiesAction(
                     mv_backend.dialect, {PostgresStorageParameter.FILLFACTOR: 85}
-                )
-            ],
+                ),
         )
         sql, params = alter.to_sql()
         mv_backend.execute(sql, params, options=DDL)
@@ -190,7 +188,7 @@ class TestAlterMaterializedView:
         alter = PostgresAlterMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_summary"),
-            actions=[PostgresChangeMaterializedViewOwnerAction(mv_backend.dialect, "CURRENT_USER")],
+            action=PostgresChangeMaterializedViewOwnerAction(mv_backend.dialect, "CURRENT_USER"),
         )
         sql, params = alter.to_sql()
         mv_backend.execute(sql, params, options=DDL)

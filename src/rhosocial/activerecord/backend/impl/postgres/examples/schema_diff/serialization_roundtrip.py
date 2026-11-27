@@ -78,9 +78,7 @@ snapshot_json = json.dumps(snapshot_before.to_dict(), default=str)
 snapshot_loaded = SchemaSnapshot.from_dict(json.loads(snapshot_json))
 
 # Modify the database
-add_phone = AlterTableStatement(dialect, Table(dialect, 'users'), [
-    AddColumnAction(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20)))
-])
+add_phone = AlterTableStatement(dialect, Table(dialect, 'users'), AddColumnAction(dialect, ColumnDefinition(dialect, "phone", VarCharType(dialect, length=20))))
 sql, params = add_phone.to_sql()
 backend.execute(sql, params)
 

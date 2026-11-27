@@ -837,9 +837,9 @@ def register_specials():
         lambda d: PostgresAlterMaterializedViewStatement(
             d,
             view=MaterializedView(d, "mv"),
-            actions=[PostgresSetMaterializedViewPropertiesAction(
+            action=PostgresSetMaterializedViewPropertiesAction(
                 d, properties={"fillfactor": "70"}
-            )],
+            ),
         ),
     )
     register_special_constructor(

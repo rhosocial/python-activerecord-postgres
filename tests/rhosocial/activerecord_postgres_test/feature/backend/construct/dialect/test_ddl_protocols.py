@@ -772,7 +772,6 @@ class TestTypeDomainProtocols:
         assert baseline.supports_create_domain() is True
         assert baseline.supports_alter_domain() is True
         assert baseline.supports_drop_domain() is True
-        assert baseline.supports_multiple_domain_alter_actions() is False
         assert baseline.supports_drop_domain_if_exists() is True
         assert baseline.supports_drop_domain_cascade() is True
         assert baseline.supports_drop_domain_restrict() is True

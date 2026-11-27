@@ -117,9 +117,6 @@ class PostgresDomainMixin(DomainMixin):
     def supports_domain_collation(self) -> bool:
         return self.supports_domains()
 
-    def supports_multiple_domain_alter_actions(self) -> bool:
-        return False
-
     def supports_drop_domain_if_exists(self) -> bool:
         return self.supports_domains()
 
@@ -238,23 +235,22 @@ class PostgresDomainMixin(DomainMixin):
                 "ALTER DOMAIN",
                 suggestion="requires PostgreSQL 9.6+",
             )
-        if len(expr.actions) > 1 and not self.supports_multiple_domain_alter_actions():
-            raise UnsupportedFeatureError(self.name, "multiple ALTER DOMAIN actions")
-        action_parts: List[str] = []
-        action_params: List[Any] = []
-        for action in expr.actions:
-            if not isinstance(action, _PostgresUnsupportedDomainAction) and not isinstance(
-                action, self._POSTGRES_DOMAIN_ACTIONS
-            ):
-                raise UnsupportedFeatureError(
-                    self.name,
-                    f"ALTER DOMAIN action {action.action_kind}",
-                )
-            action_sql, params = action.to_sql()
-            action_parts.append(action_sql)
-            action_params.extend(params)
+        action = expr.action
+        if not isinstance(action, DomainAlterAction):
+            raise TypeError(
+                f"AlterDomainStatement.action must be a DomainAlterAction implementation, "
+                f"got {type(action).__name__}"
+            )
+        if not isinstance(action, _PostgresUnsupportedDomainAction) and not isinstance(
+            action, self._POSTGRES_DOMAIN_ACTIONS
+        ):
+            raise UnsupportedFeatureError(
+                self.name,
+                f"ALTER DOMAIN action {action.action_kind}",
+            )
+        action_sql, action_params = action.to_sql()
         return (
-            f"ALTER DOMAIN {expr.domain.to_sql()[0]} {', '.join(action_parts)}",
+            f"ALTER DOMAIN {expr.domain.to_sql()[0]} {action_sql}",
             tuple(action_params),
         )
 

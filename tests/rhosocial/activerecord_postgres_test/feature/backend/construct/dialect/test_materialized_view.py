@@ -485,13 +485,13 @@ class TestMaterializedViewExceptionContract:
 class TestAlterMaterializedView:
     """G6: ALTER MATERIALIZED VIEW actions."""
 
-    def _alter(self, dialect, *actions, **kwargs):
+    def _alter(self, dialect, action, **kwargs):
         schema = kwargs.pop("schema", None)
         name = kwargs.pop("view_name", "sales_summary")
         return PostgresAlterMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, name, schema_name=schema),
-            actions=list(actions),
+            action=action,
             **kwargs,
         )
 
@@ -553,18 +553,19 @@ class TestAlterMaterializedView:
             ).to_sql()
             assert sql.endswith(f"OWNER TO {keyword.upper()}")
 
-    def test_multiple_actions(self):
-        """T-33."""
+    def test_two_changes_are_two_statements(self):
+        """Two changes are two statements, each carrying one action."""
         dialect = _dialect()
-        sql, _ = self._alter(
-            dialect,
-            PostgresRenameMaterializedViewAction(dialect, "sales_summary_v2"),
-            PostgresSetMaterializedViewPropertiesAction(dialect, {"fillfactor": 90}),
+        rename_sql, _ = self._alter(
+            dialect, PostgresRenameMaterializedViewAction(dialect, "sales_summary_v2")
         ).to_sql()
-        assert sql == (
-            'ALTER MATERIALIZED VIEW "sales_summary" RENAME TO "sales_summary_v2";\n'
-            'ALTER MATERIALIZED VIEW "sales_summary" SET (fillfactor = 90)'
-        )
+        props_sql, _ = self._alter(
+            dialect, PostgresSetMaterializedViewPropertiesAction(dialect, {"fillfactor": 90})
+        ).to_sql()
+
+        assert rename_sql == 'ALTER MATERIALIZED VIEW "sales_summary" RENAME TO "sales_summary_v2"'
+        assert props_sql == 'ALTER MATERIALIZED VIEW "sales_summary" SET (fillfactor = 90)'
+        assert ";" not in rename_sql + props_sql
 
     def test_alter_target_schema_qualified(self):
         """T-34."""
@@ -595,18 +596,18 @@ class TestAlterMaterializedView:
             )
         )
 
-    def test_requires_at_least_one_action(self):
+    def test_requires_an_action_object(self):
         dialect = _dialect()
-        with pytest.raises(ValueError):
+        with pytest.raises(TypeError):
             PostgresAlterMaterializedViewStatement(
-                dialect=dialect, view=MaterializedView(dialect, 'mv'), actions=[]
+                dialect=dialect, view=MaterializedView(dialect, 'mv'), action=[]
             )
 
     def test_rejects_non_action_objects(self):
         dialect = _dialect()
         with pytest.raises(TypeError):
             PostgresAlterMaterializedViewStatement(
-                dialect=dialect, view=MaterializedView(dialect, 'mv'), actions=[object()]
+                dialect=dialect, view=MaterializedView(dialect, 'mv'), action=object()
             )
 
     def test_rejects_unlisted_storage_parameters(self):
@@ -820,7 +821,7 @@ class TestMaterializedViewProtocolAndSurface:
             PostgresAlterMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
-                actions=[PostgresRenameMaterializedViewAction(dialect, "mv2")],
+                action=PostgresRenameMaterializedViewAction(dialect, "mv2"),
             ),
         ]
         for expression in expressions:
