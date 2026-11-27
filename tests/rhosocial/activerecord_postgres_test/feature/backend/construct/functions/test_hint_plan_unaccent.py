@@ -7,7 +7,8 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression import Column, QueryStatement
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.objects import Index, Table, View
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.statements.dml import (
     DeleteStatement,
@@ -121,6 +122,84 @@ class TestHintBuilders:
         hint = hint_set(dialect, guc, value)
         with pytest.raises(TypeError):
             _hinted_query(dialect, hint).to_sql()
+
+
+class TestHintTargets:
+    """A hint target is a relation reference, resolved to one wire spelling."""
+
+    def test_alias_wins(self, dialect):
+        ref = NamedRelationRef(dialect, Table(dialect, "t1"), alias="a")
+        payload = hint_index_scan(dialect, ref)
+        assert payload["tables"] == ('"a"',), "an alias is the only spelling that matches"
+        assert _phrase(dialect, payload) == 'IndexScan("a")'
+
+    def test_unaliased_reference_yields_the_relation_name(self, dialect):
+        ref = NamedRelationRef(dialect, Table(dialect, "t1"))
+        payload = hint_seq_scan(dialect, ref)
+        assert payload["tables"] == ('"t1"',)
+        assert _phrase(dialect, payload) == 'SeqScan("t1")'
+
+    def test_alias_without_quoting(self, dialect):
+        ref = NamedRelationRef(
+            dialect, Table(dialect, "t1"), alias="a", alias_need_quote=False
+        )
+        assert hint_seq_scan(dialect, ref)["tables"] == ("a",)
+
+    def test_schema_is_never_emitted(self, dialect):
+        table = Table(dialect, "t1", schema_name="s2")
+        payload = hint_seq_scan(dialect, table)
+        assert payload["tables"] == ('"t1"',), "a bare name still matches s2.t1"
+        assert "." not in payload["tables"][0], "a schema-qualified hint does not parse"
+
+    def test_a_quoted_name_survives_to_the_wire(self, dialect):
+        table = Table(dialect, "Odd Name")
+        payload = hint_index_scan(dialect, table)
+        assert payload["tables"] == ('"Odd Name"',), "quoting is exact, not cosmetic"
+        assert _phrase(dialect, payload) == 'IndexScan("Odd Name")'
+
+    def test_a_mixed_case_name_is_not_lowercased(self, dialect):
+        table = Table(dialect, "Mixed")
+        assert hint_seq_scan(dialect, table)["tables"] == ('"Mixed"',)
+
+    def test_a_view_is_refused(self, dialect):
+        with pytest.raises(TypeError) as caught:
+            hint_seq_scan(dialect, View(dialect, "v1"))
+        assert "view" in str(caught.value)
+        assert "expands" in str(caught.value)
+
+    def test_a_non_relation_object_is_refused(self, dialect):
+        with pytest.raises(TypeError) as caught:
+            hint_index_scan(dialect, Index(dialect, "ix"))
+        assert "not a relation" in str(caught.value)
+
+    def test_an_unknown_target_type_is_refused(self, dialect):
+        with pytest.raises(TypeError) as caught:
+            hint_seq_scan(dialect, 42)
+        assert "int" in str(caught.value)
+
+    def test_a_hint_group_takes_references(self, dialect):
+        group = HintGroup(
+            Table(dialect, "a", name_need_quote=False),
+            NamedRelationRef(
+                dialect,
+                Table(dialect, "b", name_need_quote=False),
+                alias="b2",
+                alias_need_quote=False,
+            ),
+        )
+        hint = hint_leading(dialect, group, Table(dialect, "c", name_need_quote=False))
+        assert hint["sequence"] == (("a", "b2"), "c")
+        assert _phrase(dialect, hint) == "Leading((a b2) c)"
+
+    def test_a_decoded_payload_renders_as_is(self, dialect):
+        payload = hint_seq_scan(dialect, Table(dialect, "Odd Name"))
+        # An artifact decodes JSON arrays as lists; the resolved strings are
+        # already on the wire and must not be resolved a second time.
+        decoded = dict(payload, tables=list(payload["tables"]))
+        assert _phrase(dialect, decoded) == 'SeqScan("Odd Name")'
+
+    def test_a_pseudo_name_is_a_string_escape_hatch(self, dialect):
+        assert hint_seq_scan(dialect, "*VALUES*")["tables"] == ("*VALUES*",)
 
 
 class TestHintPayload:

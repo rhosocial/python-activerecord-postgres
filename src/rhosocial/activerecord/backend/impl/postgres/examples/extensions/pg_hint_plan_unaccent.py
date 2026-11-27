@@ -103,7 +103,7 @@ query_args = dict(
 )
 if dialect.supports_pg_hint_plan():
     query = QueryStatement(
-        dialect, hints=(hint_seq_scan(dialect, TABLE),), **query_args
+        dialect, hints=(hint_seq_scan(dialect, Table(dialect, TABLE)),), **query_args
     )
 else:
     query = QueryStatement(dialect, **query_args)

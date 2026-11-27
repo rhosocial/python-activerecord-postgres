@@ -7,12 +7,34 @@ a plain dictionary: the builders return a ``dict`` with every key present (the
 dialect formatter renders it into the ``/*+ ... */`` comment.  There is no
 payload class: a hint declares no ``format_method`` and is never a node.
 
+A hint *target* is a relation reference, not a free string: the caller passes
+the :class:`~...objects.Table` (or a
+:class:`~...sources.NamedRelationRef`), and :func:`hint_target` turns it into
+the one spelling pg_hint_plan matches -- the alias when there is one, else the
+bare, unqualified relation name.  Resolution happens here, when the payload is
+built; a payload read back from an artifact is already resolved and is never
+resolved again.
+
 Values are validated with Python's identifier contract -- no regex, no
 substring checks, no SQL text inspection anywhere in this module.
 """
 
 from enum import Enum
 from typing import Optional, Sequence, Tuple, TypedDict, Union, cast
+
+from rhosocial.activerecord.backend.expression.objects import (
+    ForeignTable,
+    MaterializedView,
+    SchemaObject,
+    Table,
+    View,
+)
+from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+
+#: What a caller may name a relation with: the object itself, the query-side
+#: reference carrying its alias, or a raw string for a pseudo name
+#: (``*VALUES*``, ``ANY_subquery``) or an alias the caller already knows.
+HintTarget = Union[str, SchemaObject, NamedRelationRef]
 
 
 class HintKind(str, Enum):
@@ -64,16 +86,90 @@ HINT_FIELDS = (
 )
 
 
-def _require_identifier(value: str, field: str) -> str:
-    """Validate an identifier without inspecting its characters by hand."""
-    if not isinstance(value, str) or not value.isidentifier():
-        raise ValueError(f"Invalid pg_hint_plan {field}: {value!r}")
-    return value
+def _render_name(name: str, need_quote: bool) -> str:
+    """The wire spelling of one identifier, quoted exactly when requested.
+
+    Quoting is not cosmetic: a quoted name matches the catalogue entry exactly,
+    so a mixed-case internal name survives, while a lowercased spelling of it
+    does not.  A name the caller says needs no quote is emitted as given.
+    """
+    if not need_quote:
+        return name
+    return '"' + name.replace('"', '""') + '"'
+
+
+#: A hint phrase lives inside ``/*+ ... */``, so a name may never close it.
+_HINT_COMMENT_END = "*/"
+
+
+def _is_hint_name(value: str) -> bool:
+    """Whether ``value`` is one hint target: a bare word or a quoted name.
+
+    The quoted form is what :func:`hint_target` emits for a relation whose
+    ``name_need_quote`` is true, so the check must accept it.  A name may not
+    contain a double quote of its own (the spelling cannot nest) or the comment
+    terminator, which would end the phrase early.
+    """
+    if value.isidentifier():
+        return True
+    if len(value) < 3 or value[0] != '"' or value[-1] != '"':
+        return False
+    inner = value[1:-1]
+    return '"' not in inner and _HINT_COMMENT_END not in inner and bool(inner.strip())
+
+
+def hint_target(target: HintTarget) -> str:
+    """The one spelling pg_hint_plan matches for ``target``.
+
+    A hint target is a relation reference.  Measured behaviour on PostgreSQL
+    18 with pg_hint_plan 1.8.1:
+
+    * an alias wins -- ``FROM t1 a`` matches ``a`` and ignores ``t1``;
+    * a schema-qualified name is not even parsed, so the schema is never
+      emitted; a bare name still matches a schema-qualified reference;
+    * same-named tables in one query are ambiguous and match neither, which
+      is why the alias must be used;
+    * quoting is exact -- ``"Mixed"`` matches, ``mixed`` does not.
+
+    A :class:`~...sources.NamedRelationRef` yields its alias when set,
+    otherwise the relation's own name.  A table (node/edge included),
+    materialized view or foreign table yields its bare name, quoted exactly
+    when the object asks for it.  A view cannot be hinted: pg_hint_plan
+    reports the phrase as unused and the base table must be named instead.
+    Any other schema object (an index, sequence, type, ...) is not a relation
+    and is refused.
+
+    A ``str`` is returned unchanged: that is the escape hatch for a pseudo
+    name (``*VALUES*``, ``ANY_subquery``) or an alias the caller already knows.
+    """
+    if isinstance(target, str):
+        return target
+    if isinstance(target, NamedRelationRef):
+        if target.alias:
+            return _render_name(target.alias, target.alias_need_quote)
+        return hint_target(target.relation)
+    if isinstance(target, View):
+        raise TypeError(
+            f"pg_hint_plan cannot hint a view ({target!r}): it reports the "
+            f"phrase as unused. Hint the tables of the query the view expands "
+            f"to instead"
+        )
+    if isinstance(target, (Table, MaterializedView, ForeignTable)):
+        return _render_name(target.name, target.name_need_quote)
+    if isinstance(target, SchemaObject):
+        raise TypeError(
+            f"pg_hint_plan targets name a relation; {type(target).__name__} "
+            f"({target!r}) is not a relation that can be hinted"
+        )
+    raise TypeError(
+        f"a pg_hint_plan target must be a str, SchemaObject or "
+        f"NamedRelationRef, got {type(target).__name__}"
+    )
 
 
 def _assert_identifier(value: str, field: str) -> None:
-    """The render-time form of :func:`_require_identifier`."""
-    if not isinstance(value, str) or not value.isidentifier():
+    """The render-time form of :func:`_is_hint_name`."""
+    if not isinstance(value, str) or not _is_hint_name(value):
         raise TypeError(f"Invalid pg_hint_plan {field}: {value!r}")
 
 
@@ -106,11 +202,13 @@ class HintGroup:
 
     An *input* spelling only.  :func:`make_hint_payload` normalises it to
     ``tuple(group.tables)``, so nothing on the wire is a ``HintGroup`` -- the
-    payload is a nested array and every reader can parse it.
+    payload is a nested array and every reader can parse it.  Its entries are
+    hint targets and are resolved through :func:`hint_target`, the same as a
+    top-level target.
     """
 
-    def __init__(self, *tables: str):
-        values = tuple(_require_identifier(table, "join pair table") for table in tables)
+    def __init__(self, *tables: HintTarget):
+        values = tuple(hint_target(table) for table in tables)
         if not values:
             raise ValueError("A join pair needs at least one table")
         self.tables = values
@@ -215,11 +313,11 @@ def hint_payload(hint: object) -> dict:
     if not isinstance(hint, dict):
         # Not a payload at all; leave the refusal to assert_hint_payload.
         return {"kind": None}
-    payload = {
-        field: hint.get(field) for field in HINT_FIELDS
-    }
+    payload = {field: hint.get(field) for field in HINT_FIELDS}
     payload["tables"] = _normalise_names(payload["tables"] if payload["tables"] is not None else ())
-    payload["indexes"] = _normalise_names(payload["indexes"] if payload["indexes"] is not None else ())
+    payload["indexes"] = _normalise_names(
+        payload["indexes"] if payload["indexes"] is not None else ()
+    )
     payload["sequence"] = tuple(
         _normalise_sequence_item(item) for item in (payload["sequence"] or ())
     )
@@ -327,8 +425,10 @@ __all__ = [
     "HintGroup",
     "HintKind",
     "HintPayload",
+    "HintTarget",
     "assert_hint_payload",
     "hint_payload",
+    "hint_target",
     "make_hint_payload",
     "resolve_correction_kind",
     "resolve_hint_kind",

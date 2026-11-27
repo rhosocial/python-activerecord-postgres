@@ -126,7 +126,7 @@ class TestHintPlanIntegration:
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
-            hints=(hint_seq_scan(dialect, table),),
+            hints=(hint_seq_scan(dialect, Table(dialect, table)),),
         )
         sql, params = query.to_sql()
         assert len(backend.execute(sql, params, options=DQL).data) == 4
@@ -153,7 +153,7 @@ class TestHintPlanIntegration:
             assert "Index Scan" in indexed
 
             seq_sql, seq_params = ExplainStatement(
-                dialect, query, hints=(hint_seq_scan(dialect, table),)
+                dialect, query, hints=(hint_seq_scan(dialect, Table(dialect, table)),)
             ).to_sql()
             forced = backend.fetch_one(seq_sql, seq_params)["QUERY PLAN"]
             assert "Seq Scan" in forced
@@ -161,7 +161,7 @@ class TestHintPlanIntegration:
             index_sql, index_params = ExplainStatement(
                 dialect,
                 query,
-                hints=(hint_index_scan(dialect, table, f"idx_{table}_name"),),
+                hints=(hint_index_scan(dialect, Table(dialect, table), f"idx_{table}_name"),),
             ).to_sql()
             forced_index = backend.fetch_one(index_sql, index_params)["QUERY PLAN"]
             assert "Index Scan" in forced_index
@@ -198,7 +198,7 @@ class TestAsyncIntegration:
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
-            hints=(hint_seq_scan(dialect, table),),
+            hints=(hint_seq_scan(dialect, Table(dialect, table)),),
         )
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=DQL)

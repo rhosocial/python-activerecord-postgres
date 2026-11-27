@@ -70,6 +70,26 @@ dialect.supports_statement_hints()   # 仅在 pg_hint_plan 可用时为 True
 
 可用 builder：`hint_seq_scan`、`hint_tid_scan`、`hint_index_scan`、`hint_index_only_scan`、`hint_bitmap_scan`、`hint_no_seq_scan`、`hint_no_index_scan`、`hint_hash_join`、`hint_merge_join`、`hint_nest_loop`、`hint_leading`、`hint_rows`、`hint_parallel`、`hint_set`。
 
+## 提示目标是什么
+
+提示照**查询自己的写法**命名关系：pg_hint_plan 用提示文本与查询中的拼写做匹配，因此 builder 接受关系引用——`Table`（含 Node/Edge/Materialized/Foreign 表）、`NamedRelationRef`，或用于伪名称的普通字符串——并把它们解析成唯一一种拼写。实测规则：
+
+- **别名优先。** `FROM t1 a` 匹配 `IndexScan(a)`；`IndexScan(t1)` 会被静默忽略。
+- **永不输出 schema。** `IndexScan(s2.t1)` 根本不会被解析；而裸名 `IndexScan(t1)` 仍能匹配写作 `FROM s2.t1` 的引用。
+- **同名表有歧义。** `FROM t1 a JOIN s2.t1 b` 用名字匹配不到任何一张；只能用别名区分。
+- **引号是精确匹配。** 带引号的名字（`"Mixed"`、`"Odd Name"`）精确匹配；小写化后的拼写匹配不上。解析器仅在对象的 `name_need_quote` 为真时加引号，绝不自行小写化。
+- **视图不能被提示。** 对视图的 `IndexScan(v1)` 会被报告为未使用的提示；应改为提示该视图展开后的查询所涉及的基础表。
+
+```python
+hint_index_scan(dialect, NamedRelationRef(dialect, Table(dialect, "orders"), alias="o"))
+# /*+ IndexScan(o) */
+
+hint_seq_scan(dialect, Table(dialect, "orders", schema_name="sales"))
+# /*+ SeqScan("orders") */   -- 提示里永不写 schema
+```
+
+普通字符串原样透传：这是伪名称（`*VALUES*`、`ANY_subquery`）或调用方已知别名的逃生口。解析发生在 builder 执行时；从 artifact 解码回来的负载已持有解析后的字符串，会原样渲染、不会再次解析。
+
 标识符与 GUC 值都通过全匹配校验；注释终止符和语句分隔符会被拒绝。
 
 ## 能力探测

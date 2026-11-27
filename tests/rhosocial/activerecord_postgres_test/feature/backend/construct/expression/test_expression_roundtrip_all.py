@@ -781,15 +781,23 @@ def register_specials():
     # there is nothing to register for a hint: core's ``QueryStatement`` carries
     # the payload through its ``hints`` keyword. The phrase registered here is
     # the one a host object used to make unwritable: ``Leading`` with a nested
-    # join pair. The builder normalises ``HintGroup`` to ``("a", "b")``, so the
-    # round-trip proves the nested array survives every reader.
+    # join pair. The targets are relation references -- a ``NamedRelationRef``
+    # for the last one, so the resolver runs on the wire -- and the builder
+    # normalises ``HintGroup`` to ``("a", "b")``, so the round-trip proves the
+    # nested array survives every reader.
     register_special_constructor(
         "statements.dql.QueryStatement",
         lambda d: QueryStatement(
             d,
             [Column(d, "a")],
             _table_obj(d),
-            hints=(hint_leading(d, HintGroup("a", "b"), "c"),),
+            hints=(
+                hint_leading(
+                    d,
+                    HintGroup("a", "b"),
+                    NamedRelationRef(d, _table_obj(d, "c"), alias="c", alias_need_quote=False),
+                ),
+            ),
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------
@@ -2223,11 +2231,15 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
 def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     """A ``Leading`` hint keeps its nested pair on every wire, byte for byte."""
     dialect = postgres_dialect
+
+    def unquoted(name):
+        return Table(dialect, name, name_need_quote=False)
+
     hinted = QueryStatement(
         dialect,
         [Column(dialect, "a")],
         _table_obj(dialect),
-        hints=(hint_leading(dialect, HintGroup("a", "b"), "c"),),
+        hints=(hint_leading(dialect, HintGroup(unquoted("a"), unquoted("b")), unquoted("c")),),
     )
 
     assert hinted.hints[0]["sequence"] == (("a", "b"), "c"), (

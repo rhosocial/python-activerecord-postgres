@@ -73,6 +73,26 @@ first word of the SQL.
 
 Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
 
+## What a hint target is
+
+A hint names a relation *the way the query does*: pg_hint_plan matches the hint text against the query's own spelling, so the builders take a relation reference — a `Table` (node, edge, materialized and foreign tables included), a `NamedRelationRef`, or a plain string for a pseudo name — and resolve it to one spelling. Measured rules:
+
+- **An alias wins.** `FROM t1 a` matches `IndexScan(a)`; `IndexScan(t1)` is silently ignored.
+- **A schema is never emitted.** `IndexScan(s2.t1)` does not even parse; a bare `IndexScan(t1)` still matches a reference written `FROM s2.t1`.
+- **Same-named tables are ambiguous.** `FROM t1 a JOIN s2.t1 b` matches neither by name; aliases are the only disambiguation.
+- **Quoting is exact.** A quoted name (`"Mixed"`, `"Odd Name"`) matches exactly; its lowercased spelling does not. The resolver quotes a name exactly when the object's `name_need_quote` is true, and never lowercases it.
+- **Views cannot be hinted.** `IndexScan(v1)` is reported as an unused hint; hint the base tables of the query the view expands to instead.
+
+```python
+hint_index_scan(dialect, NamedRelationRef(dialect, Table(dialect, "orders"), alias="o"))
+# /*+ IndexScan(o) */
+
+hint_seq_scan(dialect, Table(dialect, "orders", schema_name="sales"))
+# /*+ SeqScan("orders") */   -- the schema is never spelled in a hint
+```
+
+A plain string passes through unchanged: it is the escape hatch for a pseudo name (`*VALUES*`, `ANY_subquery`) or an alias the caller already knows. Resolution happens when the builder runs; a payload decoded from an artifact already holds the resolved strings and renders unchanged.
+
 Identifiers and GUC values are validated with full matches; unsafe comment terminators and statement separators are rejected before rendering.
 
 ## Capability detection
