@@ -187,9 +187,7 @@ from .cluster import PostgresClusterStatement
 from .repack import PostgresRepackStatement
 from .domain import (
     AlterDomainActionType,
-    DomainCheckConstraint,
     DomainNullability,
-    DomainValueExpression,
     PostgresAddDomainCheckAction,
     PostgresAlterDomainExpression,
     PostgresChangeDomainOwnerAction,
@@ -335,11 +333,9 @@ __all__ = [
     # cluster
     "PostgresClusterStatement",
     "PostgresRepackStatement",
-    # domain
+    # domain (core classes imported for internal use only, never re-exported)
     "AlterDomainActionType",
     "DomainNullability",
-    "DomainValueExpression",
-    "DomainCheckConstraint",
     "PostgresAddDomainCheckAction",
     "PostgresDropDomainCheckAction",
     "PostgresRenameDomainConstraintAction",

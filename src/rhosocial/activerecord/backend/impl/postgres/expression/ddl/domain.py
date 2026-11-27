@@ -16,14 +16,8 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     DomainAlterAction,
     DomainCheckConstraint,
     DomainNullability,
-    DomainValueExpression,
     DropDomainCheckAction,
-    DropDomainDefaultAction,
     DropDomainStatement,
-    DropDomainNotNullAction,
-    RenameDomainAction,
-    SetDomainDefaultAction,
-    SetDomainNotNullAction,
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 
@@ -34,12 +28,10 @@ if TYPE_CHECKING:
 __all__ = [
     "AlterDomainActionType",
     "DomainNullability",
-    "DomainValueExpression",
-    "DomainCheckConstraint",
-    "SetDomainDefaultAction",
-    "DropDomainDefaultAction",
-    "SetDomainNotNullAction",
-    "DropDomainNotNullAction",
+    # Core DOMAIN vocabulary is imported for internal use only. Re-exporting it
+    # here would present core-owned classes as postgres-owned declarations: the
+    # backend naming rule requires every declared kind to carry the Postgres
+    # prefix and to avoid colliding with core names.
     "PostgresAddDomainCheckAction",
     "PostgresDropDomainCheckAction",
     "PostgresRenameDomainConstraintAction",

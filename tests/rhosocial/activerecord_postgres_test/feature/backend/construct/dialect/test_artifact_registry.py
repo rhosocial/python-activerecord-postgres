@@ -110,17 +110,14 @@ def test_dialect_registry_carries_core_kinds_too(dialect):
 
 
 def test_dialect_registry_refuses_another_backends_kind(dialect):
-    """A SQLite kind is not in PostgreSQL's table, and the refusal names it.
+    """A foreign kind is not in PostgreSQL's table, and the refusal names it.
 
     The dialect's table is built with ``base=core_registry()`` and its own
     package -- it never merges another backend's kinds, so an artifact naming
-    one is a kind this build cannot read rather than a class it imports.
+    one is a kind this build cannot read rather than a class it imports. The
+    kind is spelled literally: a test may not import another backend's impl.
     """
-    from rhosocial.activerecord.backend.impl.sqlite.expression.attach import (
-        SQLiteAttachStatement,
-    )
-
-    foreign_kind = SQLiteAttachStatement.kind()
+    foreign_kind = "sqlite_attach_statement"
     with pytest.raises(RegistryError) as excinfo:
         dialect.artifact_registry().resolve_node(foreign_kind)
     assert excinfo.value.reason is RegistryReason.KIND_NOT_REGISTERED
