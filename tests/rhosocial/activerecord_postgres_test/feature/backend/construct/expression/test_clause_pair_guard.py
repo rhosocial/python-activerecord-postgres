@@ -187,6 +187,7 @@ class PairCase:
         both_match=None,
         a_refusal=None,
         b_refusal=None,
+        error_type=ValueError,
     ):
         self.case_id = case_id
         self.builder = builder
@@ -203,6 +204,10 @@ class PairCase:
         )
         self.a_refusal = a_refusal
         self.b_refusal = b_refusal
+        #: The type the pair's own grammar refusal raises. A clause judged at
+        #: render time raises TypeError; one still judged at construction
+        #: raises ValueError.
+        self.error_type = error_type
 
     def render(self, **kwargs):
         dialect = _dialect(self.version)
@@ -470,6 +475,8 @@ PAIR_CASES = (
         r"NOT ENFORCED\b",
         version=PG19,
         neither_error="AlterConstraintAction requires exactly one of",
+        # Core judges this action's grammar at render time.
+        error_type=TypeError,
     ),
     PairCase(
         "PostgresCopyToStatement.force_array",
@@ -504,7 +511,7 @@ class TestFourStatesArePairwiseDistinguishable:
     @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
     def test_neither_set_renders_neither_spelling(self, case):
         if case.neither_error is not None:
-            with pytest.raises(ValueError, match=case.neither_error):
+            with pytest.raises(case.error_type, match=case.neither_error):
                 case.render()
             return
         sql = case.render()
@@ -545,7 +552,7 @@ class TestFourStatesArePairwiseDistinguishable:
 
     @pytest.mark.parametrize("case", PAIR_CASES, ids=PAIR_IDS)
     def test_both_set_is_refused(self, case):
-        with pytest.raises(ValueError, match=case.both_match):
+        with pytest.raises(case.error_type, match=case.both_match):
             case.render(**{case.a: case.a_value, case.b: case.b_value})
 
 

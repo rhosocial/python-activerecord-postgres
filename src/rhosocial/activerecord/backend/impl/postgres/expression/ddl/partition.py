@@ -78,6 +78,10 @@ class PostgresPartitionValue(BaseExpression):
         ('42', ())
     """
 
+    #: ``None`` is a partition bound value: it renders as the SQL ``NULL``, so
+    #: the position carries it rather than missing it.
+    NULLABLE_REQUIRED = frozenset({"value"})
+
     def __init__(
         self,
         dialect: "SQLDialectBase",
