@@ -139,6 +139,7 @@ class PostgresSequenceMixin:
         gating and ordering stay in one place. ``no_cache`` is the one spelling
         PostgreSQL's synopsis lacks; it is refused by name rather than rendered.
         """
+        expr.validate()
         if expr.no_cache:
             self._refuse_no_cache("SEQUENCE NO CACHE")
         return super().format_create_sequence_statement(expr)
@@ -148,6 +149,7 @@ class PostgresSequenceMixin:
 
         See :meth:`format_create_sequence_statement`.
         """
+        expr.validate()
         if expr.no_cache:
             self._refuse_no_cache("ALTER SEQUENCE NO CACHE")
         return super().format_alter_sequence_statement(expr)

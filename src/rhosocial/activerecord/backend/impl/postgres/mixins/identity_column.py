@@ -94,6 +94,7 @@ class PostgresIdentityColumnMixin(IdentityColumnMixin):
         hooks stay in one place. ``no_cache`` is the one spelling PostgreSQL's
         synopsis lacks; it is refused by name rather than rendered.
         """
+        expr.validate()
         if expr.no_cache:
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,

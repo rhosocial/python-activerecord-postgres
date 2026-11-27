@@ -33,6 +33,7 @@ class PostgresExpressionMixin:
             # Generates: "col"::money::numeric::float8
 
         """
+        expr.validate_target_type()
         expr_sql, params = expr.expression.to_sql()
         # The target is an expression, so it renders itself and this
         # concatenates. Interpolating it would have produced
