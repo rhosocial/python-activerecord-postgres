@@ -8,7 +8,7 @@ regex, no substring checks, no SQL text inspection anywhere in this module.
 """
 
 from enum import Enum
-from typing import Optional, Tuple, TYPE_CHECKING, Union
+from typing import Optional, Sequence, Tuple, TYPE_CHECKING, Union
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
@@ -91,13 +91,33 @@ def _resolve_correction_kind(value: object) -> Optional[CorrectionKind]:
 
 
 class HintGroup:
-    """A nested join pair for ``Leading((a b) c)``."""
+    """A nested join pair for ``Leading((a b) c)``.
+
+    An *input* spelling only.  :class:`PostgresHintExpression` normalises it to
+    ``tuple(group.tables)`` when it collects, so nothing on the wire is a
+    ``HintGroup`` -- the payload is a nested array and every reader can parse it.
+    """
 
     def __init__(self, *tables: str):
         values = tuple(_require_identifier(table, "join pair table") for table in tables)
         if not values:
             raise ValueError("A join pair needs at least one table")
         self.tables = values
+
+
+def _normalise_sequence_item(value: object) -> object:
+    """One ``sequence`` entry in its payload form: a name or a tuple of names.
+
+    A ``HintGroup`` is the caller's convenience object, and an array is what the
+    codec reads back (JSON and XML draw no tuple/array distinction); both become
+    the tuple the node stores.  Anything else is left for
+    :meth:`PostgresHintExpression.check_renderable` to refuse at render time.
+    """
+    if isinstance(value, HintGroup):
+        return tuple(value.tables)
+    if isinstance(value, (list, tuple)):
+        return tuple(value)
+    return value
 
 
 class PostgresHintExpression(BaseExpression):
@@ -110,8 +130,7 @@ class PostgresHintExpression(BaseExpression):
         *,
         tables: Tuple[str, ...] = (),
         indexes: Tuple[str, ...] = (),
-        groups: Tuple[HintGroup, ...] = (),
-        sequence: Tuple[object, ...] = (),
+        sequence: Tuple[Union[str, HintGroup, Sequence[str]], ...] = (),
         correction_kind: Optional[CorrectionKind] = None,
         correction_amount: Optional[Union[int, float]] = None,
         workers: Optional[int] = None,
@@ -127,8 +146,10 @@ class PostgresHintExpression(BaseExpression):
         self.kind = kind
         self.tables = tuple(tables)
         self.indexes = tuple(indexes)
-        self.groups = tuple(groups)
-        self.sequence = tuple(sequence)
+        # A nested join pair is a payload, not a node: it has no standalone SQL,
+        # so it travels as the tuple of names it holds. Only ``str`` and
+        # ``tuple[str, ...]`` reach the wire from here.
+        self.sequence = tuple(_normalise_sequence_item(item) for item in sequence)
         self.correction_kind = correction_kind
         self.correction_amount = correction_amount
         self.workers = workers
@@ -145,14 +166,16 @@ class PostgresHintExpression(BaseExpression):
         for field, values in (("table", self.tables), ("index", self.indexes)):
             for value in values:
                 _assert_identifier(value, field)
-        for group in self.groups:
-            if not isinstance(group, HintGroup):
-                raise TypeError("groups must contain HintGroup values")
         for item in self.sequence:
             if isinstance(item, str):
                 _assert_identifier(item, "join target")
-            elif not isinstance(item, HintGroup):
-                raise TypeError("sequence must contain table names or HintGroup values")
+            elif isinstance(item, tuple):
+                if not item:
+                    raise TypeError("sequence join pairs must name at least one table")
+                for table in item:
+                    _assert_identifier(table, "join pair table")
+            else:
+                raise TypeError("sequence must contain table names or nested join pairs")
         if self.correction_kind is not None:
             if _resolve_correction_kind(self.correction_kind) is None:
                 raise TypeError("correction_kind must be a CorrectionKind")

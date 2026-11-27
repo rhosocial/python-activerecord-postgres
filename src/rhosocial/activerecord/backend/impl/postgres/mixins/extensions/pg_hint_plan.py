@@ -54,7 +54,11 @@ class PostgresPgHintPlanMixin:
         if kind is HintKind.LEADING:
             for item in expr.sequence:
                 if isinstance(item, HintGroup):
+                    # A caller may hand the formatter a raw HintGroup; the node
+                    # itself stores the normalised tuple.
                     arguments.append("(" + " ".join(item.tables) + ")")
+                elif isinstance(item, (list, tuple)):
+                    arguments.append("(" + " ".join(item) + ")")
                 else:
                     arguments.append(item)
         arguments.extend(expr.tables)
