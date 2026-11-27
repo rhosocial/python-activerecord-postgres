@@ -104,6 +104,7 @@ from .mixins import (
     PostgresPgstattupleMixin,
     PostgresPgLogicalinspectMixin,
     PostgresPgJsonSchemaMixin,
+    PostgreTimescaleDBMixin,
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresPartitionMixin,
@@ -410,6 +411,7 @@ class PostgresDialect(
     PostgresPgstattupleMixin,
     PostgresPgLogicalinspectMixin,
     PostgresPgJsonSchemaMixin,
+    PostgreTimescaleDBMixin,
     PostgresHstoreMixin,
     # Native feature mixins
     PostgresVacuumMixin,

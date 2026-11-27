@@ -13,6 +13,7 @@ PostgreSQL extension system allows installing additional modules, such as:
 - **unaccent**: Accent-insensitive text normalization
 - **amcheck / pageinspect / pgstattuple / pg_logicalinspect**: Diagnostics
 - **pg_jsonschema**: JSON Schema validation (PG14-18)
+- **TimescaleDB**: Time-series hypertables (amd64-only image family)
 - **hstore**: Key-value pair storage
 
 ## Introspection and Adaptation
@@ -100,6 +101,7 @@ The dialect maintains definitions for the following known extensions:
 | pgstattuple | 1.0 | monitoring | Tuple-level statistics |
 | pg_logicalinspect | 1.0 | replication | Logical snapshot inspection (PG18+) |
 | pg_jsonschema | 0.3 | validation | JSON Schema validation (PG14-18) |
+| timescaledb | 2.0 | time_series | Hypertables (amd64-only postgres-exts-ts) |
 | hstore | 1.0 | data | Key-value pair storage |
 | uuid-ossp | 1.0 | utility | UUID generation functions |
 | pgcrypto | 1.0 | security | Cryptographic functions |
@@ -143,6 +145,7 @@ backend.introspect_and_adapt()
 - **[unaccent](./unaccent.md)**: Accent-insensitive text
 - **[amcheck](./amcheck.md)** / **[pageinspect](./pageinspect.md)** / **[pgstattuple](./pgstattuple.md)** / **[pg_logicalinspect](./pg_logicalinspect.md)**: Diagnostics
 - **[pg_jsonschema](./pg_jsonschema.md)**: JSON Schema validation
+- **[TimescaleDB](./timescaledb.md)**: Time-series hypertables
 - **[hstore](./hstore.md)**: Key-value storage
 
 💡 *AI Prompt:* "What advantages does PostgreSQL's extension mechanism have over MySQL's plugin system?"

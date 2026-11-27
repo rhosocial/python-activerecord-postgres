@@ -354,6 +354,12 @@ UNACCENT_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "unaccent": FunctionVersionRequirement(extension="unaccent", ext_feature="function"),
 }
 
+TIMESCALEDB_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "create_hypertable": FunctionVersionRequirement(
+        extension="timescaledb", ext_feature="hypertable", min_pg_version=(12, 0, 0)
+    ),
+}
+
 PG_JSONSCHEMA_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "json_matches_schema": FunctionVersionRequirement(
         extension="pg_jsonschema", ext_feature="validation", min_pg_version=(14, 0, 0)
@@ -434,6 +440,7 @@ _ALL_CATEGORIES = [
     UNACCENT_FUNCTION_VERSIONS,
     DIAGNOSTICS_FUNCTION_VERSIONS,
     PG_JSONSCHEMA_FUNCTION_VERSIONS,
+    TIMESCALEDB_FUNCTION_VERSIONS,
     POSTGIS_FUNCTION_VERSIONS,
 ]
 
