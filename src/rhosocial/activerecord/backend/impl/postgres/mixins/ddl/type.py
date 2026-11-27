@@ -37,6 +37,7 @@ from ...expression.ddl.type import (
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
+    from ...expression.ddl.extension_index import PostgresDropTypeNameExpression
     from ...expression.ddl.type import PostgresCompositeTypeAttribute
 
 
@@ -237,8 +238,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         """
         if not isinstance(expr.type, Type):
             raise TypeError(
-                f"CreateTypeStatement.type must be a Type, "
-                f"got {type(expr.type).__name__}"
+                f"CreateTypeStatement.type must be a Type, " f"got {type(expr.type).__name__}"
             )
         if not self.supports_type_objects() or not self.supports_create_type():
             raise UnsupportedFeatureError(self.name, "CREATE TYPE")
@@ -288,8 +288,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         """
         if not isinstance(expr.type, Type):
             raise TypeError(
-                f"AlterTypeStatement.type must be a Type, "
-                f"got {type(expr.type).__name__}"
+                f"AlterTypeStatement.type must be a Type, " f"got {type(expr.type).__name__}"
             )
         if not self.supports_type_objects() or not self.supports_alter_type():
             raise UnsupportedFeatureError(self.name, "ALTER TYPE")
@@ -315,9 +314,15 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
         parts.append(action_sql)
         return " ".join(parts), tuple(action_params)
 
-    def format_postgres_drop_type_name_expression(self, expr) -> Tuple[str, tuple]:
+    def format_postgres_drop_type_name_expression(
+        self, expr: "PostgresDropTypeNameExpression"
+    ) -> Tuple[str, tuple]:
         """Validate schema arguments and render a name-addressed DROP TYPE."""
-        if expr.schema is not None and expr.schema_name is not None and expr.schema != expr.schema_name:
+        if (
+            expr.schema is not None
+            and expr.schema_name is not None
+            and expr.schema != expr.schema_name
+        ):
             raise ValueError("schema and schema_name must match when both are provided")
         resolved = expr.schema if expr.schema is not None else expr.schema_name
         node = PostgresDropTypeExpression(
@@ -338,8 +343,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             raise UnsupportedFeatureError(self.name, "DROP TYPE")
         if not isinstance(expr.type, Type):
             raise TypeError(
-                f"{type(expr).__name__}.type must be a Type, "
-                f"got {type(expr.type).__name__}"
+                f"{type(expr).__name__}.type must be a Type, " f"got {type(expr.type).__name__}"
             )
         if expr.if_exists and not self.supports_drop_type_if_exists():
             raise UnsupportedFeatureError(self.name, "DROP TYPE IF EXISTS")
@@ -384,9 +388,7 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
             )
             return f"AS ({attributes})", ()
         if isinstance(expr, PostgresEnumTypeDefinition):
-            labels = ", ".join(
-                self._format_postgres_enum_value(label) for label in expr.labels
-            )
+            labels = ", ".join(self._format_postgres_enum_value(label) for label in expr.labels)
             return f"AS ENUM ({labels})", ()
         if isinstance(expr, PostgresRangeTypeDefinition):
             if expr.multirange_type_name is not None and self.version < (14, 0, 0):
@@ -516,7 +518,9 @@ class PostgresTypeMixin(UserDefinedTypeMixin):
                         raise ValueError("STORAGE property cannot be None")
                     rendered_value = self.format_identifier(value)
                 else:
-                    rendered_value = "NONE" if value is None else self._format_qualified_identifier(value)
+                    rendered_value = (
+                        "NONE" if value is None else self._format_qualified_identifier(value)
+                    )
                 clauses.append(f"{name} = {rendered_value}")
             return f"SET ({', '.join(clauses)})", ()
         raise UnsupportedFeatureError(

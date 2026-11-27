@@ -177,10 +177,13 @@ class PostgresDomainMixin(DomainMixin):
             clauses = list(expr.checks)
         if clauses and not self.supports_domain_checks():
             raise UnsupportedFeatureError(self.name, "DOMAIN CHECK")
-        if any(
-            isinstance(clause, DomainCheckConstraint) and clause.name is not None
-            for clause in clauses
-        ) and not self.supports_named_domain_checks():
+        if (
+            any(
+                isinstance(clause, DomainCheckConstraint) and clause.name is not None
+                for clause in clauses
+            )
+            and not self.supports_named_domain_checks()
+        ):
             raise UnsupportedFeatureError(self.name, "named DOMAIN CHECK")
         if len(clauses) > 1 and not self.supports_multiple_domain_checks():
             raise UnsupportedFeatureError(self.name, "multiple domain CHECK constraints")
@@ -254,7 +257,7 @@ class PostgresDomainMixin(DomainMixin):
             tuple(action_params),
         )
 
-    def format_postgres_alter_domain_statement(
+    def render_postgres_alter_domain_statement(
         self,
         expr: AlterDomainStatement,
     ) -> Tuple[str, tuple]:
@@ -271,8 +274,7 @@ class PostgresDomainMixin(DomainMixin):
         """
         if not isinstance(expr.domain, Domain):
             raise TypeError(
-                f"DropDomainStatement.domain must be a Domain, "
-                f"got {type(expr.domain).__name__}"
+                f"DropDomainStatement.domain must be a Domain, " f"got {type(expr.domain).__name__}"
             )
         if not self.supports_domains() or not self.supports_drop_domain():
             raise UnsupportedFeatureError(

@@ -105,7 +105,7 @@ class PostgresDataTypeSupport(Protocol):
         """
         ...
 
-    def format_create_range_type(self, expr) -> Tuple[str, tuple]:
+    def render_create_range_type(self, expr) -> Tuple[str, tuple]:
         """Format CREATE TYPE AS RANGE statement from expression object.
 
         Args:

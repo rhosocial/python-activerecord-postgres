@@ -13,9 +13,24 @@ of backend-expression-families §5.3): the generic expression renders exactly as
 before, and only a derived instance carrying hints is prefixed.
 """
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+        CreateTableAsStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements.ddl_view import (
+        CreateMaterializedViewStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        DeleteStatement,
+        InsertStatement,
+        UpdateStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
+    from rhosocial.activerecord.backend.expression.statements.explain import ExplainStatement
 
 from ...expression.hint import (
     CorrectionKind,
@@ -83,9 +98,7 @@ class PostgresPgHintPlanMixin:
                 )
             if not self.check_extension_feature("pg_hint_plan", "memoize"):
                 installed = self.get_extension_version("pg_hint_plan")
-                minimum = self.get_extension_min_version_for_feature(
-                    "pg_hint_plan", "memoize"
-                )
+                minimum = self.get_extension_min_version_for_feature("pg_hint_plan", "memoize")
                 raise UnsupportedFeatureError(
                     self.name,
                     f"{kind.value} hint (pg_hint_plan {minimum}+)",
@@ -96,9 +109,7 @@ class PostgresPgHintPlanMixin:
             "pg_hint_plan", "disable_index"
         ):
             installed = self.get_extension_version("pg_hint_plan")
-            minimum = self.get_extension_min_version_for_feature(
-                "pg_hint_plan", "disable_index"
-            )
+            minimum = self.get_extension_min_version_for_feature("pg_hint_plan", "disable_index")
             raise UnsupportedFeatureError(
                 self.name,
                 f"DisableIndex hint (pg_hint_plan {minimum}+)",
@@ -196,7 +207,7 @@ class PostgresHintedStatementsMixin:
             f"Give the hint to the outermost statement instead"
         )
 
-    def format_query_statement(self, expr) -> Tuple[str, tuple]:
+    def format_query_statement(self, expr: "QueryStatement") -> Tuple[str, tuple]:
         sql, params = super().format_query_statement(expr)
         if not isinstance(expr, PostgresQueryStatement):
             return sql, params
@@ -205,7 +216,7 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_insert_statement(self, expr) -> Tuple[str, tuple]:
+    def format_insert_statement(self, expr: "InsertStatement") -> Tuple[str, tuple]:
         from rhosocial.activerecord.backend.expression.statements.dml import (
             SelectSource,
         )
@@ -225,7 +236,7 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_update_statement(self, expr) -> Tuple[str, tuple]:
+    def format_update_statement(self, expr: "UpdateStatement") -> Tuple[str, tuple]:
         sql, params = super().format_update_statement(expr)
         if not isinstance(expr, PostgresUpdateStatement):
             return sql, params
@@ -234,7 +245,7 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_delete_statement(self, expr) -> Tuple[str, tuple]:
+    def format_delete_statement(self, expr: "DeleteStatement") -> Tuple[str, tuple]:
         sql, params = super().format_delete_statement(expr)
         if not isinstance(expr, PostgresDeleteStatement):
             return sql, params
@@ -243,7 +254,7 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_explain_statement(self, expr) -> Tuple[str, tuple]:
+    def format_explain_statement(self, expr: "ExplainStatement") -> Tuple[str, tuple]:
         # The comment goes ahead of the EXPLAIN keyword, which is the position
         # pg_hint_plan documents; the wrapped statement must not carry its own.
         if isinstance(expr.statement, _NESTED_HINTED_STATEMENTS) and expr.statement.hints:
@@ -256,7 +267,7 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_create_table_as_statement(self, expr) -> Tuple[str, tuple]:
+    def format_create_table_as_statement(self, expr: "CreateTableAsStatement") -> Tuple[str, tuple]:
         """Prefix ``CREATE TABLE ... AS`` with its head hint.
 
         PostgreSQL has no formatter of its own for CTAS, so ``super()`` is
@@ -275,7 +286,9 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_create_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
+    def format_create_materialized_view_statement(
+        self, expr: "CreateMaterializedViewStatement"
+    ) -> Tuple[str, tuple]:
         """Prefix ``CREATE MATERIALIZED VIEW ... AS`` with its head hint.
 
         ``super()`` is ``PostgresMaterializedViewMixin``'s PostgreSQL-specific
@@ -292,7 +305,9 @@ class PostgresHintedStatementsMixin:
         self._require_hint_plan()
         return self._hint_comment(expr.hints) + sql, params
 
-    def format_refresh_materialized_view_pg_statement(self, expr) -> Tuple[str, tuple]:
+    def format_refresh_materialized_view_pg_statement(
+        self, expr: "PostgresRefreshMaterializedViewStatement"
+    ) -> Tuple[str, tuple]:
         """Prefix ``REFRESH MATERIALIZED VIEW`` with its head hint.
 
         ``PostgresRefreshMaterializedViewStatement`` declares this formatter

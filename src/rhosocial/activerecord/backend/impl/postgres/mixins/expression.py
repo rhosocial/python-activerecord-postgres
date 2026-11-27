@@ -1,7 +1,26 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/expression.py
 """PostgreSQL expression formatting mixin."""
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING, Union
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.core import FunctionCall, RowCountWildcard
+    from ..expression.values import (
+        PostgresHstoreValue,
+        PostgresLtreeValue,
+        PostgresNetworkValue,
+        PostgresRangeValue,
+    )
+
+
+def _escape_psycopg_operator(operator: str) -> str:
+    """Double a literal ``%`` in an operator symbol for psycopg.
+
+    psycopg reads ``%`` as the start of a bind placeholder, so an operator that
+    contains one (for example a pg_trgm symbol) must be doubled before it is
+    concatenated. This escapes the declared operator atom, not assembled SQL.
+    """
+    return operator.replace("%", "%%") if "%" in operator else operator
 
 
 class PostgresExpressionMixin:
@@ -66,12 +85,12 @@ class PostgresExpressionMixin:
         op = expr.op
         if isinstance(op, ComparisonOperator):
             op = op.symbol
-        # Escape % in operators for psycopg compatibility
-        escaped_op = op.replace('%', '%%') if '%' in op else op
+        # Escape the declared operator atom, not the assembled SQL.
+        escaped_op = _escape_psycopg_operator(op)
         sql = f"{left_sql} {escaped_op} {right_sql}"
         return sql, left_params + right_params
 
-    def format_row_count_wildcard(self, expr) -> Tuple[str, tuple]:
+    def format_row_count_wildcard(self, expr: "RowCountWildcard") -> Tuple[str, tuple]:
         """Format ``PostgresRowCountWildcard``: ``*`` or ``t.*``.
 
         Core's bare ``*`` is right for ``COUNT(*)`` and is left alone; the override
@@ -143,3 +162,39 @@ class PostgresExpressionMixin:
         if expr.alias:
             sql = f"{sql} AS {self.format_identifier(expr.alias)}"
         return sql, tuple(parts_params)
+
+    def format_function_call(
+        self,
+        expr: Union[
+            "FunctionCall",
+            "PostgresNetworkValue",
+            "PostgresRangeValue",
+            "PostgresHstoreValue",
+            "PostgresLtreeValue",
+        ],
+    ) -> Tuple[str, tuple]:
+        """Render a call, including PostgreSQL's typed value wrappers.
+
+        The four value nodes declare this same formatter but render the call
+        they wrap through their own ``to_sql()``, so the annotation names both
+        the call and the wrappers instead of a bare ``BaseExpression``. Every
+        ordinary call still goes through core's implementation below it.
+        """
+        from ..expression.values import (
+            PostgresHstoreValue,
+            PostgresLtreeValue,
+            PostgresNetworkValue,
+            PostgresRangeValue,
+        )
+
+        if isinstance(
+            expr,
+            (
+                PostgresNetworkValue,
+                PostgresRangeValue,
+                PostgresHstoreValue,
+                PostgresLtreeValue,
+            ),
+        ):
+            return expr.to_sql()
+        return super().format_function_call(expr)

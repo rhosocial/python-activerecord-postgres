@@ -26,8 +26,8 @@ class TestPostgresBloomMixin:
         """CreateIndexStatement with index_type bloom should render a bloom index."""
         expr = CreateIndexStatement(
             self.dialect,
-            index=Index(self.dialect, 'idx_name'),
-            table=Table(self.dialect, 'table_name'),
+            index=Index(self.dialect, "idx_name"),
+            table=Table(self.dialect, "table_name"),
             columns=["col1", "col2"],
             index_type="bloom",
         )
@@ -41,8 +41,8 @@ class TestPostgresBloomMixin:
         """CreateIndexStatement with fillfactor should include WITH (fillfactor = ...)."""
         expr = PostgresCreateIndexExpression(
             self.dialect,
-            index=Index(self.dialect, 'idx_name'),
-            table=Table(self.dialect, 'table_name'),
+            index=Index(self.dialect, "idx_name"),
+            table=Table(self.dialect, "table_name"),
             columns=["col1", "col2"],
             index_type="bloom",
             with_options={"fillfactor": 90},
@@ -53,5 +53,5 @@ class TestPostgresBloomMixin:
 
     def test_format_bloom_access_method(self):
         """format_bloom_access_method should return SQL containing bloom."""
-        result = self.dialect.format_bloom_access_method()
+        result = self.dialect.render_bloom_access_method()
         assert "bloom" in result

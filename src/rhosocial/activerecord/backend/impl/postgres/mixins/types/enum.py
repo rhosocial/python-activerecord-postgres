@@ -16,10 +16,15 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     CreateTypeStatement,
     DropTypeStatement,
 )
-from ...expression.ddl.type import PostgresRenameEnumValueAction
+from ...expression.ddl.type import (
+    PostgresEnumTypeNameExpression,
+    PostgresEnumValuesExpression,
+    PostgresRenameEnumValueAction,
+)
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
+    from ...expression.enum_ import PostgresEnumType
 
 __all__ = ["EnumTypeMixin"]
 
@@ -50,13 +55,17 @@ class EnumTypeMixin:
             raise TypeError("ENUM expr must be strings")
         return ", ".join(self.inline_sql_literal(label) for label in labels), ()
 
-    def format_postgres_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_values_expression(
+        self, expr: "PostgresEnumValuesExpression"
+    ) -> Tuple[str, tuple]:
         return self.format_enum_values(expr.values)
 
-    def format_postgres_enum_type_name_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_enum_type_name_expression(
+        self, expr: "PostgresEnumTypeNameExpression"
+    ) -> Tuple[str, tuple]:
         return self.format_type_object(Type(self, expr.name, schema_name=expr.schema))
 
-    def format_enum_type_expression(self, expr: Any) -> Tuple[str, tuple]:
+    def format_enum_type_expression(self, expr: "PostgresEnumType") -> Tuple[str, tuple]:
         return self.format_type_object(Type(self, expr.name, schema_name=expr.schema))
 
     def create_enum_type(
@@ -98,39 +107,53 @@ class EnumTypeMixin:
         from ...functions.enum import add_enum_value as factory
 
         sql, _ = factory(
-            self._as_dialect(), type_name, new_value, schema,
-            before=before, after=after,
+            self._as_dialect(),
+            type_name,
+            new_value,
+            schema,
+            before=before,
+            after=after,
         ).to_sql()
         return sql
 
-    def format_create_enum_type(self, expr: Any) -> Tuple[str, tuple]:
+    def render_create_enum_type(self, expr: Any) -> Tuple[str, tuple]:
         from ...functions.enum import create_enum_type as factory
 
         return factory(
-            self._as_dialect(), expr.name, expr.values, expr.schema,
+            self._as_dialect(),
+            expr.name,
+            expr.values,
+            expr.schema,
             if_not_exists=expr.if_not_exists,
         ).to_sql()
 
-    def format_drop_enum_type(self, expr: Any) -> Tuple[str, tuple]:
+    def render_drop_enum_type(self, expr: Any) -> Tuple[str, tuple]:
         from ...functions.enum import drop_enum_type as factory
 
         return factory(
-            self._as_dialect(), expr.name, expr.schema,
-            if_exists=expr.if_exists, cascade=expr.cascade,
+            self._as_dialect(),
+            expr.name,
+            expr.schema,
+            if_exists=expr.if_exists,
+            cascade=expr.cascade,
         ).to_sql()
 
-    def format_alter_enum_add_value(self, expr: Any) -> Tuple[str, tuple]:
+    def render_alter_enum_add_value(self, expr: Any) -> Tuple[str, tuple]:
         from ...functions.enum import add_enum_value as factory
 
         return factory(
-            self._as_dialect(), expr.type_name, expr.new_value, expr.schema,
-            before=expr.before, after=expr.after,
+            self._as_dialect(),
+            expr.type_name,
+            expr.new_value,
+            expr.schema,
+            before=expr.before,
+            after=expr.after,
         ).to_sql()
 
-    def format_alter_enum_type_add_value(self, expr: Any) -> Tuple[str, tuple]:
-        return self.format_alter_enum_add_value(expr)
+    def render_alter_enum_type_add_value(self, expr: Any) -> Tuple[str, tuple]:
+        return self.render_alter_enum_add_value(expr)
 
-    def format_alter_enum_type_rename_value(self, expr: Any) -> Tuple[str, tuple]:
+    def render_alter_enum_type_rename_value(self, expr: Any) -> Tuple[str, tuple]:
         dialect = self._as_dialect()
         action = PostgresRenameEnumValueAction(
             dialect,

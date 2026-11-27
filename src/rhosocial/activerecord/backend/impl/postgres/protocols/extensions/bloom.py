@@ -29,6 +29,6 @@ class PostgresBloomSupport(Protocol):
         """Whether bloom index is supported."""
         ...
 
-    def format_bloom_access_method(self) -> str:
+    def render_bloom_access_method(self) -> str:
         """Format bloom as access method."""
         ...

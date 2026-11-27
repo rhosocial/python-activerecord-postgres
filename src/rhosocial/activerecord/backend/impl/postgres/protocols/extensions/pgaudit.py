@@ -38,14 +38,14 @@ class PostgresPgauditSupport(Protocol):
         """Whether pgaudit supports session auditing."""
         ...
 
-    def format_pgaudit_set_role(self, expr: str) -> str:
+    def render_pgaudit_set_role(self, expr: str) -> str:
         """Format audit expr assignment."""
         ...
 
-    def format_pgaudit_log_level(self, expr: str = "log") -> str:
+    def render_pgaudit_log_level(self, expr: str = "log") -> str:
         """Format audit log expr configuration."""
         ...
 
-    def format_pgaudit_include_catalog(self, expr: bool = True) -> str:
+    def render_pgaudit_include_catalog(self, expr: bool = True) -> str:
         """Format expr catalog statements."""
         ...

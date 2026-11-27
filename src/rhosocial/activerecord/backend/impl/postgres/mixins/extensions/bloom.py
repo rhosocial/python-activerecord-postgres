@@ -9,6 +9,6 @@ class PostgresBloomMixin:
         """Check if bloom index is supported."""
         return self.check_extension_feature("bloom", "index")
 
-    def format_bloom_access_method(self) -> str:
+    def render_bloom_access_method(self) -> str:
         """Render the bloom access-method setting (a string utility)."""
         return "SET default_index_access_method = 'bloom'"

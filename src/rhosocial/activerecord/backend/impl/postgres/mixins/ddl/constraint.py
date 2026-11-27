@@ -82,6 +82,16 @@ def _is_exclude_operator(text: str) -> bool:
     return bool(text) and all(char in _EXCLUDE_OPERATOR_CHARACTERS for char in text)
 
 
+def _normalise_exclude_operator(operator: str) -> str:
+    """Normalise one declared operator atom before validating it.
+
+    A caller may spell an operator with surrounding or embedded whitespace.
+    That whitespace belongs to the atom's spelling, not to assembled SQL, and
+    is removed here so the allowlist check below sees the operator itself.
+    """
+    return "".join(operator.strip().lower().split())
+
+
 class PostgresConstraintMixin(_ConstraintMixinBase):
     """PostgreSQL constraint capability declarations.
 
@@ -496,11 +506,11 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             TableConstraintBranch,
         )
 
-        if not (isinstance(branch, type)
-                and issubclass(branch, (ColumnConstraintBranch, TableConstraintBranch))):
-            raise TypeError(
-                f"constraint kind must be a constraint branch class, got {branch!r}"
-            )
+        if not (
+            isinstance(branch, type)
+            and issubclass(branch, (ColumnConstraintBranch, TableConstraintBranch))
+        ):
+            raise TypeError(f"constraint kind must be a constraint branch class, got {branch!r}")
         if (
             branch in (TableCheckConstraint, TableForeignKeyConstraint)
             and self.supports_constraint_enforced()
@@ -534,11 +544,11 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             TableConstraintBranch,
         )
 
-        if not (isinstance(branch, type)
-                and issubclass(branch, (ColumnConstraintBranch, TableConstraintBranch))):
-            raise TypeError(
-                f"constraint kind must be a constraint branch class, got {branch!r}"
-            )
+        if not (
+            isinstance(branch, type)
+            and issubclass(branch, (ColumnConstraintBranch, TableConstraintBranch))
+        ):
+            raise TypeError(f"constraint kind must be a constraint branch class, got {branch!r}")
         boundary = {
             TableForeignKeyConstraint: (18, 0, 0),
             TableCheckConstraint: (19, 0, 0),
@@ -733,9 +743,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
                 UnsupportedFeatureError,
             )
 
-            kind = self._KIND_SQL.get(
-                type(expr.branch), type(expr.branch).__name__
-            )
+            kind = self._KIND_SQL.get(type(expr.branch), type(expr.branch).__name__)
             feature = f"{kind} NOT ENFORCED on a column constraint"
             raise UnsupportedFeatureError(
                 self.name,
@@ -770,7 +778,9 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         self._require_enforceable_constraint(expr.constraint_branch)
         return cast(Tuple[str, tuple], super().format_alter_constraint_action(expr))
 
-    def format_validate_constraint_action(self, expr: "ValidateConstraintAction") -> Tuple[str, tuple]:
+    def format_validate_constraint_action(
+        self, expr: "ValidateConstraintAction"
+    ) -> Tuple[str, tuple]:
         return cast(Tuple[str, tuple], super().format_validate_constraint_action(expr))
 
     @staticmethod
@@ -811,7 +821,8 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             raise ValueError(f"{context} has unbalanced quotes or parentheses")
 
     def format_table_exclude_constraint(
-        self, expr: TableExcludeConstraint,
+        self,
+        expr: TableExcludeConstraint,
     ) -> Tuple[str, tuple]:
         """Render PostgreSQL's EXCLUDE body.
 
@@ -862,7 +873,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             expression, operator = element
             if not isinstance(operator, str):
                 raise ValueError("EXCLUDE operator must be a string")
-            operator = "".join(operator.strip().lower().split())
+            operator = _normalise_exclude_operator(operator)
             if operator in {"is", "isnot"} or not _is_exclude_operator(operator):
                 raise ValueError(f"Invalid exclude operator '{operator}'")
             if isinstance(expression, str):
@@ -876,7 +887,9 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
             else:
                 to_sql = getattr(expression, "to_sql", None)
                 if not callable(to_sql):
-                    raise TypeError("EXCLUDE element expression must be an identifier or SQL expression")
+                    raise TypeError(
+                        "EXCLUDE element expression must be an identifier or SQL expression"
+                    )
                 if expression.dialect is not self:
                     raise ValueError("EXCLUDE element expression must use the PostgreSQL dialect")
                 expression_sql, expression_params = to_sql()

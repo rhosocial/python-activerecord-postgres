@@ -6,7 +6,12 @@ the ``ALTER COLUMN ... SET DATA TYPE ... USING`` conversion expression,
 which the core ``DDLColumnMixin`` does not emit.
 """
 
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+        AlterColumnAction,
+    )
 
 
 class PostgresAlterColumnModifierMixin:
@@ -72,7 +77,7 @@ class PostgresAlterColumnModifierMixin:
             result = f"{result} CASCADE"
         return result, ()
 
-    def format_alter_column_action(self, expr) -> Tuple[str, tuple]:
+    def format_alter_column_action(self, expr: "AlterColumnAction") -> Tuple[str, tuple]:
         """Format an ``ALTER COLUMN`` expr, adding ``USING`` conversion.
 
         The core ``DDLColumnMixin.format_alter_column_action`` renders the
@@ -101,9 +106,7 @@ class PostgresAlterColumnModifierMixin:
         op = getattr(expr, "operation", None)
         op_str = op.value if hasattr(op, "value") else str(op)
         if op_str != "SET DATA TYPE":
-            raise ValueError(
-                "USING conversion is only valid for ALTER COLUMN SET DATA TYPE"
-            )
+            raise ValueError("USING conversion is only valid for ALTER COLUMN SET DATA TYPE")
 
         using_sql, using_params = using.to_sql()
         core, sep, cascade = sql.partition(" CASCADE")

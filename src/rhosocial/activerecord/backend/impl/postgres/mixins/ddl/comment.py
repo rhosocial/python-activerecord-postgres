@@ -2,7 +2,10 @@
 """PostgreSQL COMMENT ON DDL implementation."""
 
 from enum import Enum
-from typing import Tuple
+from typing import Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...expression.ddl.comment import PostgresCommentOnStatement
 
 
 class PostgresCommentMixin:
@@ -17,7 +20,7 @@ class PostgresCommentMixin:
         """
         return True
 
-    def format_comment_on_statement(self, expr) -> Tuple[str, tuple]:
+    def format_comment_on_statement(self, expr: "PostgresCommentOnStatement") -> Tuple[str, tuple]:
         """Format COMMENT ON statement (PostgreSQL-specific).
 
         Accepts a :class:`~rhosocial.activerecord.backend.expression.objects.SchemaObject`

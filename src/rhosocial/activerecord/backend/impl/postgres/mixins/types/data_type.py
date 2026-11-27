@@ -10,12 +10,13 @@ instead of the removed format_* methods.
 
 Methods retained in this mixin:
 - supports_*: Capability detection
-- format_create_range_type: DDL statement
+- render_create_range_type: DDL statement
 """
 
 from typing import Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.statements.ddl_type import CreateTypeStatement
+
 
 class PostgresDataTypeMixin:
     """Mixin providing PostgreSQL data type support methods.
@@ -66,7 +67,6 @@ class PostgresDataTypeMixin:
         """
         return False
 
-
     def supports_numeric_infinity(self) -> bool:
         """Whether NUMERIC type supports Infinity values.
 
@@ -97,7 +97,7 @@ class PostgresDataTypeMixin:
         """
         return self.version_at_least((14, 0, 0))
 
-    def format_create_range_type(
+    def render_create_range_type(
         self,
         expr: CreateTypeStatement,
     ) -> Tuple[str, tuple]:

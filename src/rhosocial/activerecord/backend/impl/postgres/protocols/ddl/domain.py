@@ -12,7 +12,6 @@ from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import AlterDomainStatement
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import DomainAlterAction
 
-
 __all__ = ["PostgresDomainSupport"]
 
 
@@ -23,11 +22,10 @@ class PostgresDomainSupport(
     DropDomainSupport,
     Protocol,
 ):
-    def format_postgres_alter_domain_statement(
+    def render_postgres_alter_domain_statement(
         self,
         expr: AlterDomainStatement,
-    ) -> Tuple[str, tuple]:
-        ...
+    ) -> Tuple[str, tuple]: ...
 
     # The two formatters below serve this backend's own private nodes: the
     # legacy ``sql=`` argument still hands an expression that carries nothing
@@ -40,11 +38,9 @@ class PostgresDomainSupport(
     def format_legacy_sql_expression(
         self,
         expr: BaseExpression,
-    ) -> Tuple[str, tuple]:
-        ...
+    ) -> Tuple[str, tuple]: ...
 
     def format_postgres_unsupported_domain_action(
         self,
         expr: DomainAlterAction,
-    ) -> Tuple[str, tuple]:
-        ...
+    ) -> Tuple[str, tuple]: ...

@@ -27,7 +27,7 @@ class PostgresPgauditMixin:
         """Check if pgaudit supports session auditing."""
         return self.check_extension_feature("pgaudit", "session")
 
-    def format_pgaudit_set_role(self, expr: str) -> str:
+    def render_pgaudit_set_role(self, expr: str) -> str:
         """Format audit expr assignment.
 
         Args:
@@ -38,7 +38,7 @@ class PostgresPgauditMixin:
         """
         return f"ALTER ROLE {expr} SET pgaudit.expr = '{expr}'"
 
-    def format_pgaudit_log_level(self, expr: str = "log") -> str:
+    def render_pgaudit_log_level(self, expr: str = "log") -> str:
         """Format audit log expr configuration.
 
         Args:
@@ -49,7 +49,7 @@ class PostgresPgauditMixin:
         """
         return f"SET pgaudit.log = '{expr}'"
 
-    def format_pgaudit_include_catalog(self, expr: bool = True) -> str:
+    def render_pgaudit_include_catalog(self, expr: bool = True) -> str:
         """Format expr catalog statements.
 
         Args:

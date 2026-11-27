@@ -2,6 +2,10 @@
 from typing import Any, Dict, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
+from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    ColumnDefinition,
+    CreateTableOptions,
+)
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
     IntegerType,
@@ -80,7 +84,6 @@ class PostgresTableMixin:
         """TEMPORARY tables are supported in all versions."""
         return True
 
-
     def supports_create_table_as_bind_parameters(self) -> bool:
         """PostgreSQL accepts bind parameters in a CTAS body.
 
@@ -90,6 +93,7 @@ class PostgresTableMixin:
         view's body, which is stored and run again later.
         """
         return True
+
     def supports_unlogged_table(self) -> bool:
         """CREATE UNLOGGED TABLE is supported since PostgreSQL 9.5.
 
@@ -121,7 +125,7 @@ class PostgresTableMixin:
         """PostgreSQL supports CREATE TABLE (LIKE ...) with INCLUDING/EXCLUDING options."""
         return True
 
-    def format_create_table_options(self, expr) -> Tuple[str, tuple]:
+    def format_create_table_options(self, expr: "CreateTableOptions") -> Tuple[str, tuple]:
         """Format the CREATE header modifiers for PostgreSQL.
 
         Accepts both the generic ``CreateTableOptions`` (renders ``OR REPLACE``)
@@ -164,6 +168,7 @@ class PostgresTableMixin:
         from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
             PostgresCreateTableOptions,
         )
+
         if (
             isinstance(expr.table_options, PostgresCreateTableOptions)
             and expr.table_options.unlogged
@@ -172,6 +177,7 @@ class PostgresTableMixin:
             from rhosocial.activerecord.backend.dialect.exceptions import (
                 UnsupportedFeatureError,
             )
+
             raise UnsupportedFeatureError(
                 self.name,
                 "CREATE UNLOGGED TEMPORARY TABLE",
@@ -254,7 +260,7 @@ class PostgresTableMixin:
 
         return " ".join(parts), tuple(table_params) + tuple(source_params)
 
-    def format_column_definition(self, expr) -> Tuple[str, tuple]:
+    def format_column_definition(self, expr: "ColumnDefinition") -> Tuple[str, tuple]:
         """Format a single column definition with PostgreSQL-specific syntax.
 
         Accepts both the generic ``ColumnDefinition`` and the PostgreSQL
@@ -287,8 +293,10 @@ class PostgresTableMixin:
             # vendor form is the standalone COMMENT ON statement); a comment
             # on a column definition is never silently dropped.
             from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
+
             raise UnsupportedFeatureError(
-                self.name, "COLUMN COMMENT",
+                self.name,
+                "COLUMN COMMENT",
                 "PostgreSQL has no inline column comment; use a standalone "
                 "COMMENT ON COLUMN statement.",
             )

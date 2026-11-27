@@ -28,7 +28,11 @@ class PostgresEnumTypeSupport(Protocol):
     """
 
     def create_enum_type(
-        self, name: str, values: List[str], schema: Optional[str] = None, if_not_exists: bool = False
+        self,
+        name: str,
+        values: List[str],
+        schema: Optional[str] = None,
+        if_not_exists: bool = False,
     ) -> str:
         """Generate CREATE TYPE statement for enum.
 
@@ -44,7 +48,11 @@ class PostgresEnumTypeSupport(Protocol):
         ...
 
     def drop_enum_type(
-        self, name: str, schema: Optional[str] = None, if_exists: bool = False, cascade: bool = False
+        self,
+        name: str,
+        schema: Optional[str] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
     ) -> str:
         """Generate DROP TYPE statement for enum.
 
@@ -94,7 +102,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_create_enum_type(
+    def render_create_enum_type(
         self,
         expr: "PostgresCreateEnumTypeExpression",
     ) -> Tuple[str, tuple]:
@@ -108,7 +116,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_drop_enum_type(
+    def render_drop_enum_type(
         self,
         expr: "PostgresDropEnumTypeExpression",
     ) -> Tuple[str, tuple]:
@@ -122,7 +130,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_alter_enum_add_value(
+    def render_alter_enum_add_value(
         self,
         expr: "PostgresAlterEnumAddValueExpression",
     ) -> Tuple[str, tuple]:
@@ -147,7 +155,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_alter_enum_type_add_value(self, expr: Any) -> Tuple[str, tuple]:
+    def render_alter_enum_type_add_value(self, expr: Any) -> Tuple[str, tuple]:
         """Format ALTER TYPE ADD VALUE statement from expression object.
 
         Args:
@@ -158,7 +166,7 @@ class PostgresEnumTypeSupport(Protocol):
         """
         ...
 
-    def format_alter_enum_type_rename_value(self, expr: Any) -> Tuple[str, tuple]:
+    def render_alter_enum_type_rename_value(self, expr: Any) -> Tuple[str, tuple]:
         """Format ALTER TYPE RENAME VALUE statement from expression object.
 
         Args:
@@ -176,5 +184,3 @@ class PostgresEnumTypeSupport(Protocol):
     def format_postgres_enum_values_expression(self, expr: Any) -> Tuple[str, tuple]:
         """Format enum values from expression object."""
         ...
-
-

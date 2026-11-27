@@ -23,6 +23,7 @@ materialized view cannot be relocated to another tablespace after creation.
 This mixin must precede the core ``ViewMixin`` in ``PostgresDialect`` so the
 formatters below take precedence over the generic ones.
 """
+
 from typing import Any, Dict, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
@@ -41,9 +42,13 @@ from ..expression.ddl.mv import (
 from ..storage_parameters import resolve_storage_parameter
 
 if TYPE_CHECKING:
-    from ....expression.statements.ddl_view import CreateMaterializedViewStatement
+    from ....expression.statements.ddl_view import (
+        CreateMaterializedViewStatement,
+        DropMaterializedViewStatement,
+    )
     from ..expression.ddl.mv import (
         PostgresAlterMaterializedViewStatement,
+        PostgresMaterializedViewAlterAction,
         PostgresRefreshMaterializedViewStatement,
     )
 
@@ -68,7 +73,6 @@ class PostgresMaterializedViewMixin(ViewMixin):
         """Materialized views require PostgreSQL 9.3+."""
         return self.version_at_least((9, 3, 0))
 
-
     def supports_materialized_view_bind_parameters(self) -> bool:
         """PostgreSQL refuses bind parameters in a materialized view body.
 
@@ -77,6 +81,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
         where a bound value has no meaning.
         """
         return False
+
     def supports_refresh_materialized_view(self) -> bool:
         """REFRESH MATERIALIZED VIEW requires PostgreSQL 9.3+."""
         return self.version_at_least((9, 3, 0))
@@ -185,7 +190,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
     # Formatters
     # ------------------------------------------------------------------
 
-    def format_create_materialized_view_statement(self, expr: "CreateMaterializedViewStatement") -> Tuple[str, tuple]:
+    def format_create_materialized_view_statement(
+        self, expr: "CreateMaterializedViewStatement"
+    ) -> Tuple[str, tuple]:
         """Format CREATE MATERIALIZED VIEW statement for PostgreSQL.
 
         Follows the PostgreSQL grammar order:
@@ -273,7 +280,9 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         return " ".join(parts), query_params
 
-    def format_drop_materialized_view_statement(self, expr: Any) -> Tuple[str, tuple]:
+    def format_drop_materialized_view_statement(
+        self, expr: "DropMaterializedViewStatement"
+    ) -> Tuple[str, tuple]:
         """Format DROP MATERIALIZED VIEW statement for PostgreSQL.
 
         Extends the core formatter with schema qualification and consumes the
@@ -384,12 +393,12 @@ class PostgresMaterializedViewMixin(ViewMixin):
             raise UnsupportedFeatureError(self.name, "ALTER MATERIALIZED VIEW")
 
         target = self._format_materialized_view_name(expr)
-        action_sql, action_params = self.format_postgres_materialized_view_alter_action(
-            expr.action
-        )
+        action_sql, action_params = self.format_postgres_materialized_view_alter_action(expr.action)
         return f"ALTER MATERIALIZED VIEW {target} {action_sql}", ()
 
-    def format_postgres_materialized_view_alter_action(self, expr: Any) -> Tuple[str, tuple]:
+    def format_postgres_materialized_view_alter_action(
+        self, expr: "PostgresMaterializedViewAlterAction"
+    ) -> Tuple[str, tuple]:
         """Render one ALTER MATERIALIZED VIEW action body.
 
         Returns the ``(sql, params)`` tuple every ``format_*`` method returns.

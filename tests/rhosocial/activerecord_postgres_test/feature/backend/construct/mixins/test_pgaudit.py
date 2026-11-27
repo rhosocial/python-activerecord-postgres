@@ -1,7 +1,9 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/mixins/test_pgaudit.py
 """Unit tests for PostgreSQL pgaudit extension mixin."""
 
-from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pgaudit import PostgresPgauditMixin
+from rhosocial.activerecord.backend.impl.postgres.mixins.extensions.pgaudit import (
+    PostgresPgauditMixin,
+)
 
 
 class TestPgauditMixin:
@@ -13,10 +15,10 @@ class TestPgauditMixin:
 
     def test_format_pgaudit_set_role(self):
         """Test audit role assignment formatting."""
-        result = self.mixin.format_pgaudit_set_role('audit_role')
+        result = self.mixin.render_pgaudit_set_role("audit_role")
         assert "pgaudit" in result
 
     def test_format_pgaudit_log_level(self):
         """Test audit log level configuration formatting."""
-        result = self.mixin.format_pgaudit_log_level('log')
+        result = self.mixin.render_pgaudit_log_level("log")
         assert "pgaudit.log" in result

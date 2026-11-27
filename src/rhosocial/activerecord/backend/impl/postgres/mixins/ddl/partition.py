@@ -24,15 +24,24 @@ if TYPE_CHECKING:
     )
 
 
+def _inline_partition_string(value: str) -> str:
+    """Quote one partition-bound string atom for a DDL literal position.
+
+    The caller has already decided that this string is a bound value rather
+    than a parsed expression; doubling its quotes is escaping of that single
+    declared atom, not a rewrite of an assembled SQL string.
+    """
+    escaped = value.replace("'", "''")
+    return f"'{escaped}'"
+
+
 class PostgresPartitionMixin:
     """PostgreSQL partitioning enhancements implementation.
 
     All features are native, using version number for detection.
     """
 
-    def _format_partition_table_ref(
-        self, schema: Optional[str], table_name: str
-    ) -> str:
+    def _format_partition_table_ref(self, schema: Optional[str], table_name: str) -> str:
         """Render a partition or its parent table.
 
         Both sides of every partition statement -- CREATE ... PARTITION OF,
@@ -253,9 +262,7 @@ class PostgresPartitionMixin:
         else:
             raise ValueError(f"Invalid PostgreSQL partition method: {expr.method}")
         if method == "LIST" and len(expr.keys) != 1:
-            raise ValueError(
-                "PostgreSQL LIST partitioning accepts exactly one key expression"
-            )
+            raise ValueError("PostgreSQL LIST partitioning accepts exactly one key expression")
 
         key_parts: List[str] = []
         params: List[Any] = []
@@ -389,8 +396,7 @@ class PostgresPartitionMixin:
                         "DEFAULT partitions require PostgreSQL 11+.",
                     )
                 return "DEFAULT", ()
-            escaped = value.replace("'", "''")
-            return f"'{escaped}'", ()
+            return _inline_partition_string(value), ()
         if isinstance(value, int):
             return str(value), ()
         if isinstance(value, float):
@@ -466,15 +472,11 @@ class PostgresPartitionMixin:
         parts = ["CREATE TABLE"]
         if expr.if_not_exists:
             parts.append("IF NOT EXISTS")
-        child_name = self._format_partition_table_ref(
-            expr.schema, expr.partition_name
-        )
+        child_name = self._format_partition_table_ref(expr.schema, expr.partition_name)
         parts.append(child_name)
 
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        parent_name = self._format_partition_table_ref(
-            parent_schema, expr.parent_table
-        )
+        parent_name = self._format_partition_table_ref(parent_schema, expr.parent_table)
         parts.append(f"PARTITION OF {parent_name}")
 
         params: List[Any] = []
@@ -487,7 +489,9 @@ class PostgresPartitionMixin:
             to_value = expr.partition_values.get("to")
             if from_value is None or to_value is None:
                 raise ValueError("RANGE partition requires 'from' and 'to' values")
-            from_values = list(from_value) if isinstance(from_value, (list, tuple)) else [from_value]
+            from_values = (
+                list(from_value) if isinstance(from_value, (list, tuple)) else [from_value]
+            )
             to_values = list(to_value) if isinstance(to_value, (list, tuple)) else [to_value]
             if not from_values or not to_values:
                 raise ValueError("RANGE partition boundaries must not be empty")
@@ -512,8 +516,7 @@ class PostgresPartitionMixin:
                 to_sql_parts.append(value_sql)
                 params.extend(value_params)
             parts.append(
-                f"FOR VALUES FROM ({', '.join(from_sql_parts)}) "
-                f"TO ({', '.join(to_sql_parts)})"
+                f"FOR VALUES FROM ({', '.join(from_sql_parts)}) " f"TO ({', '.join(to_sql_parts)})"
             )
         elif partition_type == "LIST":
             value_sql_parts, value_params = self._format_list_partition_values(
@@ -583,17 +586,13 @@ class PostgresPartitionMixin:
         parts = ["ALTER TABLE"]
 
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        parts.append(
-            self._format_partition_table_ref(parent_schema, expr.parent_table)
-        )
+        parts.append(self._format_partition_table_ref(parent_schema, expr.parent_table))
 
         if expr.concurrently and not self.supports_concurrent_detach():
             raise ValueError("DETACH CONCURRENTLY requires PostgreSQL 14+")
         parts.append("DETACH PARTITION")
 
-        parts.append(
-            self._format_partition_table_ref(expr.schema, expr.partition_name)
-        )
+        parts.append(self._format_partition_table_ref(expr.schema, expr.partition_name))
 
         if expr.concurrently:
             parts.append("CONCURRENTLY")
@@ -643,12 +642,8 @@ class PostgresPartitionMixin:
 
         parts = ["ALTER TABLE"]
         parent_schema = expr.parent_schema if expr.parent_schema is not None else expr.schema
-        parent_name = self._format_partition_table_ref(
-            parent_schema, expr.parent_table
-        )
-        partition_name = self._format_partition_table_ref(
-            expr.schema, expr.partition_name
-        )
+        parent_name = self._format_partition_table_ref(parent_schema, expr.parent_table)
+        partition_name = self._format_partition_table_ref(expr.schema, expr.partition_name)
         parts.extend((parent_name, "ATTACH PARTITION", partition_name))
 
         params: List[Any] = []
@@ -661,7 +656,9 @@ class PostgresPartitionMixin:
             to_value = expr.partition_values.get("to")
             if from_value is None or to_value is None:
                 raise ValueError("RANGE partition requires 'from' and 'to' values")
-            from_values = list(from_value) if isinstance(from_value, (list, tuple)) else [from_value]
+            from_values = (
+                list(from_value) if isinstance(from_value, (list, tuple)) else [from_value]
+            )
             to_values = list(to_value) if isinstance(to_value, (list, tuple)) else [to_value]
             if not from_values or not to_values:
                 raise ValueError("RANGE partition boundaries must not be empty")
@@ -686,8 +683,7 @@ class PostgresPartitionMixin:
                 to_sql_parts.append(value_sql)
                 params.extend(value_params)
             parts.append(
-                f"FOR VALUES FROM ({', '.join(from_sql_parts)}) "
-                f"TO ({', '.join(to_sql_parts)})"
+                f"FOR VALUES FROM ({', '.join(from_sql_parts)}) " f"TO ({', '.join(to_sql_parts)})"
             )
         elif partition_type == "LIST":
             value_sql_parts, value_params = self._format_list_partition_values(
@@ -717,7 +713,6 @@ class PostgresPartitionMixin:
             parts.append(f"FOR VALUES WITH (MODULUS {modulus}, REMAINDER {remainder})")
 
         return " ".join(parts), tuple(params)
-
 
     def format_partition_tree_query_statement(
         self, expr: "PostgresPartitionTreeQueryStatement"
