@@ -13,7 +13,7 @@ The PostgreSQL backend supports the same type-safe DDL expressions as the core l
 | `DropIndexStatement` | ✅ Full | |
 | `CreateViewStatement` | ✅ Full | |
 | `DropViewStatement` | ✅ Full | |
-| `PostgresCreateMaterializedViewExpression` | ✅ Full | IF NOT EXISTS, TABLESPACE, storage parameters (see [materialized views](./materialized_view.md)) |
+| `PostgresCreateMaterializedViewStatement` | ✅ Full | IF NOT EXISTS, TABLESPACE, storage parameters (see [materialized views](./materialized_view.md)) |
 | `PostgresRefreshMaterializedViewStatement` | ✅ Full | CONCURRENTLY (PG 9.4+, requires a UNIQUE index) |
 | `PostgresAlterMaterializedViewStatement` | ✅ Full | RENAME TO, SET SCHEMA, SET/RESET storage parameters, OWNER TO |
 | `PostgresDropMaterializedViewExpression` | ✅ Full | IF EXISTS, CASCADE |

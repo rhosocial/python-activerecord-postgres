@@ -11,7 +11,7 @@
 
 | 表达式 | 用途 | PostgreSQL 专有选项 |
 |---|---|---|
-| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`、`if_not_exists`、`storage_options`、`tablespace`、`column_aliases`、`with_data` |
+| `PostgresCreateMaterializedViewStatement` | `CREATE MATERIALIZED VIEW` | `schema`、`if_not_exists`、`storage_options`、`tablespace`、`column_aliases`、`with_data` |
 | `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `schema`、`concurrently`、`with_data` |
 | `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`、动作列表 |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`、`if_exists`、`cascade` |
@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.expression import Column, FunctionCall, Quer
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
 )
 
 summary = QueryStatement(
@@ -41,7 +41,7 @@ summary = QueryStatement(
     group_by_having=GroupByHavingClause(dialect, group_by=[Column(dialect, "product_id")]),
 )
 
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view_name="sales_summary",
     query=summary,
@@ -68,7 +68,7 @@ SELECT ... WITH DATA
 ### `WITH NO DATA`
 
 ```python
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect, view_name="sales_daily", query=daily, with_data=False
 )
 ```
@@ -100,7 +100,7 @@ PostgresStorageParameter.PARALLEL_WORKERS.min_version     # (11, 0, 0)
   因为 `add_reloption_kind()` / `add_*_reloption()` 是服务端导出的扩展点。
 
 ```python
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view_name="columnar_summary",
     query=summary,

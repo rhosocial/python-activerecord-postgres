@@ -36,7 +36,7 @@ pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语
 | `PostgresDeleteStatement` | `DELETE` | `expression/hinted_statements.py` |
 | `PostgresExplainStatement` | `EXPLAIN` | `expression/hinted_statements.py` |
 | `PostgresCreateTableAsStatement` | `CREATE TABLE ... AS` | `expression/hinted_statements.py` |
-| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
+| `PostgresCreateMaterializedViewStatement` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
 | `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `expression/ddl/mv.py` |
 
 最后两个在提示支持之前就已经是 PostgreSQL 派生类，本次就地扩展；其余六个是 core 语句在本后端的对应类。
@@ -83,7 +83,7 @@ sql, params = explained.to_sql()
 
 无论外层是通用还是 PostgreSQL 的 `EXPLAIN`，只要被包裹的语句自身已带提示，它都会拒绝渲染（两个注释位置会有歧义）。
 
-`hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`PostgresCreateTableAsStatement`（`CREATE TABLE ... AS`）、`PostgresCreateMaterializedViewExpression`（`CREATE MATERIALIZED VIEW ... AS`）与 `PostgresRefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
+`hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`PostgresCreateTableAsStatement`（`CREATE TABLE ... AS`）、`PostgresCreateMaterializedViewStatement`（`CREATE MATERIALIZED VIEW ... AS`）与 `PostgresRefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (

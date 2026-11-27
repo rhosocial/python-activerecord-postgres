@@ -24,7 +24,7 @@ from ...expression.hint import (
     hint_payload,
 )
 from ...expression.ddl.mv import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresRefreshMaterializedViewStatement,
 )
 from ...expression.hinted_statements import (
@@ -267,7 +267,7 @@ class PostgresHintedStatementsMixin:
         if isinstance(expr.query, PostgresQueryStatement) and expr.query.hints:
             self._refuse_nested_hint(expr.query)
         sql, params = super().format_create_materialized_view_statement(expr)
-        if not isinstance(expr, PostgresCreateMaterializedViewExpression):
+        if not isinstance(expr, PostgresCreateMaterializedViewStatement):
             return sql, params
         if not expr.hints:
             return sql, params

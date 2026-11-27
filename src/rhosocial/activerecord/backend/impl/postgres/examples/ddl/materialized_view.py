@@ -12,7 +12,7 @@ This example demonstrates:
 8. REFRESH MATERIALIZED VIEW WITH DATA (after NO DATA)
 9. Schema-qualified refresh (PostgresRefreshMaterializedViewStatement)
 10. DROP MATERIALIZED VIEW with CASCADE and IF EXISTS
-11. IF NOT EXISTS (PostgreSQL 9.4+) via PostgresCreateMaterializedViewExpression
+11. IF NOT EXISTS (PostgreSQL 9.4+) via PostgresCreateMaterializedViewStatement
 12. Schema-qualified create/drop
 13. ALTER MATERIALIZED VIEW: RENAME TO / SET SCHEMA / SET () / RESET () / OWNER TO
 14. Introspection: list_materialized_views() with is_populated / has_unique_index
@@ -61,7 +61,7 @@ from rhosocial.activerecord.backend.impl.postgres.storage_parameters import Post
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresDropMaterializedViewExpression,
     PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
@@ -174,7 +174,7 @@ summary_query = QueryStatement(
     ),
 )
 
-create_mv = PostgresCreateMaterializedViewExpression(
+create_mv = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     query=summary_query,
@@ -443,7 +443,7 @@ print("  Note: This would fail at runtime if the MV does not exist.")
 # instead of failing. Requires PostgreSQL 9.4+; the dialect raises
 # UnsupportedFeatureError below that version.
 
-if_not_exists_mv = PostgresCreateMaterializedViewExpression(
+if_not_exists_mv = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     query=summary_query,
@@ -462,7 +462,7 @@ backend.execute(sql, params)
 
 backend.execute('CREATE SCHEMA IF NOT EXISTS mv_reporting', options=ddl_options)
 
-schema_mv = PostgresCreateMaterializedViewExpression(
+schema_mv = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'Order Summary', schema_name='mv_reporting'),
     query=summary_query,

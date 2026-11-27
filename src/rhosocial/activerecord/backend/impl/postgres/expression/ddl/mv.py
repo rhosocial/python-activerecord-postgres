@@ -38,7 +38,7 @@ __all__ = [
     "PostgresMaterializedViewAlterAction",
     "PostgresAlterMaterializedViewStatement",
     "PostgresChangeMaterializedViewOwnerAction",
-    "PostgresCreateMaterializedViewExpression",
+    "PostgresCreateMaterializedViewStatement",
     "PostgresDropMaterializedViewExpression",
     "PostgresRefreshMaterializedViewStatement",
     "PostgresRenameMaterializedViewAction",
@@ -55,7 +55,7 @@ def _validate_name(value: str, field_name: str) -> None:
         raise ValueError(f"{field_name} must be a non-empty string")
 
 
-class PostgresCreateMaterializedViewExpression(CreateMaterializedViewStatement):
+class PostgresCreateMaterializedViewStatement(CreateMaterializedViewStatement):
     """PostgreSQL CREATE MATERIALIZED VIEW with schema and IF NOT EXISTS support.
 
     Extends the generic expression with the PostgreSQL-specific ``IF NOT EXISTS``
@@ -74,7 +74,7 @@ class PostgresCreateMaterializedViewExpression(CreateMaterializedViewStatement):
         ...     PostgresStorageParameter,
         ... )
         >>> dialect = PostgresDialect(version=(15, 0, 0))
-        >>> create = PostgresCreateMaterializedViewExpression(
+        >>> create = PostgresCreateMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary", schema_name="reporting"),
         ...     query=sales_query,

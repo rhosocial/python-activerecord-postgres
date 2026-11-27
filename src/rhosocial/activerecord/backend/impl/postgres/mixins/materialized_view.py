@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from ..expression.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
     PostgresChangeMaterializedViewOwnerAction,
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -240,7 +240,7 @@ class PostgresMaterializedViewMixin(ViewMixin):
 
         # IF NOT EXISTS exists only on the PostgreSQL subclass; the core
         # node has no such field and asks for none of it.
-        if isinstance(expr, PostgresCreateMaterializedViewExpression) and expr.if_not_exists:
+        if isinstance(expr, PostgresCreateMaterializedViewStatement) and expr.if_not_exists:
             if not self.supports_materialized_view_if_not_exists():
                 raise UnsupportedFeatureError(
                     self.name,

@@ -20,7 +20,7 @@ handle both the generic expression and the derived one.
 
 Two of PostgreSQL's eight hinted statements were already derived before this
 change and are extended in place, not duplicated here:
-``PostgresCreateMaterializedViewExpression`` (``CREATE MATERIALIZED VIEW ... AS``)
+``PostgresCreateMaterializedViewStatement`` (``CREATE MATERIALIZED VIEW ... AS``)
 and ``PostgresRefreshMaterializedViewStatement`` (``REFRESH MATERIALIZED VIEW``),
 both in :mod:`...expression.ddl.mv`.
 

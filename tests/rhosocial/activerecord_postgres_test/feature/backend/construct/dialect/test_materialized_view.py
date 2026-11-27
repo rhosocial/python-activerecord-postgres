@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresMaterializedViewAlterAction,
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresDropMaterializedViewExpression,
     PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
@@ -349,19 +349,19 @@ class TestRefreshMaterializedViewFormatting:
             "concurrent": lambda: RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrent=True
             ),
-            "if_not_exists": lambda: PostgresCreateMaterializedViewExpression(
+            "if_not_exists": lambda: PostgresCreateMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
                 query=_source_query(dialect),
                 if_not_exists=True,
             ),
-            "tablespace": lambda: PostgresCreateMaterializedViewExpression(
+            "tablespace": lambda: PostgresCreateMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
                 query=_source_query(dialect),
                 tablespace="fast_ssd",
             ),
-            "storage_options": lambda: PostgresCreateMaterializedViewExpression(
+            "storage_options": lambda: PostgresCreateMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
                 query=_source_query(dialect),
@@ -398,7 +398,7 @@ class TestMaterializedViewSchemaQualification:
     def test_create_mv_schema_qualified(self):
         """T-19."""
         dialect = _dialect()
-        sql, _ = PostgresCreateMaterializedViewExpression(
+        sql, _ = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, 'mv_sales', schema_name='reporting'),
             query=_source_query(dialect),
@@ -425,11 +425,11 @@ class TestMaterializedViewSchemaQualification:
     def test_rejects_empty_names(self):
         dialect = _dialect()
         with pytest.raises(ValueError):
-            PostgresCreateMaterializedViewExpression(
+            PostgresCreateMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, '  '), query=_source_query(dialect)
             )
         with pytest.raises(ValueError):
-            PostgresCreateMaterializedViewExpression(
+            PostgresCreateMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv', schema_name=''), query=_source_query(dialect))
 
 
@@ -439,7 +439,7 @@ class TestCreateMaterializedViewIfNotExists:
     def test_if_not_exists_rendered(self):
         """T-22."""
         dialect = _dialect()
-        sql, _ = PostgresCreateMaterializedViewExpression(
+        sql, _ = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, 'sales_summary'),
             query=_source_query(dialect),
@@ -453,7 +453,7 @@ class TestCreateMaterializedViewIfNotExists:
     def test_if_not_exists_false_omitted(self):
         """T-23."""
         dialect = _dialect()
-        sql, _ = PostgresCreateMaterializedViewExpression(
+        sql, _ = PostgresCreateMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), query=_source_query(dialect)
         ).to_sql()
         assert "IF NOT EXISTS" not in sql
@@ -462,7 +462,7 @@ class TestCreateMaterializedViewIfNotExists:
         """T-24."""
         dialect = _dialect(PG_93)
         with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateMaterializedViewExpression(
+            PostgresCreateMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'sales_summary'),
                 query=_source_query(dialect),
@@ -482,7 +482,7 @@ class TestMaterializedViewExceptionContract:
             lambda dialect: PostgresRefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrently=True
             ),
-            lambda dialect: PostgresCreateMaterializedViewExpression(
+            lambda dialect: PostgresCreateMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), query=_source_query(dialect), if_not_exists=True
             ),
         ],
@@ -649,7 +649,7 @@ class TestAlterMaterializedView:
             with pytest.raises(ValueError):
                 PostgresResetMaterializedViewPropertiesAction(dialect, [bogus])
             with pytest.raises(ValueError):
-                PostgresCreateMaterializedViewExpression(
+                PostgresCreateMaterializedViewStatement(
                     dialect=dialect,
                     view=MaterializedView(dialect, 'mv'),
                     query=_source_query(dialect),
@@ -659,7 +659,7 @@ class TestAlterMaterializedView:
     def test_allows_unlisted_storage_parameters_explicitly(self):
         """Escape hatch for table access method options and toast.* names."""
         dialect = _dialect()
-        expression = PostgresCreateMaterializedViewExpression(
+        expression = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, 'mv'),
             query=_source_query(dialect),
@@ -820,7 +820,7 @@ class TestMaterializedViewProtocolAndSurface:
         from rhosocial.activerecord.backend.impl.postgres import expression as pg_expression
 
         for name in (
-            "PostgresCreateMaterializedViewExpression",
+            "PostgresCreateMaterializedViewStatement",
             "PostgresDropMaterializedViewExpression",
             "PostgresRefreshMaterializedViewStatement",
             "PostgresAlterMaterializedViewStatement",
@@ -840,7 +840,7 @@ class TestMaterializedViewProtocolAndSurface:
         query = _source_query(dialect)
         expressions = [
             _create(dialect),
-            PostgresCreateMaterializedViewExpression(
+            PostgresCreateMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), query=query
             ),
             DropMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),

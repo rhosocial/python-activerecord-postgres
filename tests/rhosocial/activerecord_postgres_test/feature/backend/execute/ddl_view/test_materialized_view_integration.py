@@ -15,7 +15,7 @@ from rhosocial.activerecord.backend.impl.postgres.storage_parameters import Post
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresDropMaterializedViewExpression,
     PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
@@ -74,7 +74,7 @@ class TestCreateMaterializedView:
 
     def test_with_no_data_is_unqueryable_until_refresh(self, mv_backend, daily_query):
         """T-44."""
-        expression = PostgresCreateMaterializedViewExpression(
+        expression = PostgresCreateMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_daily"),
             query=daily_query(),
@@ -198,7 +198,7 @@ class TestMaterializedViewIntrospection:
     def test_list_reports_populated_flag(self, mv_backend, create_summary_mv, daily_query):
         """T-48."""
         create_summary_mv()
-        empty = PostgresCreateMaterializedViewExpression(
+        empty = PostgresCreateMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=MaterializedView(mv_backend.dialect, "mv_sales_daily"),
             query=daily_query(),
@@ -275,7 +275,7 @@ class TestMaterializedViewAsyncParity:
 
     async def test_create_refresh_drop(self, async_mv_backend, summary_query):
         dialect = async_mv_backend.dialect
-        create = PostgresCreateMaterializedViewExpression(
+        create = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "mv_sales_summary"),
             query=summary_query(),
@@ -314,7 +314,7 @@ class TestMaterializedViewAsyncParity:
 
     async def test_list_materialized_views(self, async_mv_backend, summary_query):
         dialect = async_mv_backend.dialect
-        create = PostgresCreateMaterializedViewExpression(
+        create = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "mv_sales_summary"),
             query=summary_query(),
@@ -333,7 +333,7 @@ class TestMaterializedViewAsyncParity:
     async def test_teardown_leaves_no_residue(self, async_mv_backend, daily_query):
         """T-51: fixture teardown must remove every object it created."""
         dialect = async_mv_backend.dialect
-        create = PostgresCreateMaterializedViewExpression(
+        create = PostgresCreateMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "mv_sales_daily"),
             query=daily_query(),

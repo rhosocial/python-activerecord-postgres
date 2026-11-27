@@ -36,7 +36,7 @@ Eight statements carry hints on a PostgreSQL statement class:
 | `PostgresDeleteStatement` | `DELETE` | `expression/hinted_statements.py` |
 | `PostgresExplainStatement` | `EXPLAIN` | `expression/hinted_statements.py` |
 | `PostgresCreateTableAsStatement` | `CREATE TABLE ... AS` | `expression/hinted_statements.py` |
-| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
+| `PostgresCreateMaterializedViewStatement` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
 | `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `expression/ddl/mv.py` |
 
 The last two were already PostgreSQL-derived before hint support and were extended in place; the other six are the backend's counterparts of core's statements.
@@ -84,7 +84,7 @@ sql, params = explained.to_sql()
 
 An `EXPLAIN` — generic or PostgreSQL — refuses a wrapped statement that already carries its own hints (two comment positions would be ambiguous).
 
-The same `hints=` keyword is accepted by the three statements PostgreSQL plans when it runs them: `PostgresCreateTableAsStatement` (`CREATE TABLE ... AS`), `PostgresCreateMaterializedViewExpression` (`CREATE MATERIALIZED VIEW ... AS`) and `PostgresRefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment and picks a different plan:
+The same `hints=` keyword is accepted by the three statements PostgreSQL plans when it runs them: `PostgresCreateTableAsStatement` (`CREATE TABLE ... AS`), `PostgresCreateMaterializedViewStatement` (`CREATE MATERIALIZED VIEW ... AS`) and `PostgresRefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment and picks a different plan:
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (

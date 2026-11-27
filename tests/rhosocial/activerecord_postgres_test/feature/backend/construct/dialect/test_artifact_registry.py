@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromStatement,
     PostgresCopyToStatement,
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresCreateTableAsStatement,
     PostgresDeleteStatement,
     PostgresExplainStatement,
@@ -92,7 +92,7 @@ def test_the_eight_hinted_statement_kinds_resolve(dialect):
         PostgresDeleteStatement,
         PostgresExplainStatement,
         PostgresCreateTableAsStatement,
-        PostgresCreateMaterializedViewExpression,
+        PostgresCreateMaterializedViewStatement,
         PostgresRefreshMaterializedViewStatement,
     ):
         resolved = registry.resolve_node(cls.kind())

@@ -13,7 +13,7 @@ PostgreSQL 后端支持与核心库相同的类型安全 DDL 表达式，并具�
 | `DropIndexStatement` | ✅ 完整 | |
 | `CreateViewStatement` | ✅ 完整 | |
 | `DropViewStatement` | ✅ 完整 | |
-| `PostgresCreateMaterializedViewExpression` | ✅ 完整 | IF NOT EXISTS、TABLESPACE、存储参数（见[物化视图](./materialized_view.md)） |
+| `PostgresCreateMaterializedViewStatement` | ✅ 完整 | IF NOT EXISTS、TABLESPACE、存储参数（见[物化视图](./materialized_view.md)） |
 | `PostgresRefreshMaterializedViewStatement` | ✅ 完整 | CONCURRENTLY（PG 9.4+，要求存在 UNIQUE 索引） |
 | `PostgresAlterMaterializedViewStatement` | ✅ 完整 | RENAME TO、SET SCHEMA、SET/RESET 存储参数、OWNER TO |
 | `PostgresDropMaterializedViewExpression` | ✅ 完整 | IF EXISTS、CASCADE |

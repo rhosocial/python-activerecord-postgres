@@ -12,7 +12,7 @@
 
 | Expression | Purpose | PostgreSQL-specific options |
 |---|---|---|
-| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`, `if_not_exists`, `storage_options`, `tablespace`, `column_aliases`, `with_data` |
+| `PostgresCreateMaterializedViewStatement` | `CREATE MATERIALIZED VIEW` | `schema`, `if_not_exists`, `storage_options`, `tablespace`, `column_aliases`, `with_data` |
 | `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `schema`, `concurrently`, `with_data` |
 | `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`, action list |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`, `if_exists`, `cascade` |
@@ -27,7 +27,7 @@ usable; they simply do not carry `schema` / `if_not_exists`.
 from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryStatement, TableExpression
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
 )
 
 summary = QueryStatement(
@@ -41,7 +41,7 @@ summary = QueryStatement(
     group_by_having=GroupByHavingClause(dialect, group_by=[Column(dialect, "product_id")]),
 )
 
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view_name="sales_summary",
     query=summary,
@@ -69,7 +69,7 @@ SELECT ... WITH DATA
 ### `WITH NO DATA`
 
 ```python
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect, view_name="sales_daily", query=daily, with_data=False
 )
 ```
@@ -104,7 +104,7 @@ explicit `allow_unlisted_storage_parameters=True` opt-in:
   `add_*_reloption()` are exported server APIs.
 
 ```python
-create = PostgresCreateMaterializedViewExpression(
+create = PostgresCreateMaterializedViewStatement(
     dialect=dialect,
     view_name="columnar_summary",
     query=summary,

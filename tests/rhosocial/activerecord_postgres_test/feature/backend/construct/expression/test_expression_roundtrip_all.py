@@ -326,7 +326,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     make_hint_payload,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresRefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
@@ -870,8 +870,8 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "ddl.mv.PostgresCreateMaterializedViewExpression",
-        lambda d: PostgresCreateMaterializedViewExpression(
+        "ddl.mv.PostgresCreateMaterializedViewStatement",
+        lambda d: PostgresCreateMaterializedViewStatement(
             d,
             MaterializedView(d, "mv"),
             _one_column_query(d),
@@ -2345,7 +2345,7 @@ def test_the_eight_hinted_statement_specials_attach_hints(postgres_dialect):
         "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresDeleteStatement",
         "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresExplainStatement",
         "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresCreateTableAsStatement",
-        "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresCreateMaterializedViewExpression",
+        "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresCreateMaterializedViewStatement",
         "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresRefreshMaterializedViewStatement",
     )
     for fqn in hinted_fqns:

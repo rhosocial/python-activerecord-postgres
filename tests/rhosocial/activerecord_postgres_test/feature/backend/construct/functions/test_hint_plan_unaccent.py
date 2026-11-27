@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     HintGroup,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
     PostgresRefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
@@ -284,7 +284,7 @@ DERIVED_FROM_CORE = [
 #: keyword-only ``hints``.
 PG_ONLY_PRE_CHANGE_SIGNATURES = [
     (
-        PostgresCreateMaterializedViewExpression,
+        PostgresCreateMaterializedViewStatement,
         (
             "dialect",
             "view",
@@ -351,7 +351,7 @@ class TestDerivedStatements:
     def test_the_pg_only_statements_keep_their_own_formatters(self):
         """The two existing PG statements keep the dispatch they already had."""
         assert (
-            PostgresCreateMaterializedViewExpression.format_method
+            PostgresCreateMaterializedViewStatement.format_method
             == CreateMaterializedViewStatement.format_method
         )
         assert (
@@ -523,7 +523,7 @@ class TestHintedDdlStatements:
             (),
         )
 
-        hinted = PostgresCreateMaterializedViewExpression(
+        hinted = PostgresCreateMaterializedViewStatement(
             dialect,
             MaterializedView(dialect, "mv"),
             _plain_query(dialect),
@@ -625,7 +625,7 @@ HINTED_STATEMENTS = [
         QueryStatement(d, [Column(d, "id")], Table(d, "t")),
         hints=(hint_seq_scan(d, "t"),),
     ),
-    lambda d: PostgresCreateMaterializedViewExpression(
+    lambda d: PostgresCreateMaterializedViewStatement(
         d,
         MaterializedView(d, "mv"),
         QueryStatement(d, [Column(d, "id")], Table(d, "t")),

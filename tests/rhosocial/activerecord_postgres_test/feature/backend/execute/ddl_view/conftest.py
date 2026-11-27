@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresCreateMaterializedViewExpression,
+    PostgresCreateMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -139,7 +139,7 @@ def create_summary_mv(mv_backend, summary_query):
     """Factory that creates a summary materialized view on the live server."""
 
     def _create(view=None, query=None, **kwargs):
-        expression = PostgresCreateMaterializedViewExpression(
+        expression = PostgresCreateMaterializedViewStatement(
             dialect=mv_backend.dialect,
             view=view if view is not None else MaterializedView(mv_backend.dialect, "mv_sales_summary"),
             query=query if query is not None else summary_query(),
