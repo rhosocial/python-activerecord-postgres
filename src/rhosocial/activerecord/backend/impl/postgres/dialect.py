@@ -87,6 +87,7 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     DomainMixin,
 )
 from .mixins import (
+    PostgresHintedStatementsMixin,
     PostgresObjectNameMixin,
     PostgresExtensionMixin,
     PostgresMaterializedViewMixin,
@@ -479,6 +480,12 @@ class PostgresDialect(
     PredicateMixin,
     ExpressionMixin,
     DateTimeMixin,
+    # A backend mixin goes immediately before the core mixin it overrides (see
+    # the bundle rule above). This one overrides DQLMixin's and DMLMixin's four
+    # statement formatters, and DQLMixin precedes DMLMixin here, so one position
+    # ahead of DQLMixin puts it ahead of both -- and after PostgresPgHintPlanMixin,
+    # which owns the private comment helper it calls.
+    PostgresHintedStatementsMixin,
     DQLMixin,
     DMLMixin,
     DDLColumnMixin,

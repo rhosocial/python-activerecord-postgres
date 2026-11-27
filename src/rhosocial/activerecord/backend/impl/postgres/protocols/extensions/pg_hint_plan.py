@@ -1,7 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/protocols/extensions/pg_hint_plan.py
 """pg_hint_plan extension protocol definition."""
 
-from typing import Iterable, Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable
 
 
 @runtime_checkable
@@ -16,8 +16,4 @@ class PostgresPgHintPlanSupport(Protocol):
 
     def supports_pg_hint_plan(self) -> bool:
         """Whether optimizer hints via ``/*+ ... */`` are available."""
-        ...
-
-    def build_hinted_query(self, query, hints: Iterable[str]):
-        """Prefix a statement expression with a validated hint comment."""
         ...

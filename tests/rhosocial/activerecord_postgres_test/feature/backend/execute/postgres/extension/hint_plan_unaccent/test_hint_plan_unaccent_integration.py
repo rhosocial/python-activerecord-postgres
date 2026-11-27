@@ -24,11 +24,14 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.types import TextType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresHintedExplainStatement,
+    PostgresHintedQueryStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_index_scan,
     hint_seq_scan,
     load_pg_hint_plan,
-    pg_hint_plan_hinted_query,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.unaccent import unaccent
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -122,14 +125,13 @@ class TestHintPlanIntegration:
     def test_hinted_query_runs_and_binds(self, hint_env):
         backend, dialect, table = hint_env
         backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = QueryStatement(
-            dialect=dialect,
+        query = PostgresHintedQueryStatement(
+            dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
+            hints=(hint_seq_scan(dialect, table),),
         )
-        sql, params = pg_hint_plan_hinted_query(
-            dialect, query, [hint_seq_scan(dialect, table)]
-        ).to_sql()
+        sql, params = query.to_sql()
         assert len(backend.execute(sql, params, options=DQL).data) == 4
 
     def test_hint_changes_plan(self, hint_env):
@@ -153,16 +155,18 @@ class TestHintPlanIntegration:
             indexed = backend.fetch_one("EXPLAIN " + base, params)["QUERY PLAN"]
             assert "Index Scan" in indexed
 
-            seq = pg_hint_plan_hinted_query(dialect, query, [hint_seq_scan(dialect, table)])
-            sql, params = seq.to_sql()
-            forced = backend.fetch_one("EXPLAIN " + sql, params)["QUERY PLAN"]
+            seq_sql, seq_params = PostgresHintedExplainStatement(
+                dialect, query, hints=(hint_seq_scan(dialect, table),)
+            ).to_sql()
+            forced = backend.fetch_one(seq_sql, seq_params)["QUERY PLAN"]
             assert "Seq Scan" in forced
 
-            hinted = pg_hint_plan_hinted_query(
-                dialect, query, [hint_index_scan(dialect, table, f"idx_{table}_name")]
-            )
-            sql, params = hinted.to_sql()
-            forced_index = backend.fetch_one("EXPLAIN " + sql, params)["QUERY PLAN"]
+            index_sql, index_params = PostgresHintedExplainStatement(
+                dialect,
+                query,
+                hints=(hint_index_scan(dialect, table, f"idx_{table}_name"),),
+            ).to_sql()
+            forced_index = backend.fetch_one(index_sql, index_params)["QUERY PLAN"]
             assert "Index Scan" in forced_index
         finally:
             backend.execute("SET enable_seqscan = on", (), options=DDL)
@@ -193,8 +197,13 @@ class TestAsyncIntegration:
         assert dialect.supports_pg_hint_plan()
         assert dialect.supports_unaccent()
         await backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = QueryStatement(dialect=dialect, select=[Column(dialect, "id")], from_=Table(dialect, table))
-        sql, params = pg_hint_plan_hinted_query(dialect, query, [hint_seq_scan(dialect, table)]).to_sql()
+        query = PostgresHintedQueryStatement(
+            dialect,
+            select=[Column(dialect, "id")],
+            from_=Table(dialect, table),
+            hints=(hint_seq_scan(dialect, table),),
+        )
+        sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=DQL)
         assert len(result.data) == 4
         sql, params = unaccent(dialect, "Résumé").to_sql()

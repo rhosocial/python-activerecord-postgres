@@ -72,7 +72,7 @@ from .extensions.ltree import PostgresLtreeMixin
 from .extensions.intarray import PostgresIntarrayMixin
 from .extensions.pg_trgm import PostgresPgTrgmMixin
 from .extensions.pgroonga import PostgresPgroongaMixin
-from .extensions.pg_hint_plan import PostgresPgHintPlanMixin
+from .extensions.pg_hint_plan import PostgresHintedStatementsMixin, PostgresPgHintPlanMixin
 from .extensions.unaccent import PostgresUnaccentMixin
 from .extensions.amcheck import PostgresAmcheckMixin
 from .extensions.pageinspect import PostgresPageinspectMixin
@@ -203,6 +203,7 @@ __all__ = [
     "PostgresIntarrayMixin",
     "PostgresPgTrgmMixin",
     "PostgresPgroongaMixin",
+    "PostgresHintedStatementsMixin",
     "PostgresPgHintPlanMixin",
     "PostgresUnaccentMixin",
     "PostgresAmcheckMixin",

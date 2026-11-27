@@ -2,8 +2,9 @@
 """
 pg_hint_plan hint builders.
 
-Builders return typed :class:`PostgresHintExpression` nodes.  No SQL or hint
-text is assembled here -- rendering belongs to the dialect formatters.
+Builders return :class:`PostgresHint` payloads, not expression nodes: a hint
+is a comment carried by a statement, so the phrase is rendered by the dialect
+formatter and never assembled here.
 """
 
 from typing import TYPE_CHECKING
@@ -11,8 +12,7 @@ from typing import TYPE_CHECKING
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     CorrectionKind,
     HintKind,
-    PostgresHintedQueryExpression,
-    PostgresHintExpression,
+    PostgresHint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.load_library import (
     PostgresLoadLibraryExpression,
@@ -22,67 +22,67 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def hint_seq_scan(dialect: "SQLDialectBase", table: str) -> PostgresHintExpression:
+def hint_seq_scan(dialect: "SQLDialectBase", table: str) -> PostgresHint:
     """``SeqScan(table)``."""
-    return PostgresHintExpression(dialect, HintKind.SEQ_SCAN, tables=(table,))
+    return PostgresHint(HintKind.SEQ_SCAN, tables=(table,))
 
 
-def hint_tid_scan(dialect: "SQLDialectBase", table: str) -> PostgresHintExpression:
+def hint_tid_scan(dialect: "SQLDialectBase", table: str) -> PostgresHint:
     """``TidScan(table)``."""
-    return PostgresHintExpression(dialect, HintKind.TID_SCAN, tables=(table,))
+    return PostgresHint(HintKind.TID_SCAN, tables=(table,))
 
 
 def hint_index_scan(
     dialect: "SQLDialectBase", table: str, *indexes: str
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``IndexScan(table [index ...])``."""
-    return PostgresHintExpression(dialect, HintKind.INDEX_SCAN, tables=(table,), indexes=indexes)
+    return PostgresHint(HintKind.INDEX_SCAN, tables=(table,), indexes=indexes)
 
 
 def hint_index_only_scan(
     dialect: "SQLDialectBase", table: str, *indexes: str
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``IndexOnlyScan(table [index ...])``."""
-    return PostgresHintExpression(dialect, HintKind.INDEX_ONLY_SCAN, tables=(table,), indexes=indexes)
+    return PostgresHint(HintKind.INDEX_ONLY_SCAN, tables=(table,), indexes=indexes)
 
 
 def hint_bitmap_scan(
     dialect: "SQLDialectBase", table: str, *indexes: str
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``BitmapScan(table [index ...])``."""
-    return PostgresHintExpression(dialect, HintKind.BITMAP_SCAN, tables=(table,), indexes=indexes)
+    return PostgresHint(HintKind.BITMAP_SCAN, tables=(table,), indexes=indexes)
 
 
-def hint_no_seq_scan(dialect: "SQLDialectBase", table: str) -> PostgresHintExpression:
+def hint_no_seq_scan(dialect: "SQLDialectBase", table: str) -> PostgresHint:
     """``NoSeqScan(table)``."""
-    return PostgresHintExpression(dialect, HintKind.NO_SEQ_SCAN, tables=(table,))
+    return PostgresHint(HintKind.NO_SEQ_SCAN, tables=(table,))
 
 
-def hint_no_index_scan(dialect: "SQLDialectBase", table: str) -> PostgresHintExpression:
+def hint_no_index_scan(dialect: "SQLDialectBase", table: str) -> PostgresHint:
     """``NoIndexScan(table)``."""
-    return PostgresHintExpression(dialect, HintKind.NO_INDEX_SCAN, tables=(table,))
+    return PostgresHint(HintKind.NO_INDEX_SCAN, tables=(table,))
 
 
-def hint_hash_join(dialect: "SQLDialectBase", *tables: str) -> PostgresHintExpression:
+def hint_hash_join(dialect: "SQLDialectBase", *tables: str) -> PostgresHint:
     """``HashJoin(table table ...)``."""
-    return PostgresHintExpression(dialect, HintKind.HASH_JOIN, tables=tables)
+    return PostgresHint(HintKind.HASH_JOIN, tables=tables)
 
 
-def hint_merge_join(dialect: "SQLDialectBase", *tables: str) -> PostgresHintExpression:
+def hint_merge_join(dialect: "SQLDialectBase", *tables: str) -> PostgresHint:
     """``MergeJoin(table table ...)``."""
-    return PostgresHintExpression(dialect, HintKind.MERGE_JOIN, tables=tables)
+    return PostgresHint(HintKind.MERGE_JOIN, tables=tables)
 
 
-def hint_nest_loop(dialect: "SQLDialectBase", *tables: str) -> PostgresHintExpression:
+def hint_nest_loop(dialect: "SQLDialectBase", *tables: str) -> PostgresHint:
     """``NestLoop(table table ...)``."""
-    return PostgresHintExpression(dialect, HintKind.NEST_LOOP, tables=tables)
+    return PostgresHint(HintKind.NEST_LOOP, tables=tables)
 
 
 def hint_leading(
     dialect: "SQLDialectBase", *targets: object
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``Leading(...)``; pass :class:`HintGroup` for nested join pairs."""
-    return PostgresHintExpression(dialect, HintKind.LEADING, sequence=targets)
+    return PostgresHint(HintKind.LEADING, sequence=targets)
 
 
 def hint_rows(
@@ -90,10 +90,9 @@ def hint_rows(
     kind: CorrectionKind,
     amount: float,
     *tables: str,
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``Rows(table table ... correction)`` with a typed correction operator."""
-    return PostgresHintExpression(
-        dialect,
+    return PostgresHint(
         HintKind.ROWS,
         tables=tables,
         correction_kind=kind,
@@ -103,27 +102,18 @@ def hint_rows(
 
 def hint_parallel(
     dialect: "SQLDialectBase", table: str, workers: int, soft: bool = True
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``Parallel(table workers [soft|hard])``."""
-    return PostgresHintExpression(
-        dialect, HintKind.PARALLEL, tables=(table,), workers=workers, soft=soft
+    return PostgresHint(
+        HintKind.PARALLEL, tables=(table,), workers=workers, soft=soft
     )
 
 
 def hint_set(
     dialect: "SQLDialectBase", guc: str, value: object
-) -> PostgresHintExpression:
+) -> PostgresHint:
     """``Set(GUC-param value)`` for planner-time GUC overrides."""
-    return PostgresHintExpression(dialect, HintKind.SET, guc=guc, guc_value=value)
-
-
-def pg_hint_plan_hinted_query(
-    dialect: "SQLDialectBase",
-    query,
-    hints,
-) -> PostgresHintedQueryExpression:
-    """Wrap ``query`` in a validated pg_hint_plan hint comment."""
-    return PostgresHintedQueryExpression(dialect, query, tuple(hints))
+    return PostgresHint(HintKind.SET, guc=guc, guc_value=value)
 
 
 def load_pg_hint_plan(dialect: "SQLDialectBase") -> PostgresLoadLibraryExpression:
@@ -152,6 +142,5 @@ __all__ = [
     "hint_rows",
     "hint_parallel",
     "hint_set",
-    "pg_hint_plan_hinted_query",
     "load_pg_hint_plan",
 ]

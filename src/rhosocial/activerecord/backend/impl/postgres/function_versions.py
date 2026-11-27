@@ -342,9 +342,6 @@ PGROONGA_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
 }
 
 PG_HINT_PLAN_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
-    "pg_hint_plan_hinted_query": FunctionVersionRequirement(
-        extension="pg_hint_plan", ext_feature="hints"
-    ),
     "load_pg_hint_plan": FunctionVersionRequirement(
         extension="pg_hint_plan", ext_feature="hints"
     ),

@@ -8,7 +8,7 @@ from .ltree import PostgresLtreeMixin
 from .intarray import PostgresIntarrayMixin
 from .pg_trgm import PostgresPgTrgmMixin
 from .pgroonga import PostgresPgroongaMixin
-from .pg_hint_plan import PostgresPgHintPlanMixin
+from .pg_hint_plan import PostgresHintedStatementsMixin, PostgresPgHintPlanMixin
 from .unaccent import PostgresUnaccentMixin
 from .amcheck import PostgresAmcheckMixin
 from .pageinspect import PostgresPageinspectMixin
@@ -48,6 +48,7 @@ __all__ = [
     "PostgresIntarrayMixin",
     "PostgresPgTrgmMixin",
     "PostgresPgroongaMixin",
+    "PostgresHintedStatementsMixin",
     "PostgresPgHintPlanMixin",
     "PostgresUnaccentMixin",
     "PostgresAmcheckMixin",

@@ -94,9 +94,14 @@ class PostgresExplainMixin:
         from rhosocial.activerecord.backend.expression.statements import ExplainType
 
         statement_sql, statement_params = expr.statement.to_sql()
+        # pg_hint_plan reads the hint comment before the statement, and an
+        # EXPLAIN is the statement as far as the planner is concerned, so the
+        # comment goes ahead of the EXPLAIN keyword.
+        hints = getattr(expr, "hints", ())
+        prefix = self._hint_comment(hints) if hints else ""
         options = expr.options
         if options is None:
-            return f"EXPLAIN {statement_sql}", statement_params
+            return prefix + f"EXPLAIN {statement_sql}", statement_params
 
         opts: list = []
         analyze_requested = options.analyze or options.type == ExplainType.ANALYZE
@@ -149,5 +154,5 @@ class PostgresExplainMixin:
             opts.append("WAL")
 
         if opts:
-            return "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
-        return f"EXPLAIN {statement_sql}", statement_params
+            return prefix + "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
+        return prefix + f"EXPLAIN {statement_sql}", statement_params

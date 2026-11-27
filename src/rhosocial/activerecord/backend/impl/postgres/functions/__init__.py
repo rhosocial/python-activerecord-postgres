@@ -423,7 +423,6 @@ from .pg_hint_plan import (
     hint_rows,
     hint_parallel,
     hint_set,
-    pg_hint_plan_hinted_query,
     load_pg_hint_plan,
 )
 
@@ -929,7 +928,6 @@ __all__ = [
     "hint_rows",
     "hint_parallel",
     "hint_set",
-    "pg_hint_plan_hinted_query",
     "load_pg_hint_plan",
     # unaccent functions
     "unaccent",

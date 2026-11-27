@@ -29,6 +29,12 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromStatement,
     PostgresCopyToStatement,
+    PostgresHint,
+    PostgresHintedDeleteStatement,
+    PostgresHintedExplainStatement,
+    PostgresHintedInsertStatement,
+    PostgresHintedQueryStatement,
+    PostgresHintedUpdateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.registry import backend_registry
 
@@ -43,14 +49,30 @@ def _copy_statement(dialect):
 
 
 def test_dialect_registry_resolves_postgres_proprietary_kinds(dialect):
-    """COPY is PostgreSQL's own node, and this backend's table carries it."""
+    """COPY and the hinted statements are this backend's own kinds."""
     registry = dialect.artifact_registry()
-    for cls in (PostgresCopyToStatement, PostgresCopyFromStatement):
+    for cls in (
+        PostgresCopyToStatement,
+        PostgresCopyFromStatement,
+        PostgresHintedQueryStatement,
+        PostgresHintedInsertStatement,
+        PostgresHintedUpdateStatement,
+        PostgresHintedDeleteStatement,
+        PostgresHintedExplainStatement,
+    ):
         resolved = registry.resolve_node(cls.kind())
         assert resolved is cls, (
             f"{cls.kind()} resolved to {resolved.__module__}.{resolved.__name__}, "
             f"not to the class that declares it"
         )
+
+
+def test_a_hint_payload_is_not_a_registered_kind(dialect):
+    """A hint is a value carried by a statement, never a kind of its own."""
+    assert not hasattr(PostgresHint, "kind"), "a payload must not name a node kind"
+    with pytest.raises(RegistryError) as excinfo:
+        dialect.artifact_registry().resolve_node("postgres_hint")
+    assert excinfo.value.reason is RegistryReason.KIND_NOT_REGISTERED
 
 
 def test_dialect_registry_carries_core_kinds_too(dialect):

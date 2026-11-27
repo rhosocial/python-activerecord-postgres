@@ -5,7 +5,7 @@ pg_hint_plan + unaccent: optimizer hints and accent-insensitive text.
 Demonstrates:
 1. Detect both extensions and enable them with expression objects
 2. LOAD pg_hint_plan in the session (needed without shared_preload_libraries)
-3. Wrap a query in a typed hint comment
+3. Build a hinted query carrying a typed hint payload
 4. Normalize text with unaccent() in a query
 """
 
@@ -45,6 +45,7 @@ from rhosocial.activerecord.backend.expression.statements import ValuesSource  #
 from rhosocial.activerecord.backend.expression.types import TextType  # noqa: E402
 from rhosocial.activerecord.backend.impl.postgres.expression import (  # noqa: E402
     PostgresCreateExtensionStatement,
+    PostgresHintedQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (  # noqa: E402
     PostgresSerialType,
@@ -52,7 +53,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (  # n
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (  # noqa: E402
     hint_seq_scan,
     load_pg_hint_plan,
-    pg_hint_plan_hinted_query,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.unaccent import unaccent  # noqa: E402
 from rhosocial.activerecord.backend.options import ExecutionOptions  # noqa: E402
@@ -98,13 +98,16 @@ backend.execute(
     ).to_sql()
 )
 
-query = QueryStatement(
-    dialect=dialect,
+query_args = dict(
     select=[Column(dialect, "id"), unaccent(dialect, Column(dialect, "name")).as_("normalized")],
     from_=Table(dialect, TABLE),
 )
 if dialect.supports_pg_hint_plan():
-    query = pg_hint_plan_hinted_query(dialect, query, [hint_seq_scan(dialect, TABLE)])
+    query = PostgresHintedQueryStatement(
+        dialect, hints=(hint_seq_scan(dialect, TABLE),), **query_args
+    )
+else:
+    query = QueryStatement(dialect, **query_args)
 
 sql, params = query.to_sql()
 print("SQL:", sql)

@@ -2,36 +2,65 @@
 """PostgreSQL pg_hint_plan extension mixin.
 
 Capability detection is version-aware via the shared extension feature map.
-Hint phrases are typed expression nodes; this module is the only place that
-renders them into SQL, through the two formatter methods below (one expression,
-one formatter).
+
+Hints are values carried by a statement, not nodes of their own: this module
+is the only place that renders them, through the private phrase helper and the
+formatter overrides of :class:`PostgresHintedStatementsMixin`.
 """
 
-from typing import Iterable, Tuple
+from typing import Tuple
 
 from ...expression.hint import (
-    HintGroup,
+    CorrectionKind,
     HintKind,
-    PostgresHintedQueryExpression,
-    PostgresHintExpression,
+    assert_hint_payload,
 )
 from ...expression.load_library import PostgresLoadLibraryExpression
 
 
 class PostgresPgHintPlanMixin:
-    """pg_hint_plan optimizer hint capability and expression building."""
+    """pg_hint_plan optimizer hint capability and rendering."""
 
     def supports_pg_hint_plan(self) -> bool:
         """Whether optimizer hints via ``/*+ ... */`` are supported."""
         return self.check_extension_feature("pg_hint_plan", "hints")
 
-    def build_hinted_query(
-        self,
-        query,
-        hints: Iterable[PostgresHintExpression],
-    ) -> PostgresHintedQueryExpression:
-        """Prefix ``query`` with validated, typed pg_hint_plan hints."""
-        return PostgresHintedQueryExpression(self, query, tuple(hints))
+    def _hint_phrase(self, hint: dict) -> str:
+        """Render one hint payload as a pg_hint_plan phrase.
+
+        The payload's grammar is checked here as well as in the statement's
+        ``check_renderable``: a malformed payload is a caller error, so this
+        raises ``TypeError`` rather than producing partial hint text.
+        """
+        assert_hint_payload(hint)
+        kind = HintKind(hint["kind"])
+        arguments = []
+        if kind is HintKind.LEADING:
+            for item in hint["sequence"]:
+                if isinstance(item, tuple):
+                    arguments.append("(" + " ".join(item) + ")")
+                else:
+                    arguments.append(item)
+        arguments.extend(hint["tables"])
+        arguments.extend(hint["indexes"])
+        if hint["correction_kind"] is not None:
+            arguments.append(
+                str(CorrectionKind(hint["correction_kind"]))
+                + str(hint["correction_amount"])
+            )
+        if hint["workers"] is not None:
+            arguments.append(str(hint["workers"]))
+            if hint["soft"] is not None:
+                arguments.append("soft" if hint["soft"] else "hard")
+        if hint["guc"] is not None:
+            arguments.append(hint["guc"])
+            if hint["guc_value"] is not None:
+                arguments.append(str(hint["guc_value"]))
+        return str(kind) + "(" + " ".join(arguments) + ")"
+
+    def _hint_comment(self, hints) -> str:
+        """Render the ``/*+ ... */ `` comment prefix for a statement's hints."""
+        return "/*+ " + " ".join(self._hint_phrase(hint) for hint in hints) + " */ "
 
     def format_pg_load_library(self, expr: PostgresLoadLibraryExpression) -> Tuple[str, tuple]:
         """Render ``LOAD '<library>'`` (the only place building this SQL)."""
@@ -43,49 +72,46 @@ class PostgresPgHintPlanMixin:
         literal = self.format_literal(expr.library)
         return "LOAD " + literal, ()
 
-    def format_pg_hint(self, expr: PostgresHintExpression) -> Tuple[str, tuple]:
-        """Render one typed hint phrase (the only string assembly for hints)."""
-        if not isinstance(expr, PostgresHintExpression):
-            raise TypeError(
-                f"format_pg_hint expects a PostgresHintExpression, got {type(expr).__name__}"
-            )
-        arguments = []
-        kind = HintKind(expr.kind)
-        if kind is HintKind.LEADING:
-            for item in expr.sequence:
-                if isinstance(item, HintGroup):
-                    # A caller may hand the formatter a raw HintGroup; the node
-                    # itself stores the normalised tuple.
-                    arguments.append("(" + " ".join(item.tables) + ")")
-                elif isinstance(item, (list, tuple)):
-                    arguments.append("(" + " ".join(item) + ")")
-                else:
-                    arguments.append(item)
-        arguments.extend(expr.tables)
-        arguments.extend(expr.indexes)
-        if expr.correction_kind is not None:
-            arguments.append(str(expr.correction_kind) + str(expr.correction_amount))
-        if expr.workers is not None:
-            arguments.append(str(expr.workers))
-            if expr.soft is not None:
-                arguments.append("soft" if expr.soft else "hard")
-        if expr.guc is not None:
-            arguments.append(expr.guc)
-            if expr.guc_value is not None:
-                arguments.append(str(expr.guc_value))
-        if not arguments:
-            raise ValueError(f"{kind.value} needs at least one parameter")
-        return str(kind) + "(" + " ".join(arguments) + ")", ()
 
-    def format_pg_hint_plan_hinted_query(
-        self, expr: PostgresHintedQueryExpression
-    ) -> Tuple[str, tuple]:
-        """Render ``/*+ ... */ <statement>`` with the inner statement's params."""
-        if not isinstance(expr, PostgresHintedQueryExpression):
-            raise TypeError(
-                "format_pg_hint_plan_hinted_query expects a PostgresHintedQueryExpression, "
-                f"got {type(expr).__name__}"
-            )
-        query_sql, query_params = expr.query.to_sql()
-        hint_sql = " ".join(hint.to_sql()[0] for hint in expr.hints)
-        return "/*+ " + hint_sql + " */ " + query_sql, tuple(query_params)
+class PostgresHintedStatementsMixin:
+    """Prefix a statement's SQL with its pg_hint_plan comment.
+
+    Each override calls the core formatter through ``super()`` and only adds
+    the comment when the statement carries hints.  This mixin therefore has to
+    precede the core DQL/DML mixins in the dialect's base list; see the bundle
+    rule in ``dialect.py``.
+    """
+
+    def format_query_statement(self, expr) -> Tuple[str, tuple]:
+        sql, params = super().format_query_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_insert_statement(self, expr) -> Tuple[str, tuple]:
+        sql, params = super().format_insert_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_update_statement(self, expr) -> Tuple[str, tuple]:
+        sql, params = super().format_update_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+    def format_delete_statement(self, expr) -> Tuple[str, tuple]:
+        sql, params = super().format_delete_statement(expr)
+        hints = getattr(expr, "hints", ())
+        if not hints:
+            return sql, params
+        return self._hint_comment(hints) + sql, params
+
+
+__all__ = [
+    "PostgresHintedStatementsMixin",
+    "PostgresPgHintPlanMixin",
+]

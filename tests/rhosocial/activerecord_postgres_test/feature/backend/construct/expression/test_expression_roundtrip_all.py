@@ -12,8 +12,8 @@ by what they hold. ``test_value_kind_plane`` asserts that plane (wire name,
 payload type, round-trip) because the class matrix sees only one row for it
 whatever the payloads are.
 
-Current census, for the record: 619 registered classes, 619 constructible, 0
-pinned unconstructible, 555 rendered, 41 refused as unsupported, 20 classified
+Current census, for the record: 622 registered classes, 622 constructible, 0
+pinned unconstructible, 558 rendered, 41 refused as unsupported, 20 classified
 non-renders, 3 with no formatter declared. The two gap tables
 (``_CODEC_GAPS`` / ``_CODEC_RENDER_GAPS``) are the only places a parameter may
 be lost, each pinned per class *and* channel with its exception type.
@@ -233,6 +233,7 @@ from rhosocial.activerecord.backend.expression.statements.dml import (
     MergeAction,
     MergeActionType,
     MergeStatement,
+    ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -313,8 +314,14 @@ from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import (
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     HintGroup,
     HintKind,
-    PostgresHintedQueryExpression,
-    PostgresHintExpression,
+    PostgresHint,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresHintedDeleteStatement,
+    PostgresHintedExplainStatement,
+    PostgresHintedInsertStatement,
+    PostgresHintedQueryStatement,
+    PostgresHintedUpdateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.pg_stat import (
     PostgresPgStatStatement,
@@ -337,6 +344,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading,
+    hint_seq_scan,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
     collect_expression_classes,
@@ -752,24 +760,58 @@ def register_specials():
         ),
     )
 
-    # -- pg_hint_plan: a closed hint kind plus typed identifiers ------------
-    # The kind is an enum member and the identifiers have to satisfy Python's
-    # identifier contract, so the guess's placeholder string names neither. The
-    # phrase registered is the one a host object used to make unwritable:
-    # ``Leading`` with a nested join pair. The builder still accepts
-    # ``HintGroup``, but the expression normalises it to ``("a", "b")``, so the
-    # round-trip below proves the nested array survives every reader.
+    # -- pg_hint_plan: a hint payload rides on a statement -------------------
+    # A hint is a comment carried by one statement, not a node of its own, so
+    # there is nothing to register for a hint: the five derived statements
+    # carry the payload. Each needs at least one well-formed hint, which the
+    # introspective guess cannot invent (its fillers would be ``()``), so each
+    # gets a real one here. The phrase registered for the query is the one a
+    # host object used to make unwritable: ``Leading`` with a nested join pair.
+    # The builder still accepts ``HintGroup``, but the payload normalises it to
+    # ``("a", "b")``, so the round-trip proves the nested array survives every
+    # reader.
     register_special_constructor(
-        "hint.PostgresHintExpression",
-        lambda d: hint_leading(d, HintGroup("a", "b"), "c"),
+        "hinted_statements.PostgresHintedQueryStatement",
+        lambda d: PostgresHintedQueryStatement(
+            d,
+            [Column(d, "a")],
+            _table_obj(d),
+            hints=(hint_leading(d, HintGroup("a", "b"), "c"),),
+        ),
     )
-    # The wrapper additionally needs a real statement and at least one real hint.
     register_special_constructor(
-        "hint.PostgresHintedQueryExpression",
-        lambda d: PostgresHintedQueryExpression(
+        "hinted_statements.PostgresHintedInsertStatement",
+        lambda d: PostgresHintedInsertStatement(
+            d,
+            _table_obj(d),
+            ValuesSource(d, [[Literal(d, 1)]]),
+            ["a"],
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresHintedUpdateStatement",
+        lambda d: PostgresHintedUpdateStatement(
+            d,
+            _table_obj(d),
+            {"a": Literal(d, 1)},
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresHintedDeleteStatement",
+        lambda d: PostgresHintedDeleteStatement(
+            d,
+            _table_obj(d),
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresHintedExplainStatement",
+        lambda d: PostgresHintedExplainStatement(
             d,
             _one_column_query(d),
-            (PostgresHintExpression(d, HintKind.SEQ_SCAN, tables=("t",)),),
+            hints=(hint_seq_scan(d, "t"),),
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------
@@ -1267,11 +1309,12 @@ UNCONSTRUCTIBLE = (
     # ``test_unconstructible_list_is_exact`` observes right now, and it is pinned
     # in both directions so the first class that needs an exemption fails CI.
     #
-    # The last four -- the two pg_hint_plan nodes, the named enum column type and
-    # the pg_stat_statements statement -- each carried a payload the introspective
-    # filler could not supply (an enum kind, a statement plus hints, a type name,
-    # a query kind). Each now has a special constructor, so the matrix renders
-    # them instead of skipping them.
+    # The last two -- the named enum column type and the pg_stat_statements
+    # statement -- each carried a payload the introspective filler could not
+    # supply (a type name, a query kind). Each now has a special constructor,
+    # so the matrix renders them instead of skipping them. The pg_hint_plan
+    # nodes that used to be here are gone: a hint is a payload carried by one
+    # of the five hinted statements, and each of those has its own constructor.
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own
@@ -2192,23 +2235,29 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
 # ---------------------------------------------------------------------------
 #
 # ``HintGroup`` is how a caller spells a nested pair. It has no standalone SQL,
-# so making it an expression node would break one-expression-one-statement.
-# Instead the hint normalises it to the tuple of names and the phrase carries
-# that on the wire. ``Leading((a b) c)`` is the phrase that needs it; the
-# matrix's ``PostgresHintExpression`` row is the same phrase, and this test
-# states the artifact and both renderings explicitly.
+# so it is not an expression node: the payload normalises it to the tuple of
+# names and the phrase carries that on the wire, on the hinted statement that
+# owns the comment. ``Leading((a b) c)`` is the phrase that needs it, and this
+# test states the artifact and both renderings explicitly.
 
 
 def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     """A ``Leading`` hint keeps its nested pair on every wire, byte for byte."""
     dialect = postgres_dialect
-    hint = hint_leading(dialect, HintGroup("a", "b"), "c")
+    hinted = PostgresHintedQueryStatement(
+        dialect,
+        [Column(dialect, "a")],
+        _table_obj(dialect),
+        hints=(hint_leading(dialect, HintGroup("a", "b"), "c"),),
+    )
 
-    assert hint.sequence == (("a", "b"), "c"), "HintGroup must normalise to a tuple"
-    assert serialize(hint)["params"]["sequence"] == [["a", "b"], "c"]
+    assert hinted.hints[0]["sequence"] == (("a", "b"), "c"), (
+        "HintGroup must normalise to a tuple inside the payload"
+    )
+    assert serialize(hinted)["params"]["hints"][0]["sequence"] == [["a", "b"], "c"]
 
-    sql, params = hint.to_sql()
-    assert sql == "Leading((a b) c)"
+    sql, params = hinted.to_sql()
+    assert sql == '/*+ Leading((a b) c) */ SELECT "a" FROM "t"'
     assert params == ()
 
     for channel, enc, dec in (
@@ -2216,18 +2265,23 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
         ("json", serialize_json, deserialize_json),
         ("xml", serialize_xml, deserialize_xml),
     ):
-        restored = dec(enc(hint), dialect, registry=MATRIX_REGISTRY)
-        assert restored.sequence == hint.sequence, channel
+        restored = dec(enc(hinted), dialect, registry=MATRIX_REGISTRY)
+        assert restored.hints == hinted.hints, channel
         restored_sql, restored_params = restored.to_sql()
         assert restored_sql == sql, channel
         assert list(restored_params) == list(params), channel
 
-    # The grammar is checked against the normalised form, and still only when
-    # SQL is asked for: the constructor collects even a pair the renderer will
-    # refuse.
+    # The grammar is checked against the normalised payload, and still only
+    # when SQL is asked for: the constructor collects even a pair the renderer
+    # will refuse.
     for bad_pair in ((), ("a", "b c"), (1,)):
-        unvalidated = PostgresHintExpression(
-            dialect, HintKind.LEADING, sequence=(bad_pair, "c")
+        unvalidated = PostgresHintedQueryStatement(
+            dialect,
+            [Column(dialect, "a")],
+            _table_obj(dialect),
+            hints=(
+                PostgresHint(HintKind.LEADING, sequence=(bad_pair, "c")),
+            ),
         )
         with pytest.raises(TypeError):
             unvalidated.to_sql()
