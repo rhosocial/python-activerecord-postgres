@@ -43,6 +43,28 @@ jobs:
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
+      - name: Create postgres scenario config
+        # The rules are DB-free, but tests/conftest.py imports support.postgres,
+        # which reads this file at import time. Supply the same minimal config
+        # the other jobs use; no connection is made here.
+        run: |
+          cat > postgres_scenarios.yaml << EOF
+          scenarios:
+            postgres_default:
+              host: 127.0.0.1
+              port: 5432
+              database: test_db
+              username: root
+              password: password
+            postgres_exts:
+              host: 127.0.0.1
+              port: 5433
+              database: test_db
+              username: root
+              password: password
+          EOF
+          echo "POSTGRES_SCENARIOS_CONFIG_PATH=$(pwd)/postgres_scenarios.yaml" >> $GITHUB_ENV
+
       - name: Formal rules contracts
         # Isolated from the DB-dependent jobs: module-level global registries
         # there can change what a contract test constructs, which makes an
