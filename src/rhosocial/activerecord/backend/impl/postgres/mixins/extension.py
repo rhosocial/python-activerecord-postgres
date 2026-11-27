@@ -156,7 +156,11 @@ class PostgresExtensionMixin:
             "repository": "https://github.com/ossc-db/pg_hint_plan",
             "features": {
                 "hints": {"min_version": "1.3"},
-                "disable_index": {"min_version": "2.0"},
+                # Measured from upstream release notes (1.4.0 added Memoize,
+                # 1.8.0 added DisableIndex) and pg-ts18: PG 18.7 + 1.8.1 renders
+                # both; the gates track phrases that take effect, not doc rows.
+                "memoize": {"min_version": "1.4"},
+                "disable_index": {"min_version": "1.8"},
             },
         },
         "unaccent": {

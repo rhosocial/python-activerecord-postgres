@@ -48,7 +48,8 @@ _NESTED_HINTED_STATEMENTS = (
 )
 
 
-#: Hints that name a plan node the server only has from PostgreSQL 17 on.
+#: Hints that name a join-level plan node: gated by both the PostgreSQL 17+
+#: server and the pg_hint_plan release that introduced them (1.4.0).
 _MEMOIZE_KINDS = frozenset({HintKind.MEMOIZE, HintKind.NO_MEMOIZE})
 
 
@@ -65,27 +66,44 @@ class PostgresPgHintPlanMixin:
         Capability is probed at render time, not when the payload is built: the
         same payload can travel to a newer server, and a node must always build.
         ``version_at_least`` and ``check_extension_feature`` are the dialect's
-        existing probes; the installed version is named in the error so it is
-        clear which side of the gate failed.
+        existing probes; the installed version and the required minimum are
+        named in the error so it is clear which side of the gate failed.
+        Gate minimums come from upstream release notes and were re-verified on
+        pg-ts18 (PG 18.7 + pg_hint_plan 1.8.1).
         """
-        if kind in _MEMOIZE_KINDS and not self.version_at_least((17, 0, 0)):
-            version = self.version_or_none
-            raise UnsupportedFeatureError(
-                self.name,
-                f"{kind.value} hint (PostgreSQL 17+)",
-                f"the Memoize node is absent on the current server version "
-                f"{'.'.join(str(part) for part in version) if version else 'unknown'}; "
-                f"connect to PostgreSQL 17 or newer, or drop the hint.",
-            )
+        if kind in _MEMOIZE_KINDS:
+            if not self.version_at_least((17, 0, 0)):
+                version = self.version_or_none
+                raise UnsupportedFeatureError(
+                    self.name,
+                    f"{kind.value} hint (PostgreSQL 17+)",
+                    f"the Memoize node is absent on the current server version "
+                    f"{'.'.join(str(part) for part in version) if version else 'unknown'}; "
+                    f"connect to PostgreSQL 17 or newer, or drop the hint.",
+                )
+            if not self.check_extension_feature("pg_hint_plan", "memoize"):
+                installed = self.get_extension_version("pg_hint_plan")
+                minimum = self.get_extension_min_version_for_feature(
+                    "pg_hint_plan", "memoize"
+                )
+                raise UnsupportedFeatureError(
+                    self.name,
+                    f"{kind.value} hint (pg_hint_plan {minimum}+)",
+                    f"the loaded pg_hint_plan version is {installed or 'unknown'}; "
+                    f"load pg_hint_plan {minimum} or newer, or drop the hint.",
+                )
         if kind is HintKind.DISABLE_INDEX and not self.check_extension_feature(
             "pg_hint_plan", "disable_index"
         ):
             installed = self.get_extension_version("pg_hint_plan")
+            minimum = self.get_extension_min_version_for_feature(
+                "pg_hint_plan", "disable_index"
+            )
             raise UnsupportedFeatureError(
                 self.name,
-                "DisableIndex hint (pg_hint_plan 2.0+)",
+                f"DisableIndex hint (pg_hint_plan {minimum}+)",
                 f"the loaded pg_hint_plan version is {installed or 'unknown'}; "
-                f"load pg_hint_plan 2.0 or newer, or drop the hint.",
+                f"load pg_hint_plan {minimum} or newer, or drop the hint.",
             )
 
     def _hint_phrase(self, hint: dict) -> str:

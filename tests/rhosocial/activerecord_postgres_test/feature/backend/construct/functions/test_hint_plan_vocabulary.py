@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
 from rhosocial.activerecord.backend.impl.postgres.protocols.base import PostgresExtensionInfo
 
 
-def _dialect(server=(18, 7, 0), extension="2.0.0"):
+def _dialect(server=(18, 7, 0), extension="1.8.1"):
     dialect = PostgresDialect(version=server)
     dialect._extensions = {
         "pg_hint_plan": PostgresExtensionInfo(
@@ -41,7 +41,7 @@ def _dialect(server=(18, 7, 0), extension="2.0.0"):
 
 @pytest.fixture
 def dialect():
-    """A server and extension that satisfy every gate below."""
+    """A server and the measured extension version that satisfy every gate."""
     return _dialect()
 
 
@@ -179,11 +179,14 @@ class TestNewHintKinds:
 
 
 class TestVersionGates:
+    """Memoize needs both gates; DisableIndex only the measured extension one."""
+
     @pytest.mark.parametrize(
-        "build", [lambda d: hint_memoize(d, "a"), lambda d: hint_no_memoize(d, "a")]
+        "build",
+        [lambda d: hint_memoize(d, "a", "b"), lambda d: hint_no_memoize(d, "a", "b")],
     )
     def test_memoize_needs_postgresql_17(self, build):
-        old = _dialect(server=(16, 4, 0), extension="2.0.0")
+        old = _dialect(server=(16, 4, 0))
         payload = build(old)  # a payload may always be built
         with pytest.raises(UnsupportedFeatureError) as caught:
             _phrase(old, payload)
@@ -191,25 +194,55 @@ class TestVersionGates:
         assert "16.4.0" in str(caught.value)
 
     @pytest.mark.parametrize(
-        "build", [lambda d: hint_memoize(d, "a"), lambda d: hint_no_memoize(d, "a")]
+        "build",
+        [lambda d: hint_memoize(d, "a", "b"), lambda d: hint_no_memoize(d, "a", "b")],
+    )
+    def test_memoize_needs_pg_hint_plan_14(self, build):
+        """A new server with the pre-Memoize extension is refused by name."""
+        old = _dialect(server=(18, 7, 0), extension="1.3.1")
+        payload = build(old)
+        with pytest.raises(UnsupportedFeatureError) as caught:
+            _phrase(old, payload)
+        assert "1.3.1" in str(caught.value)
+        assert "1.4" in str(caught.value)
+
+    @pytest.mark.parametrize(
+        "build",
+        [lambda d: hint_memoize(d, "a", "b"), lambda d: hint_no_memoize(d, "a", "b")],
     )
     def test_memoize_renders_on_17_and_later(self, build):
-        new = _dialect(server=(17, 0, 0), extension="2.0.0")
-        assert _phrase(new, build(new)) in ("Memoize(a)", "NoMemoize(a)")
+        """The measured introduction version is enough once the server is 17+."""
+        new = _dialect(server=(17, 0, 0), extension="1.4")
+        assert _phrase(new, build(new)) in ("Memoize(a b)", "NoMemoize(a b)")
 
-    def test_disable_index_needs_pg_hint_plan_2(self):
-        old = _dialect(server=(18, 7, 0), extension="1.8.1")
+    @pytest.mark.parametrize("build", [hint_memoize, hint_no_memoize])
+    def test_memoize_renders_on_measured_181(self, build):
+        measured = _dialect(server=(18, 7, 0))
+        assert _phrase(measured, build(measured, "t1", "t2")) in (
+            "Memoize(t1 t2)",
+            "NoMemoize(t1 t2)",
+        )
+
+    def test_disable_index_needs_pg_hint_plan_18(self):
+        old = _dialect(server=(18, 7, 0), extension="1.7.2")
         payload = hint_disable_index(old, "t", "idx")
         with pytest.raises(UnsupportedFeatureError) as caught:
             _phrase(old, payload)
-        assert "2.0" in str(caught.value)
-        assert "1.8.1" in str(caught.value)
+        assert "1.7.2" in str(caught.value)
+        assert "1.8" in str(caught.value)
 
-    def test_disable_index_renders_on_extension_2(self):
-        new = _dialect(server=(18, 7, 0), extension="2.0.0")
+    def test_disable_index_renders_on_extension_18(self):
+        new = _dialect(server=(18, 7, 0), extension="1.8")
         assert _phrase(new, hint_disable_index(new, "t", "idx")) == "DisableIndex(t idx)"
 
-    def test_the_other_new_kinds_do_not_need_extension_2(self):
-        old = _dialect(server=(18, 7, 0), extension="1.8.1")
+    def test_disable_index_renders_on_measured_181(self):
+        measured = _dialect(server=(18, 7, 0))
+        assert (
+            _phrase(measured, hint_disable_index(measured, "t1", "t1_v"))
+            == "DisableIndex(t1 t1_v)"
+        )
+
+    def test_the_other_new_kinds_do_not_need_extension_18(self):
+        old = _dialect(server=(18, 7, 0), extension="1.8")
         assert _phrase(old, hint_no_tid_scan(old, "t")) == "NoTidScan(t)"
         assert _phrase(old, hint_index_scan_regexp(old, "t", "^i")) == "IndexScanRegexp(t ^i)"

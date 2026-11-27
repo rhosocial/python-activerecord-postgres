@@ -124,21 +124,23 @@ dialect.supports_pg_hint_plan()   # 仅在 pg_hint_plan 可用时为 True
 | `NoIndexScan` | `hint_no_index_scan` | — |
 | `NoIndexOnlyScan` | `hint_no_index_only_scan` | — |
 | `NoBitmapScan` | `hint_no_bitmap_scan` | — |
-| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 2.0 |
+| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 1.8 |
 | `NestLoop` | `hint_nest_loop` | — |
 | `HashJoin` | `hint_hash_join` | — |
 | `MergeJoin` | `hint_merge_join` | — |
 | `NoNestLoop` | `hint_no_nest_loop` | — |
 | `NoHashJoin` | `hint_no_hash_join` | — |
 | `NoMergeJoin` | `hint_no_merge_join` | — |
-| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 |
-| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 |
+| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 且 pg_hint_plan ≥ 1.4 |
+| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 且 pg_hint_plan ≥ 1.4 |
 | `Leading` | `hint_leading` | — |
 | `Rows` | `hint_rows` | — |
 | `Parallel` | `hint_parallel` | — |
 | `Set` | `hint_set` | — |
 
-`*Regexp` builder 在目标之后接受 POSIX 正则，存入负载的 `indexes` 字段；`DisableIndex` 在同一字段放索引名。有版本门槛的提示仍可正常构造，仅在渲染时以 `UnsupportedFeatureError` 拒绝，异常中会点明当前服务端或扩展版本。
+版本门槛以**实际能渲染并生效**的短语为准（在 PG 18.7 + pg_hint_plan 1.8.1 上实测并与上游发布说明交叉核对），不是从文档表格照抄的版本号；`Memoize`/`NoMemoize` 另需提示中至少给出两个关系。
+
+`*Regexp` builder 在目标之后接受 POSIX 正则，存入负载的 `indexes` 字段；`DisableIndex` 在同一字段放索引名。有版本门槛的提示仍可正常构造，仅在渲染时以 `UnsupportedFeatureError` 拒绝，异常中会点明当前版本与所需最低版本。
 
 ## 提示目标是什么
 
@@ -169,7 +171,7 @@ dialect.supports_pg_hint_plan()          # 扩展已装且版本 >= 1.3
 dialect.get_extension_version("pg_hint_plan")
 ```
 
-上述版本门槛分别用 `dialect.version`（服务端，`Memoize`/`NoMemoize`）和 `get_extension_version("pg_hint_plan")`（扩展，`DisableIndex`）探测。
+`Memoize`/`NoMemoize` 的门槛同时用 `dialect.version`（服务端）与 `check_extension_feature("pg_hint_plan", "memoize")`（扩展）探测；`DisableIndex` 用 `check_extension_feature("pg_hint_plan", "disable_index")`（经 `get_extension_version`）探测。
 
 ## 另见
 

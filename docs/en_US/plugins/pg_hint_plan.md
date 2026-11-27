@@ -127,21 +127,23 @@ first word of the SQL.
 | `NoIndexScan` | `hint_no_index_scan` | — |
 | `NoIndexOnlyScan` | `hint_no_index_only_scan` | — |
 | `NoBitmapScan` | `hint_no_bitmap_scan` | — |
-| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 2.0 |
+| `DisableIndex` | `hint_disable_index` | pg_hint_plan ≥ 1.8 |
 | `NestLoop` | `hint_nest_loop` | — |
 | `HashJoin` | `hint_hash_join` | — |
 | `MergeJoin` | `hint_merge_join` | — |
 | `NoNestLoop` | `hint_no_nest_loop` | — |
 | `NoHashJoin` | `hint_no_hash_join` | — |
 | `NoMergeJoin` | `hint_no_merge_join` | — |
-| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 |
-| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 |
+| `Memoize` | `hint_memoize` | PostgreSQL ≥ 17 + pg_hint_plan ≥ 1.4 |
+| `NoMemoize` | `hint_no_memoize` | PostgreSQL ≥ 17 + pg_hint_plan ≥ 1.4 |
 | `Leading` | `hint_leading` | — |
 | `Rows` | `hint_rows` | — |
 | `Parallel` | `hint_parallel` | — |
 | `Set` | `hint_set` | — |
 
-A `*Regexp` builder takes POSIX patterns after the target and stores them in the payload's `indexes` field; `DisableIndex` takes index names there. Gated kinds build normally and are refused at render time with `UnsupportedFeatureError` (the error names the server or extension version in force).
+Gates reflect the phrases that actually render and take effect (measured on PG 18.7 with pg_hint_plan 1.8.1, cross-checked against upstream release notes), not numbers copied from a doc table; `Memoize`/`NoMemoize` additionally require at least two relations in the hint.
+
+A `*Regexp` builder takes POSIX patterns after the target and stores them in the payload's `indexes` field; `DisableIndex` takes index names there. Gated kinds build normally and are refused at render time with `UnsupportedFeatureError` (the error names the version in force and the required minimum).
 
 ## What a hint target is
 
@@ -172,7 +174,7 @@ dialect.supports_pg_hint_plan()          # extension installed and version >= 1.
 dialect.get_extension_version("pg_hint_plan")
 ```
 
-The version gates above use `dialect.version` (server, for `Memoize`/`NoMemoize`) and `get_extension_version("pg_hint_plan")` (extension, for `DisableIndex`).
+The version gates above use both `dialect.version` and `check_extension_feature("pg_hint_plan", "memoize")` for `Memoize`/`NoMemoize`, and `check_extension_feature("pg_hint_plan", "disable_index")` (via `get_extension_version`) for `DisableIndex`.
 
 ## See also
 

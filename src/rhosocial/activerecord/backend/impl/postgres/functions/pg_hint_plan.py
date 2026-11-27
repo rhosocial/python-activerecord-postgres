@@ -126,7 +126,7 @@ def hint_no_bitmap_scan(dialect: "SQLDialectBase", table: HintTarget) -> "HintPa
 def hint_disable_index(
     dialect: "SQLDialectBase", table: HintTarget, *indexes: str
 ) -> "HintPayload":
-    """``DisableIndex(table index ...)`` (pg_hint_plan 2.0+)."""
+    """``DisableIndex(table index ...)`` (pg_hint_plan 1.8+)."""
     return make_hint_payload(HintKind.DISABLE_INDEX, tables=(hint_target(table),), indexes=indexes)
 
 
@@ -161,12 +161,18 @@ def hint_no_nest_loop(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPa
 
 
 def hint_memoize(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
-    """``Memoize(table table ...)`` (PostgreSQL 17+)."""
+    """``Memoize(table table ...)`` (PostgreSQL 17+, pg_hint_plan 1.4+).
+
+    pg_hint_plan requires at least two relations for this hint.
+    """
     return make_hint_payload(HintKind.MEMOIZE, tables=_targets(tables))
 
 
 def hint_no_memoize(dialect: "SQLDialectBase", *tables: HintTarget) -> "HintPayload":
-    """``NoMemoize(table table ...)`` (PostgreSQL 17+)."""
+    """``NoMemoize(table table ...)`` (PostgreSQL 17+, pg_hint_plan 1.4+).
+
+    pg_hint_plan requires at least two relations for this hint.
+    """
     return make_hint_payload(HintKind.NO_MEMOIZE, tables=_targets(tables))
 
 
