@@ -311,6 +311,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import (
     PostgresEnumType,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
+    HintGroup,
     HintKind,
     PostgresHintedQueryExpression,
     PostgresHintExpression,
@@ -333,6 +334,9 @@ from rhosocial.activerecord.backend.impl.postgres.functions import (
     ltree as pg_ltree,
     network as pg_network,
     range as pg_range,
+)
+from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
+    hint_leading,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
     collect_expression_classes,
@@ -751,13 +755,15 @@ def register_specials():
     # -- pg_hint_plan: a closed hint kind plus typed identifiers ------------
     # The kind is an enum member and the identifiers have to satisfy Python's
     # identifier contract, so the guess's placeholder string names neither. The
-    # wrapper additionally needs a real statement and at least one real hint.
+    # phrase registered is the one a host object used to make unwritable:
+    # ``Leading`` with a nested join pair. The builder still accepts
+    # ``HintGroup``, but the expression normalises it to ``("a", "b")``, so the
+    # round-trip below proves the nested array survives every reader.
     register_special_constructor(
         "hint.PostgresHintExpression",
-        lambda d: PostgresHintExpression(
-            d, HintKind.INDEX_SCAN, tables=("t",), indexes=("idx",)
-        ),
+        lambda d: hint_leading(d, HintGroup("a", "b"), "c"),
     )
+    # The wrapper additionally needs a real statement and at least one real hint.
     register_special_constructor(
         "hint.PostgresHintedQueryExpression",
         lambda d: PostgresHintedQueryExpression(
@@ -2179,3 +2185,49 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
         'SELECT "a", %s FROM "u"'
     )
     assert params == (1, 5, 2)
+
+
+# ---------------------------------------------------------------------------
+# The nested join pair: a payload, not a node
+# ---------------------------------------------------------------------------
+#
+# ``HintGroup`` is how a caller spells a nested pair. It has no standalone SQL,
+# so making it an expression node would break one-expression-one-statement.
+# Instead the hint normalises it to the tuple of names and the phrase carries
+# that on the wire. ``Leading((a b) c)`` is the phrase that needs it; the
+# matrix's ``PostgresHintExpression`` row is the same phrase, and this test
+# states the artifact and both renderings explicitly.
+
+
+def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
+    """A ``Leading`` hint keeps its nested pair on every wire, byte for byte."""
+    dialect = postgres_dialect
+    hint = hint_leading(dialect, HintGroup("a", "b"), "c")
+
+    assert hint.sequence == (("a", "b"), "c"), "HintGroup must normalise to a tuple"
+    assert serialize(hint)["params"]["sequence"] == [["a", "b"], "c"]
+
+    sql, params = hint.to_sql()
+    assert sql == "Leading((a b) c)"
+    assert params == ()
+
+    for channel, enc, dec in (
+        ("dict", serialize, deserialize),
+        ("json", serialize_json, deserialize_json),
+        ("xml", serialize_xml, deserialize_xml),
+    ):
+        restored = dec(enc(hint), dialect, registry=MATRIX_REGISTRY)
+        assert restored.sequence == hint.sequence, channel
+        restored_sql, restored_params = restored.to_sql()
+        assert restored_sql == sql, channel
+        assert list(restored_params) == list(params), channel
+
+    # The grammar is checked against the normalised form, and still only when
+    # SQL is asked for: the constructor collects even a pair the renderer will
+    # refuse.
+    for bad_pair in ((), ("a", "b c"), (1,)):
+        unvalidated = PostgresHintExpression(
+            dialect, HintKind.LEADING, sequence=(bad_pair, "c")
+        )
+        with pytest.raises(TypeError):
+            unvalidated.to_sql()
