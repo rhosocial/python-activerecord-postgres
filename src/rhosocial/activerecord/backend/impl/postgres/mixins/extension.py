@@ -177,6 +177,16 @@ class PostgresExtensionMixin:
                 "validation": {"min_version": "0.3"},
             },
         },
+        "timescaledb": {
+            "min_version": "2.0",
+            "description": "Time-series hypertables and policies",
+            "category": "time_series",
+            "documentation": "https://docs.timescale.com/",
+            "repository": "https://github.com/timescale/timescaledb",
+            "features": {
+                "hypertable": {"min_version": "2.0"},
+            },
+        },
         "fuzzystrmatch": {
             "min_version": "1.0",
             "description": "Fuzzy string matching (Levenshtein, Soundex)",

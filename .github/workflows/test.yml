@@ -39,7 +39,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       postgres-exts:
-        image: vistart/postgres-exts:18
+        image: vistart/postgres-exts-ts:18
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
@@ -253,7 +253,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       postgres-exts:
-        image: vistart/postgres-exts:${{ matrix.postgres-version }}
+        image: ${{ contains(fromJson('["15","16","17","18"]'), matrix.postgres-version) && format('vistart/postgres-exts-ts:{0}', matrix.postgres-version) || format('vistart/postgres-exts:{0}', matrix.postgres-version) }}
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root
@@ -361,7 +361,7 @@ jobs:
           --health-timeout 5s
           --health-retries 5
       postgres-exts:
-        image: vistart/postgres-exts:${{ matrix.postgres-version }}
+        image: ${{ contains(fromJson('["15","16","17","18"]'), matrix.postgres-version) && format('vistart/postgres-exts-ts:{0}', matrix.postgres-version) || format('vistart/postgres-exts:{0}', matrix.postgres-version) }}
         env:
           POSTGRES_DB: test_db
           POSTGRES_USER: root

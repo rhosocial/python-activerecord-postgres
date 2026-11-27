@@ -32,6 +32,7 @@ Function modules and their corresponding PostgreSQL documentation:
 - pgstattuple: Tuple-level statistics - https://www.postgresql.org/docs/current/pgstattuple.html
 - pg_logicalinspect: Logical snapshot inspection - https://www.postgresql.org/docs/current/pglogicalinspect.html
 - pg_jsonschema: JSON Schema validation - https://github.com/supabase/pg_jsonschema
+- timescaledb: Time-series hypertables - https://docs.timescale.com/
 - fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
 - earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
 - hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
@@ -442,6 +443,9 @@ from .pg_jsonschema import (
     jsonschema_is_valid,
     jsonschema_validation_errors,
 )
+
+# TimescaleDB functions
+from .timescaledb import create_hypertable
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -948,6 +952,8 @@ __all__ = [
     "jsonb_matches_schema",
     "jsonschema_is_valid",
     "jsonschema_validation_errors",
+    # TimescaleDB functions
+    "create_hypertable",
     # fuzzystrmatch functions
     "levenshtein",
     "levenshtein_less_equal",
