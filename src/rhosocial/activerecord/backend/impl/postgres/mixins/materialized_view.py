@@ -374,6 +374,12 @@ class PostgresMaterializedViewMixin(ViewMixin):
             UnsupportedFeatureError: If the dialect does not support
                 ALTER MATERIALIZED VIEW.
         """
+        if not isinstance(expr.view, MaterializedView):
+            raise TypeError(
+                f"{type(expr).__name__}.view must be a MaterializedView, "
+                f"got {type(expr.view).__name__}"
+            )
+
         if not self.supports_alter_materialized_view():
             raise UnsupportedFeatureError(self.name, "ALTER MATERIALIZED VIEW")
 

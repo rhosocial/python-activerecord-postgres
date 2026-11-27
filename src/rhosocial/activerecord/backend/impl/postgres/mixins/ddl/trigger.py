@@ -92,6 +92,17 @@ class PostgresTriggerMixin:
                 statement is refused rather than rendered without the
                 qualifier the caller asked for.
         """
+        if not isinstance(expr.trigger, Trigger):
+            raise TypeError(
+                f"CreateTriggerStatement.trigger must be a Trigger, "
+                f"got {type(expr.trigger).__name__}"
+            )
+        if not isinstance(expr.table, Table):
+            raise TypeError(
+                f"CreateTriggerStatement.table must be a Table, "
+                f"got {type(expr.table).__name__}"
+            )
+
         parts = ["CREATE TRIGGER"]
 
         if expr.if_not_exists:
