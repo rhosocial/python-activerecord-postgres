@@ -14,7 +14,6 @@ from rhosocial.activerecord.backend.dialect.exceptions import (
 )
 from rhosocial.activerecord.backend.expression.types import (
     BigIntType,
-    BlobType,
     DataType,
     DecimalType,
     DoubleType,
@@ -23,7 +22,6 @@ from rhosocial.activerecord.backend.expression.types import (
     SmallIntType,
     TimeType,
     TimestampType,
-    UUIDType,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
