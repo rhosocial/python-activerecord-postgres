@@ -51,14 +51,6 @@ class PostgresPartitionSupport(PartitionSupport, Protocol):
     - Partitionwise aggregate: PostgreSQL 11+
     """
 
-    def supports_hash_partitioning(self) -> bool:
-        """Whether HASH partitioning is supported.
-
-        Native feature, PostgreSQL 11+.
-        Enables HASH partitioning method for tables.
-        """
-        ...
-
     def supports_default_partition(self) -> bool:
         """Whether DEFAULT partition is supported.
 

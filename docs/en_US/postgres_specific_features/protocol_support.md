@@ -296,7 +296,7 @@ PostgreSQL partitioning features beyond SQL standard:
 
 | Feature | Support | Version | Description |
 |---------|---------|---------|-------------|
-| `supports_hash_partitioning()` | ✅ | ≥ 11.0 | HASH partitioning method |
+| `supports_hash_table_partitioning()` | ✅ | ≥ 11.0 | HASH partitioning method |
 | `supports_default_partition()` | ✅ | ≥ 11.0 | DEFAULT partition for non-matching rows |
 | `supports_partition_key_update()` | ✅ | ≥ 11.0 | Automatic row movement on key update |
 | `supports_concurrent_detach()` | ✅ | ≥ 14.0 | Non-blocking partition detachment |
@@ -564,7 +564,7 @@ backend.introspect_and_adapt()  # ONE database query to get all info
 dialect = backend.dialect
 
 # All these use cached data
-dialect.supports_hash_partitioning()  # Uses cached version
+dialect.supports_hash_table_partitioning()  # Uses cached version
 dialect.supports_pgvector_hnsw_index()  # Uses cached extension version
 dialect.supports_postgis_spatial_functions()  # Uses cached extension status
 

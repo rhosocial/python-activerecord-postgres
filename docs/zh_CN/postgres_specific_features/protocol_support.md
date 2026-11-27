@@ -158,7 +158,7 @@ PostgreSQL 分区特性超越 SQL 标准：
 
 | 特性 | 支持 | 版本 | 描述 |
 |------|------|------|------|
-| `supports_hash_partitioning()` | ✅ | ≥ 11.0 | HASH 分区方法 |
+| `supports_hash_table_partitioning()` | ✅ | ≥ 11.0 | HASH 分区方法 |
 | `supports_default_partition()` | ✅ | ≥ 11.0 | 用于不匹配行的 DEFAULT 分区 |
 | `supports_partition_key_update()` | ✅ | ≥ 11.0 | 键更新时自动行移动 |
 | `supports_concurrent_detach()` | ✅ | ≥ 14.0 | 非阻塞分区分离 |
@@ -426,7 +426,7 @@ backend.introspect_and_adapt()  # 一次数据库查询获取所有信息
 dialect = backend.dialect
 
 # 所有这些都使用缓存数据
-dialect.supports_hash_partitioning()  # 使用缓存的版本
+dialect.supports_hash_table_partitioning()  # 使用缓存的版本
 dialect.supports_pgvector_hnsw_index()  # 使用缓存的扩展版本
 dialect.supports_postgis_spatial_functions()  # 使用缓存的扩展状态
 

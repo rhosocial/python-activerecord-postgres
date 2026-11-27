@@ -104,7 +104,7 @@ class PostgresPartitionMixin:
         Returns:
             True if PostgreSQL version >= 11.
         """
-        return self.supports_hash_partitioning()
+        return self.version_at_least((11, 0, 0))
 
     def supports_subpartitioning(self) -> bool:
         """Check if nested partitioning is supported.
@@ -267,16 +267,6 @@ class PostgresPartitionMixin:
                 raise ValueError("partition key expressions must not contain bind parameters")
             key_parts.append(key_sql)
         return f" PARTITION BY {method} ({', '.join(key_parts)})", tuple(params)
-
-    def supports_hash_partitioning(self) -> bool:
-        """Check if HASH partitioning is supported.
-
-        Native feature, PostgreSQL 11+. Enables PARTITION BY HASH clause.
-
-        Returns:
-            True if PostgreSQL version >= 11.
-        """
-        return self.version_at_least((11, 0, 0))
 
     def supports_default_partition(self) -> bool:
         """Check if DEFAULT partition is supported.
@@ -532,7 +522,7 @@ class PostgresPartitionMixin:
             params.extend(value_params)
             parts.append(f"FOR VALUES IN ({', '.join(value_sql_parts)})")
         else:
-            if not self.supports_hash_partitioning():
+            if not self.supports_hash_table_partitioning():
                 raise UnsupportedFeatureError(
                     self.name,
                     "HASH partitioning",
@@ -706,7 +696,7 @@ class PostgresPartitionMixin:
             params.extend(value_params)
             parts.append(f"FOR VALUES IN ({', '.join(value_sql_parts)})")
         else:
-            if not self.supports_hash_partitioning():
+            if not self.supports_hash_table_partitioning():
                 raise UnsupportedFeatureError(
                     self.name,
                     "HASH partitioning",
