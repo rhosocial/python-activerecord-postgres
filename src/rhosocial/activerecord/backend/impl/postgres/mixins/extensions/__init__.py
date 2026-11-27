@@ -14,6 +14,7 @@ from .amcheck import PostgresAmcheckMixin
 from .pageinspect import PostgresPageinspectMixin
 from .pgstattuple import PostgresPgstattupleMixin
 from .pg_logicalinspect import PostgresPgLogicalinspectMixin
+from .pg_jsonschema import PostgresPgJsonSchemaMixin
 from .earthdistance import PostgresEarthdistanceMixin
 from .tablefunc import PostgresTablefuncMixin
 from .pg_stat_statements import PostgresPgStatStatementsMixin
@@ -52,6 +53,7 @@ __all__ = [
     "PostgresPageinspectMixin",
     "PostgresPgstattupleMixin",
     "PostgresPgLogicalinspectMixin",
+    "PostgresPgJsonSchemaMixin",
     "PostgresEarthdistanceMixin",
     "PostgresTablefuncMixin",
     "PostgresPgStatStatementsMixin",

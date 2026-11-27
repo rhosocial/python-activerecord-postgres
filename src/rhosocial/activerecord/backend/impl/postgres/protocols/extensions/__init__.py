@@ -14,6 +14,7 @@ from .amcheck import PostgresAmcheckSupport
 from .pageinspect import PostgresPageinspectSupport
 from .pgstattuple import PostgresPgstattupleSupport
 from .pg_logicalinspect import PostgresPgLogicalinspectSupport
+from .pg_jsonschema import PostgresPgJsonSchemaSupport
 from .earthdistance import PostgresEarthdistanceSupport
 from .tablefunc import PostgresTablefuncSupport
 from .pg_stat_statements import PostgresPgStatStatementsSupport
@@ -52,6 +53,7 @@ __all__ = [
     "PostgresPageinspectSupport",
     "PostgresPgstattupleSupport",
     "PostgresPgLogicalinspectSupport",
+    "PostgresPgJsonSchemaSupport",
     "PostgresEarthdistanceSupport",
     "PostgresTablefuncSupport",
     "PostgresPgStatStatementsSupport",

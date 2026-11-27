@@ -457,6 +457,14 @@ EXAMPLES_META = {
         'max_version': '19',
         'note': 'Requires contrib diagnostics extensions; most functions need superuser',
     },
+    'extensions/pg_jsonschema.py': {
+        'title': 'pg_jsonschema JSON Schema Validation',
+        'dialect_protocols': [],
+        'priority': 4,
+        'min_version': '14',
+        'max_version': '18',
+        'note': 'Requires pg_jsonschema 0.3.4, available in postgres-exts images for PG14-18',
+    },
     'schema_diff/table_changes.py': {
         'title': 'Schema Diff — Table Add/Remove',
         'dialect_protocols': [],

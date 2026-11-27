@@ -167,6 +167,16 @@ class PostgresExtensionMixin:
                 "function": {"min_version": "1.0"},
             },
         },
+        "pg_jsonschema": {
+            "min_version": "0.3",
+            "description": "JSON Schema validation for json/jsonb",
+            "category": "validation",
+            "documentation": "https://github.com/supabase/pg_jsonschema",
+            "repository": "https://github.com/supabase/pg_jsonschema",
+            "features": {
+                "validation": {"min_version": "0.3"},
+            },
+        },
         "fuzzystrmatch": {
             "min_version": "1.0",
             "description": "Fuzzy string matching (Levenshtein, Soundex)",
