@@ -92,12 +92,21 @@ class PostgresExplainMixin:
                 ``FORMAT TRADITIONAL`` and rejected by the server instead.
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
+        from rhosocial.activerecord.backend.expression.statements.dml import (
+            DeleteStatement,
+            InsertStatement,
+            UpdateStatement,
+        )
+        from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 
         # The hint comment belongs to exactly one statement.  A hinted EXPLAIN
         # wraps a statement that may already carry its own hints, and both
         # prefixes would then be written -- so that shape is refused rather
         # than rendered ambiguously.
-        if getattr(expr.statement, "hints", ()):
+        wrapped = expr.statement
+        if isinstance(
+            wrapped, (QueryStatement, InsertStatement, UpdateStatement, DeleteStatement)
+        ) and wrapped.hints:
             raise TypeError(
                 "EXPLAIN cannot carry hints for a statement that already "
                 "carries its own: the comment position would be ambiguous"
@@ -106,7 +115,7 @@ class PostgresExplainMixin:
         # pg_hint_plan reads the hint comment before the statement, and an
         # EXPLAIN is the statement as far as the planner is concerned, so the
         # comment goes ahead of the EXPLAIN keyword.
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         prefix = self._hint_comment(hints) if hints else ""
         options = expr.options
         if options is None:

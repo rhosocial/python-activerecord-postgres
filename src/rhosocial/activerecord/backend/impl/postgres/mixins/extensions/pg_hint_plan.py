@@ -96,28 +96,28 @@ class PostgresHintedStatementsMixin:
 
     def format_query_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_query_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
 
     def format_insert_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_insert_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
 
     def format_update_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_update_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
 
     def format_delete_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_delete_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
@@ -132,7 +132,7 @@ class PostgresHintedStatementsMixin:
         changes).
         """
         sql, params = super().format_create_table_as_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
@@ -145,7 +145,7 @@ class PostgresHintedStatementsMixin:
         this wraps is the same bytes that formatter produced.
         """
         sql, params = super().format_create_materialized_view_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
@@ -157,7 +157,7 @@ class PostgresHintedStatementsMixin:
         version, which delegates to core for the statement text.
         """
         sql, params = super().format_refresh_materialized_view_statement(expr)
-        hints = getattr(expr, "hints", ())
+        hints = expr.hints
         if not hints:
             return sql, params
         return self._hint_comment(hints) + sql, params
