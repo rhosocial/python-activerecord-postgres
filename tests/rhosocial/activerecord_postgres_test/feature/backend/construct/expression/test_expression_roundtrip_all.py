@@ -192,6 +192,7 @@ from rhosocial.activerecord.backend.expression.serialization import (
     serialize_xml,
 )
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+from rhosocial.activerecord.backend.expression.uuid import UUIDConstantExpression
 from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AddColumnAction,
     AddTableConstraintAction,
@@ -572,6 +573,14 @@ def register_specials():
         lambda d: SetOperationStatement(
             d, op="union_all", parts=_compound_arms(d)
         ),
+    )
+    # ``which`` names a UUID constant and nothing else. The guess's "x" is a
+    # caller error, which the formatter reports as ``TypeError`` now that the
+    # constructor stopped validating; naming a real constant is what lets the
+    # matrix render the node this dialect does support.
+    register_special_constructor(
+        "uuid.UUIDConstantExpression",
+        lambda d: UUIDConstantExpression(d, "nil"),
     )
 
     # -- the FROM side ------------------------------------------------------
@@ -1219,9 +1228,10 @@ UNCONSTRUCTIBLE = (
     # (``CustomType`` used to be here for the same reason -- ``raw`` was
     # keyword-only -- and now has a constructor, so it is covered instead.)
     #
-    # UUID constant. `which` is required, but the filler's "x" is refused at
-    # construction because __init__ accepts only 'nil' and 'max'.
-    "rhosocial.activerecord.backend.expression.uuid.UUIDConstantExpression",
+    # UUID constant. This left the list when `UUIDConstantExpression.__init__`
+    # stopped validating `which`: an unknown word is now a `TypeError` from
+    # the formatter, so the node itself always constructs and the filler's
+    # "x" reaches the matrix rather than being refused early.
     # PG_HINT_PLAN HINTS. Both nodes carry typed fields the generic filler
     # cannot supply: an enum kind plus validated identifiers on the hint, and
     # a statement expression plus a tuple of hints on the wrapper. Their SQL
