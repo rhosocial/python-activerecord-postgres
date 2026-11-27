@@ -13,7 +13,7 @@
 | Expression | Purpose | PostgreSQL-specific options |
 |---|---|---|
 | `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`, `if_not_exists`, `storage_options`, `tablespace`, `column_aliases`, `with_data` |
-| `PostgresRefreshMaterializedViewPgStatement` | `REFRESH MATERIALIZED VIEW` | `schema`, `concurrently`, `with_data` |
+| `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `schema`, `concurrently`, `with_data` |
 | `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`, action list |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`, `if_exists`, `cascade` |
 
@@ -117,19 +117,19 @@ create = PostgresCreateMaterializedViewExpression(
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
 )
 
 # standard refresh
-PostgresRefreshMaterializedViewPgStatement(dialect=dialect, name="sales_summary")
+PostgresRefreshMaterializedViewStatement(dialect=dialect, name="sales_summary")
 
 # concurrent refresh — requires a UNIQUE index, rejected below PG 9.4
-PostgresRefreshMaterializedViewPgStatement(
+PostgresRefreshMaterializedViewStatement(
     dialect=dialect, name="sales_summary", schema="reporting", concurrently=True
 )
 
 # populate a WITH NO DATA view
-PostgresRefreshMaterializedViewPgStatement(
+PostgresRefreshMaterializedViewStatement(
     dialect=dialect, name="sales_daily", with_data=True
 )
 ```

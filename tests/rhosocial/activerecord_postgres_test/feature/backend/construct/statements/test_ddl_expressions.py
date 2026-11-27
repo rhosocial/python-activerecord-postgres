@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresPartitionValue,
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
     PostgresCommentOnStatement,
     PostgresCreatePartitionStatement,
     PostgresDetachPartitionStatement,
@@ -53,7 +53,7 @@ from rhosocial.activerecord.backend.impl.postgres.mixins.dml.extended_statistics
 )
 
 class TestRefreshMaterializedViewExpression:
-    """Test PostgresRefreshMaterializedViewPgStatement."""
+    """Test PostgresRefreshMaterializedViewStatement."""
 
     @pytest.fixture
     def dialect(self):
@@ -61,7 +61,7 @@ class TestRefreshMaterializedViewExpression:
 
     def test_basic_refresh(self, dialect):
         """Test basic REFRESH MATERIALIZED VIEW statement."""
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
         )
@@ -71,7 +71,7 @@ class TestRefreshMaterializedViewExpression:
 
     def test_refresh_with_schema(self, dialect):
         """Test REFRESH MATERIALIZED VIEW with schema."""
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary", schema_name="analytics"),
         )
@@ -82,7 +82,7 @@ class TestRefreshMaterializedViewExpression:
     def test_refresh_concurrently_pg13(self):
         """Test CONCURRENTLY refresh requires PG 9.4+."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect_pg93,
             view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
             concurrently=True,
@@ -95,7 +95,7 @@ class TestRefreshMaterializedViewExpression:
 
     def test_refresh_concurrently_pg94(self, dialect):
         """Test CONCURRENTLY refresh with PG 9.4+."""
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,
@@ -107,7 +107,7 @@ class TestRefreshMaterializedViewExpression:
     def test_refresh_no_data_pg93(self):
         """Test WITH NO DATA on the PG 9.3 baseline."""
         dialect_pg93 = PostgresDialect(version=(9, 3, 0))
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect_pg93,
             view=MaterializedView(dialect_pg93, "monthly_sales_summary"),
             no_data=True,
@@ -118,7 +118,7 @@ class TestRefreshMaterializedViewExpression:
 
     def test_refresh_no_data_pg94(self, dialect):
         """Test WITH NO DATA with PG 9.4+."""
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             no_data=True,
@@ -129,7 +129,7 @@ class TestRefreshMaterializedViewExpression:
 
     def test_refresh_concurrently_and_no_data(self, dialect):
         """Test CONCURRENTLY with WITH NO DATA."""
-        expr = PostgresRefreshMaterializedViewPgStatement(
+        expr = PostgresRefreshMaterializedViewStatement(
             dialect=dialect,
             view=MaterializedView(dialect, "monthly_sales_summary"),
             concurrently=True,

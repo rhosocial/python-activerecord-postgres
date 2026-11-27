@@ -10,7 +10,7 @@ from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 if TYPE_CHECKING:
     from ..expression.ddl import (
         PostgresAlterMaterializedViewStatement,
-        PostgresRefreshMaterializedViewPgStatement,
+        PostgresRefreshMaterializedViewStatement,
     )
 
 
@@ -142,12 +142,12 @@ class PostgresMaterializedViewSupport(Protocol):
         ...
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "PostgresRefreshMaterializedViewPgStatement"
+        self, expr: "PostgresRefreshMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: PostgresRefreshMaterializedViewPgStatement containing all options
+            expr: PostgresRefreshMaterializedViewStatement containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

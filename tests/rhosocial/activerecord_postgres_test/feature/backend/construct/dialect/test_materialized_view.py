@@ -34,7 +34,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -316,13 +316,13 @@ class TestRefreshMaterializedViewFormatting:
         """T-15: the PostgreSQL expression is gated identically."""
         dialect = _dialect(PG_93)
         with pytest.raises(UnsupportedFeatureError):
-            PostgresRefreshMaterializedViewPgStatement(
+            PostgresRefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrently=True
             ).to_sql()
 
     def test_pg_expression_renders_concurrently_since_94(self):
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewPgStatement(
+        sql, _ = PostgresRefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'sales_summary'), concurrently=True, with_data=True
         ).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW CONCURRENTLY "sales_summary" WITH DATA'
@@ -384,14 +384,14 @@ class TestMaterializedViewSchemaQualification:
     def test_refresh_schema_qualified_and_quoted(self):
         """T-17."""
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewPgStatement(
+        sql, _ = PostgresRefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'mv_sales', schema_name='reporting')).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "reporting"."mv_sales"'
 
     def test_mixed_case_and_reserved_word_quoted(self):
         """T-18: the previous bare f-string concatenation broke here."""
         dialect = _dialect()
-        sql, _ = PostgresRefreshMaterializedViewPgStatement(
+        sql, _ = PostgresRefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, 'Order Summary', schema_name='Reporting')).to_sql()
         assert sql == 'REFRESH MATERIALIZED VIEW "Reporting"."Order Summary"'
 
@@ -479,7 +479,7 @@ class TestMaterializedViewExceptionContract:
             lambda dialect: RefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrent=True
             ),
-            lambda dialect: PostgresRefreshMaterializedViewPgStatement(
+            lambda dialect: PostgresRefreshMaterializedViewStatement(
                 dialect=dialect, view=MaterializedView(dialect, 'mv'), concurrently=True
             ),
             lambda dialect: PostgresCreateMaterializedViewExpression(
@@ -822,7 +822,7 @@ class TestMaterializedViewProtocolAndSurface:
         for name in (
             "PostgresCreateMaterializedViewExpression",
             "PostgresDropMaterializedViewExpression",
-            "PostgresRefreshMaterializedViewPgStatement",
+            "PostgresRefreshMaterializedViewStatement",
             "PostgresAlterMaterializedViewStatement",
             "PostgresRenameMaterializedViewAction",
             "PostgresSetMaterializedViewSchemaAction",
@@ -846,7 +846,7 @@ class TestMaterializedViewProtocolAndSurface:
             DropMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
             PostgresDropMaterializedViewExpression(dialect=dialect, view=MaterializedView(dialect, 'mv')),
             RefreshMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
-            PostgresRefreshMaterializedViewPgStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
+            PostgresRefreshMaterializedViewStatement(dialect=dialect, view=MaterializedView(dialect, 'mv')),
             PostgresAlterMaterializedViewStatement(
                 dialect=dialect,
                 view=MaterializedView(dialect, 'mv'),
@@ -861,7 +861,7 @@ class TestMaterializedViewProtocolAndSurface:
         """T-40: examples rely on the name=/concurrently= aliases."""
         dialect = _dialect()
         view = MaterializedView(dialect, "sales_summary", schema_name="reporting")
-        expression = PostgresRefreshMaterializedViewPgStatement(
+        expression = PostgresRefreshMaterializedViewStatement(
             dialect=dialect, view=view, concurrently=True
         )
         assert expression.name == view.name == "sales_summary"

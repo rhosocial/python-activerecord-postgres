@@ -44,7 +44,7 @@ if TYPE_CHECKING:
     from ....expression.statements.ddl_view import CreateMaterializedViewStatement
     from ..expression.ddl.mv import (
         PostgresAlterMaterializedViewStatement,
-        PostgresRefreshMaterializedViewPgStatement,
+        PostgresRefreshMaterializedViewStatement,
     )
 
 
@@ -322,12 +322,12 @@ class PostgresMaterializedViewMixin(ViewMixin):
         return super().format_refresh_materialized_view_statement(expr)
 
     def format_refresh_materialized_view_pg_statement(
-        self, expr: "PostgresRefreshMaterializedViewPgStatement"
+        self, expr: "PostgresRefreshMaterializedViewStatement"
     ) -> Tuple[str, tuple]:
         """Format REFRESH MATERIALIZED VIEW statement with PG-specific options.
 
         Args:
-            expr: PostgresRefreshMaterializedViewPgStatement containing all options
+            expr: PostgresRefreshMaterializedViewStatement containing all options
 
         Returns:
             Tuple of (SQL statement, parameters tuple)

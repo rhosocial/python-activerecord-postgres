@@ -10,7 +10,7 @@ This example demonstrates:
 6. REFRESH MATERIALIZED VIEW (normal)
 7. REFRESH MATERIALIZED VIEW CONCURRENTLY (PostgreSQL 9.4+)
 8. REFRESH MATERIALIZED VIEW WITH DATA (after NO DATA)
-9. Schema-qualified refresh (PostgresRefreshMaterializedViewPgStatement)
+9. Schema-qualified refresh (PostgresRefreshMaterializedViewStatement)
 10. DROP MATERIALIZED VIEW with CASCADE and IF EXISTS
 11. IF NOT EXISTS (PostgreSQL 9.4+) via PostgresCreateMaterializedViewExpression
 12. Schema-qualified create/drop
@@ -63,7 +63,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
     PostgresResetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewPropertiesAction,
@@ -375,14 +375,14 @@ for row in result.data or []:
     print(f"  {row}")
 
 # ============================================================
-# SECTION: 7. Schema-Qualified Refresh (PostgresRefreshMaterializedViewPgStatement)
+# SECTION: 7. Schema-Qualified Refresh (PostgresRefreshMaterializedViewStatement)
 # ============================================================
 # The PostgreSQL backend provides an extended refresh expression that
 # supports specifying the schema for the materialized view.
-# (PostgresRefreshMaterializedViewPgStatement is imported at the top of this file.)
+# (PostgresRefreshMaterializedViewStatement is imported at the top of this file.)
 
 # Refresh with schema (public is PG's default schema)
-pg_refresh = PostgresRefreshMaterializedViewPgStatement(
+pg_refresh = PostgresRefreshMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary', schema_name='public'),
 )
@@ -391,7 +391,7 @@ print(f"\nSchema-qualified REFRESH SQL: {sql}")
 backend.execute(sql, params)
 
 # Also supports the backward-compatible concurrently= alias
-pg_refresh_c = PostgresRefreshMaterializedViewPgStatement(
+pg_refresh_c = PostgresRefreshMaterializedViewStatement(
     dialect=dialect,
     view=MaterializedView(dialect, 'sales_summary'),
     concurrently=True,
@@ -594,7 +594,7 @@ backend.disconnect()
 # 6. Use RefreshMaterializedViewStatement for standard refresh
 # 7. Use RefreshMaterializedViewStatement with concurrent=True for CONCURRENTLY refresh (PG 9.4+, requires UNIQUE index)
 # 8. Use RefreshMaterializedViewStatement with with_data=True to populate a NO-DATA MV
-# 9. Use PostgresRefreshMaterializedViewPgStatement for schema-qualified refresh
+# 9. Use PostgresRefreshMaterializedViewStatement for schema-qualified refresh
 # 10. Use DropMaterializedViewStatement with cascade=True to drop dependent objects
 # 11. Use DropMaterializedViewStatement with if_exists=True for safe drop
 # 12. Requires PostgreSQL 9.3+ for basic MV support

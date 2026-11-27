@@ -106,7 +106,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constra
     PostgresExcludeConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
     PostgresDropTypeExpression,
@@ -359,8 +359,8 @@ PAIR_CASES = (
         r"WITH NO DATA\b",
     ),
     PairCase(
-        "PostgresRefreshMaterializedViewPgStatement.with_data",
-        lambda d, **kw: PostgresRefreshMaterializedViewPgStatement(
+        "PostgresRefreshMaterializedViewStatement.with_data",
+        lambda d, **kw: PostgresRefreshMaterializedViewStatement(
             d, MaterializedView(d, "mv"), **kw
         ),
         "with_data",
@@ -747,7 +747,7 @@ class TestGuardIsNotVacuous:
             "TruncateStatement.restart_identity",
             "CreateMaterializedViewStatement.with_data",
             "RefreshMaterializedViewStatement.with_data",
-            "PostgresRefreshMaterializedViewPgStatement.with_data",
+            "PostgresRefreshMaterializedViewStatement.with_data",
             "CreateTableAsStatement.with_data",
             "CTEClause.materialized",
             "TableConstraint.deferrable",
@@ -889,14 +889,14 @@ class TestMasterProbesGateTheirConsumers:
                 "WITH NO DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
+                lambda dd, **kw: PostgresRefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"with_data": True},
                 "WITH DATA",
             ),
             (
-                lambda dd, **kw: PostgresRefreshMaterializedViewPgStatement(
+                lambda dd, **kw: PostgresRefreshMaterializedViewStatement(
                     dd, MaterializedView(dd, "mv"), **kw
                 ),
                 {"no_data": True},

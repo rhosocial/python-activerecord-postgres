@@ -716,7 +716,7 @@ class TestExpressionDialectSeparation:
     """
 
     EXPRESSION_DIALECT_PAIRS = [
-        ("PostgresRefreshMaterializedViewPgStatement",
+        ("PostgresRefreshMaterializedViewStatement",
          "format_refresh_materialized_view_pg_statement"),
         ("PostgresCreateEnumTypeExpression", "format_create_type_statement"),
         ("PostgresDropEnumTypeExpression", "format_drop_type_statement"),

@@ -39,7 +39,7 @@ __all__ = [
     "PostgresChangeMaterializedViewOwnerAction",
     "PostgresCreateMaterializedViewExpression",
     "PostgresDropMaterializedViewExpression",
-    "PostgresRefreshMaterializedViewPgStatement",
+    "PostgresRefreshMaterializedViewStatement",
     "PostgresRenameMaterializedViewAction",
     "PostgresResetMaterializedViewPropertiesAction",
     "PostgresSetMaterializedViewPropertiesAction",
@@ -150,7 +150,7 @@ class PostgresDropMaterializedViewExpression(DropMaterializedViewStatement):
         )
 
 
-class PostgresRefreshMaterializedViewPgStatement(RefreshMaterializedViewStatement):
+class PostgresRefreshMaterializedViewStatement(RefreshMaterializedViewStatement):
     """PostgreSQL REFRESH MATERIALIZED VIEW statement expression.
 
     Replaces the contents of a materialized view by recalculating its query.
@@ -172,7 +172,7 @@ class PostgresRefreshMaterializedViewPgStatement(RefreshMaterializedViewStatemen
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> # Regular refresh
-        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
+        >>> refresh = PostgresRefreshMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ... )
@@ -181,14 +181,14 @@ class PostgresRefreshMaterializedViewPgStatement(RefreshMaterializedViewStatemen
         'REFRESH MATERIALIZED VIEW "monthly_sales_summary"'
 
         >>> # Concurrent refresh (PG 9.4+, requires unique index)
-        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
+        >>> refresh = PostgresRefreshMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     concurrently=True,
         ... )
 
         >>> # Refresh without data (create empty, PG 9.4+)
-        >>> refresh = PostgresRefreshMaterializedViewPgStatement(
+        >>> refresh = PostgresRefreshMaterializedViewStatement(
         ...     dialect=dialect,
         ...     view=MaterializedView(dialect, "monthly_sales_summary"),
         ...     no_data=True,

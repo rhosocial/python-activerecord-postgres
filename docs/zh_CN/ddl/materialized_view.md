@@ -12,7 +12,7 @@
 | 表达式 | 用途 | PostgreSQL 专有选项 |
 |---|---|---|
 | `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW` | `schema`、`if_not_exists`、`storage_options`、`tablespace`、`column_aliases`、`with_data` |
-| `PostgresRefreshMaterializedViewPgStatement` | `REFRESH MATERIALIZED VIEW` | `schema`、`concurrently`、`with_data` |
+| `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `schema`、`concurrently`、`with_data` |
 | `PostgresAlterMaterializedViewStatement` | `ALTER MATERIALIZED VIEW` | `schema`、动作列表 |
 | `PostgresDropMaterializedViewExpression` | `DROP MATERIALIZED VIEW` | `schema`、`if_exists`、`cascade` |
 
@@ -113,19 +113,19 @@ create = PostgresCreateMaterializedViewExpression(
 
 ```python
 from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
 )
 
 # 普通刷新
-PostgresRefreshMaterializedViewPgStatement(dialect=dialect, name="sales_summary")
+PostgresRefreshMaterializedViewStatement(dialect=dialect, name="sales_summary")
 
 # 并发刷新——要求存在 UNIQUE 索引；PG < 9.4 会被拒绝
-PostgresRefreshMaterializedViewPgStatement(
+PostgresRefreshMaterializedViewStatement(
     dialect=dialect, name="sales_summary", schema="reporting", concurrently=True
 )
 
 # 填充 WITH NO DATA 的视图
-PostgresRefreshMaterializedViewPgStatement(
+PostgresRefreshMaterializedViewStatement(
     dialect=dialect, name="sales_daily", with_data=True
 )
 ```

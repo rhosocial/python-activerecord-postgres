@@ -48,7 +48,7 @@ class TestMaterializedViewDocs:
         text = page.read_text(encoding="utf-8")
         for token in (
             "PostgresCreateMaterializedViewExpression",
-            "PostgresRefreshMaterializedViewPgStatement",
+            "PostgresRefreshMaterializedViewStatement",
             "PostgresAlterMaterializedViewStatement",
             "PostgresDropMaterializedViewExpression",
             "if_not_exists",

@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewExpression,
     PostgresDropMaterializedViewExpression,
-    PostgresRefreshMaterializedViewPgStatement,
+    PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
     PostgresSetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewSchemaAction,
@@ -88,7 +88,7 @@ class TestCreateMaterializedView:
             _query(mv_backend, "SELECT count(*) FROM mv_sales_daily")
         assert "has not been populated" in str(exc.value)
 
-        refresh = PostgresRefreshMaterializedViewPgStatement(
+        refresh = PostgresRefreshMaterializedViewStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_daily"), with_data=True
         )
         sql, params = refresh.to_sql()
@@ -104,7 +104,7 @@ class TestRefreshMaterializedView:
         mv_backend.execute(
             "INSERT INTO mv_sales (product_id, amount, sale_date) VALUES (3, 10.00, '2024-02-01')"
         )
-        refresh = PostgresRefreshMaterializedViewPgStatement(
+        refresh = PostgresRefreshMaterializedViewStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_summary")
         )
         sql, params = refresh.to_sql()
@@ -115,7 +115,7 @@ class TestRefreshMaterializedView:
     def test_concurrent_refresh_requires_unique_index(self, mv_backend, create_summary_mv):
         """T-43: without a UNIQUE index the server must reject CONCURRENTLY."""
         create_summary_mv()
-        refresh = PostgresRefreshMaterializedViewPgStatement(
+        refresh = PostgresRefreshMaterializedViewStatement(
             dialect=mv_backend.dialect, view=MaterializedView(mv_backend.dialect, "mv_sales_summary"), concurrently=True
         )
         sql, params = refresh.to_sql()
@@ -292,7 +292,7 @@ class TestMaterializedViewAsyncParity:
         await async_mv_backend.execute(
             "INSERT INTO mv_sales (product_id, amount, sale_date) VALUES (3, 10.00, '2024-02-01')"
         )
-        refresh = PostgresRefreshMaterializedViewPgStatement(
+        refresh = PostgresRefreshMaterializedViewStatement(
             dialect=dialect, view=MaterializedView(dialect, "mv_sales_summary")
         )
         sql, params = refresh.to_sql()
