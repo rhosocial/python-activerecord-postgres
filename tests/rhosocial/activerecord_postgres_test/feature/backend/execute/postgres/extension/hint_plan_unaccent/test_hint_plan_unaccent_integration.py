@@ -15,7 +15,6 @@ from rhosocial.activerecord.backend.expression import (
     ColumnDefinition,
     ColumnPrimaryKeyConstraint,
     CreateTableStatement,
-    ExplainStatement,
     InsertStatement,
     QueryStatement,
 )
@@ -24,6 +23,10 @@ from rhosocial.activerecord.backend.expression.predicates import ComparisonPredi
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.types import TextType
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresExplainStatement,
+    PostgresQueryStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresSerialType
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_index_scan,
@@ -49,7 +52,9 @@ def _create_table(backend, dialect, table):
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     backend.execute(
-        *CreateTableStatement(dialect=dialect, table=Table(dialect, table), columns=columns).to_sql(),
+        *CreateTableStatement(
+            dialect=dialect, table=Table(dialect, table), columns=columns
+        ).to_sql(),
         options=DDL,
     )
     rows = [[Literal(dialect, name)] for name in ("Café", "Résumé", "naïve", "plain")]
@@ -94,7 +99,9 @@ async def async_hint_env(async_postgres_backend_single):
         ColumnDefinition(dialect, name="name", data_type=TextType(dialect=dialect)),
     ]
     await backend.execute(
-        *CreateTableStatement(dialect=dialect, table=Table(dialect, table), columns=columns).to_sql(),
+        *CreateTableStatement(
+            dialect=dialect, table=Table(dialect, table), columns=columns
+        ).to_sql(),
         options=DDL,
     )
     await backend.execute(
@@ -122,7 +129,7 @@ class TestHintPlanIntegration:
     def test_hinted_query_runs_and_binds(self, hint_env):
         backend, dialect, table = hint_env
         backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = QueryStatement(
+        query = PostgresQueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
@@ -152,13 +159,13 @@ class TestHintPlanIntegration:
             indexed = backend.fetch_one("EXPLAIN " + base, params)["QUERY PLAN"]
             assert "Index Scan" in indexed
 
-            seq_sql, seq_params = ExplainStatement(
+            seq_sql, seq_params = PostgresExplainStatement(
                 dialect, query, hints=(hint_seq_scan(dialect, Table(dialect, table)),)
             ).to_sql()
             forced = backend.fetch_one(seq_sql, seq_params)["QUERY PLAN"]
             assert "Seq Scan" in forced
 
-            index_sql, index_params = ExplainStatement(
+            index_sql, index_params = PostgresExplainStatement(
                 dialect,
                 query,
                 hints=(hint_index_scan(dialect, Table(dialect, table), f"idx_{table}_name"),),
@@ -194,7 +201,7 @@ class TestAsyncIntegration:
         assert dialect.supports_pg_hint_plan()
         assert dialect.supports_unaccent()
         await backend.execute(*load_pg_hint_plan(dialect).to_sql(), options=DDL)
-        query = QueryStatement(
+        query = PostgresQueryStatement(
             dialect,
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),

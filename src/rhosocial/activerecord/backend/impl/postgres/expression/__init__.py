@@ -185,9 +185,23 @@ from .types import (
 )
 
 from .load_library import PostgresLoadLibraryExpression
+from .hinted_statements import (
+    PostgresCreateTableAsStatement,
+    PostgresDeleteStatement,
+    PostgresExplainStatement,
+    PostgresInsertStatement,
+    PostgresQueryStatement,
+    PostgresUpdateStatement,
+)
 
 __all__ = [
     "PostgresLoadLibraryExpression",
+    "PostgresCreateTableAsStatement",
+    "PostgresDeleteStatement",
+    "PostgresExplainStatement",
+    "PostgresInsertStatement",
+    "PostgresQueryStatement",
+    "PostgresUpdateStatement",
     "PostgresEnumType",
     "PostgresSettingsQuery",
     "PostgresPgStatStatement",

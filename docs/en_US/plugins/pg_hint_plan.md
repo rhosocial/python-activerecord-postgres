@@ -22,17 +22,38 @@ backend.execute(*load_pg_hint_plan(dialect).to_sql())
 
 ## Building hints
 
-A pg_hint_plan hint is a comment carried by **one statement**, not a statement of its own. The builders return plain dictionary payloads (`HintPayload`), never SQL strings and never expression nodes; the dialect formatter is the only place that renders the comment, and it rides on the statement that carries the hints. Pass the payloads through the statement's `hints=` keyword:
+A pg_hint_plan hint is a comment carried by **one statement**, not a statement of its own. The builders return plain dictionary payloads (`HintPayload`), never SQL strings and never expression nodes; the dialect formatter is the only place that renders the comment.
+
+Hints are PostgreSQL-specific, so they do not live on core's statements. The backend **derives** its own statement classes, each adding exactly one keyword-only parameter, `hints` (case B of the framework's expression/format rules: `E_c = derive(E_core, +params_c)`, with the base parameters untouched). Each derived class inherits its base's `format_method`, so no new expression/formatter pair appears; the PostgreSQL formatter handles both the generic and the derived expression — a generic statement renders exactly as before, and only a derived instance carrying hints is prefixed.
+
+Eight statements carry hints on a PostgreSQL statement class:
+
+| PostgreSQL class | Statement | Module |
+|---|---|---|
+| `PostgresQueryStatement` | `SELECT` | `expression/hinted_statements.py` |
+| `PostgresInsertStatement` | `INSERT` | `expression/hinted_statements.py` |
+| `PostgresUpdateStatement` | `UPDATE` | `expression/hinted_statements.py` |
+| `PostgresDeleteStatement` | `DELETE` | `expression/hinted_statements.py` |
+| `PostgresExplainStatement` | `EXPLAIN` | `expression/hinted_statements.py` |
+| `PostgresCreateTableAsStatement` | `CREATE TABLE ... AS` | `expression/hinted_statements.py` |
+| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
+| `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `expression/ddl/mv.py` |
+
+The last two were already PostgreSQL-derived before hint support and were extended in place; the other six are the backend's counterparts of core's statements.
+
+Pass the payloads through the statement's `hints=` keyword:
 
 ```python
-from rhosocial.activerecord.backend.expression import QueryStatement
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresQueryStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_seq_scan, hint_hash_join, hint_leading, hint_rows,
     hint_parallel, hint_set,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
 
-query = QueryStatement(
+query = PostgresQueryStatement(
     dialect,
     select=[...],
     from_=...,
@@ -47,49 +68,42 @@ sql, params = query.to_sql()
 backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQL))
 ```
 
-The same `hints=` keyword is accepted by `InsertStatement`, `UpdateStatement`, `DeleteStatement` and `ExplainStatement`. `ExplainStatement` writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
+`PostgresExplainStatement` writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
 
 ```python
-from rhosocial.activerecord.backend.expression import ExplainStatement
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresExplainStatement,
+)
 
-explained = ExplainStatement(
+explained = PostgresExplainStatement(
     dialect, query, hints=(hint_seq_scan(dialect, "a"),)
 )
 sql, params = explained.to_sql()
 # /*+ SeqScan(a) */ EXPLAIN SELECT ...
 ```
 
-An `ExplainStatement` refuses a wrapped statement that already carries its own hints (two prefixes would be ambiguous).
+An `EXPLAIN` — generic or PostgreSQL — refuses a wrapped statement that already carries its own hints (two comment positions would be ambiguous).
 
-The same `hints=` keyword is accepted by the three statements PostgreSQL plans
-when it runs them: `CreateTableAsStatement` (`CREATE TABLE ... AS`),
-`CreateMaterializedViewStatement` (`CREATE MATERIALIZED VIEW ... AS`) and
-`RefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured
-against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment
-and picks a different plan:
+The same `hints=` keyword is accepted by the three statements PostgreSQL plans when it runs them: `PostgresCreateTableAsStatement` (`CREATE TABLE ... AS`), `PostgresCreateMaterializedViewExpression` (`CREATE MATERIALIZED VIEW ... AS`) and `PostgresRefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment and picks a different plan:
 
 ```python
-from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-    CreateTableAsStatement,
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresCreateTableAsStatement,
 )
 
-ctas = CreateTableAsStatement(
+ctas = PostgresCreateTableAsStatement(
     dialect, Table(dialect, "ct"), query, hints=(hint_seq_scan(dialect, "t"),)
 )
 sql, params = ctas.to_sql()
 # /*+ SeqScan(t) */ CREATE TABLE "ct" AS SELECT ...
 ```
 
-For those three, give the hint to the **statement**, not to the query it wraps:
-a second comment block is rejected by pg_hint_plan, and the formatter refuses a
-wrapped hinted query by name. `CREATE VIEW` is the one statement that cannot
-carry a hint at all: it is not planned at creation time, so pg_hint_plan ignores
-the comment (measured: no log line); hint the query that reads the view instead.
+For those three, give the hint to the **statement**, not to the query it wraps: a second comment block is rejected by pg_hint_plan, and the formatter refuses a wrapped hinted query by name (`TypeError`, "a pg_hint_plan hint belongs to the outermost statement"). `CREATE VIEW` has no hinted class at all: it is not planned at creation time, so pg_hint_plan ignores the comment (measured: no log line); a hinted query inside its body is refused rather than silently made inert. Hint the query that reads the view instead.
 
-A hint payload is a plain dictionary with every key present (`None`/`()` where a field does not apply; `make_hint_payload()` builds one), so it survives artifact serialization; it is not an expression node and never renders on its own. The dialect that spells the comments renders them, and a dialect that does not refuses a hinted statement with `UnsupportedFeatureError` instead of dropping the hints:
+A hint payload is a plain dictionary with every key present (`None`/`()` where a field does not apply; `make_hint_payload()` builds one), so it survives artifact serialization; it is not an expression node and never renders on its own. The derived statement is the node that owns it, and a dialect without the extension refuses a hinted statement with `UnsupportedFeatureError` instead of dropping the hints:
 
 ```python
-dialect.supports_statement_hints()   # True only when pg_hint_plan is available
+dialect.supports_pg_hint_plan()   # True only when pg_hint_plan is available
 ```
 
 The hint comment precedes the statement, so pass an explicit `stmt_type` when

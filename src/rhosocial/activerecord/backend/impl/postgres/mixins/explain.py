@@ -92,34 +92,11 @@ class PostgresExplainMixin:
                 ``FORMAT TRADITIONAL`` and rejected by the server instead.
         """
         from rhosocial.activerecord.backend.expression.statements import ExplainType
-        from rhosocial.activerecord.backend.expression.statements.dml import (
-            DeleteStatement,
-            InsertStatement,
-            UpdateStatement,
-        )
-        from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 
-        # The hint comment belongs to exactly one statement.  A hinted EXPLAIN
-        # wraps a statement that may already carry its own hints, and both
-        # prefixes would then be written -- so that shape is refused rather
-        # than rendered ambiguously.
-        wrapped = expr.statement
-        if isinstance(
-            wrapped, (QueryStatement, InsertStatement, UpdateStatement, DeleteStatement)
-        ) and wrapped.hints:
-            raise TypeError(
-                "EXPLAIN cannot carry hints for a statement that already "
-                "carries its own: the comment position would be ambiguous"
-            )
         statement_sql, statement_params = expr.statement.to_sql()
-        # pg_hint_plan reads the hint comment before the statement, and an
-        # EXPLAIN is the statement as far as the planner is concerned, so the
-        # comment goes ahead of the EXPLAIN keyword.
-        hints = expr.hints
-        prefix = self._hint_comment(hints) if hints else ""
         options = expr.options
         if options is None:
-            return prefix + f"EXPLAIN {statement_sql}", statement_params
+            return f"EXPLAIN {statement_sql}", statement_params
 
         opts: list = []
         analyze_requested = options.analyze or options.type == ExplainType.ANALYZE
@@ -133,9 +110,7 @@ class PostgresExplainMixin:
             fmt_name = getattr(options.format, "value", str(options.format)).upper()
             switch = _FORMAT_SWITCHES.get(fmt_name)
             if switch is None or not getattr(self, switch)():
-                raise UnsupportedFeatureError(
-                    self.name, f"EXPLAIN FORMAT {fmt_name}"
-                )
+                raise UnsupportedFeatureError(self.name, f"EXPLAIN FORMAT {fmt_name}")
             opts.append(f"FORMAT {fmt_name}")
         elif options.type is not None and options.type == ExplainType.QUERY_PLAN:
             # PostgreSQL has no QUERY PLAN keyword; plain EXPLAIN is equivalent
@@ -172,5 +147,5 @@ class PostgresExplainMixin:
             opts.append("WAL")
 
         if opts:
-            return prefix + "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
-        return prefix + f"EXPLAIN {statement_sql}", statement_params
+            return "EXPLAIN (" + ", ".join(opts) + ") " + statement_sql, statement_params
+        return f"EXPLAIN {statement_sql}", statement_params

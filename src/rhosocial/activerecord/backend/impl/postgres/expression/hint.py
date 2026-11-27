@@ -330,6 +330,16 @@ def hint_payload(hint: object) -> dict:
     return payload
 
 
+def normalise_hints(hints: Sequence[object]) -> Tuple[dict, ...]:
+    """A hinted statement's constructor argument, canonicalised.
+
+    An artifact decodes the payload arrays as lists; canonicalising here keeps
+    a rebuilt statement's ``get_params()`` equal to the encoded one, and gives
+    the renderer the tuple shape it reads.
+    """
+    return tuple(hint_payload(hint) for hint in hints)
+
+
 #: Each kind's required parameters, checked by :func:`assert_hint_payload`.
 _REQUIRES_TABLES = (
     HintKind.SEQ_SCAN,
@@ -364,9 +374,7 @@ def assert_hint_payload(hint: object) -> None:
         raise TypeError(f"hint payload is missing {', '.join(missing)}")
     kind = resolve_hint_kind(hint["kind"])
     if kind is None:
-        raise TypeError(
-            f"hint payload kind must name a HintKind, got {hint['kind']!r}"
-        )
+        raise TypeError(f"hint payload kind must name a HintKind, got {hint['kind']!r}")
     for field, values in (("table", hint["tables"]), ("index", hint["indexes"])):
         if not isinstance(values, tuple):
             raise TypeError(f"{field}s must be a sequence of identifiers, got {values!r}")
@@ -393,9 +401,7 @@ def assert_hint_payload(hint: object) -> None:
     if correction_kind is not None:
         if resolve_correction_kind(correction_kind) is None:
             raise TypeError("correction_kind must be a CorrectionKind")
-        if not isinstance(correction_amount, (int, float)) or isinstance(
-            correction_amount, bool
-        ):
+        if not isinstance(correction_amount, (int, float)) or isinstance(correction_amount, bool):
             raise TypeError("correction_amount must be a number")
     elif correction_amount is not None:
         raise TypeError("correction_amount requires correction_kind")
@@ -430,6 +436,7 @@ __all__ = [
     "hint_payload",
     "hint_target",
     "make_hint_payload",
+    "normalise_hints",
     "resolve_correction_kind",
     "resolve_hint_kind",
 ]

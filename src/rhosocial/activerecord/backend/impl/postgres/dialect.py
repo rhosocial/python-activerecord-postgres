@@ -39,18 +39,14 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     SQLXMLMixin,
     CollationMixin,
     CTEMixin,
-
     WindowFunctionMixin,
     JSONMixin,
     UUIDMixin,
-
     ArrayMixin,
     ExplainMixin,
     GraphMixin,
     GraphTableMixin,
-
     MergeMixin,
-
     TemporalTableMixin,
     UpsertMixin,
     LateralJoinMixin,
@@ -73,7 +69,6 @@ from rhosocial.activerecord.backend.dialect.mixins import (
     RepeatMixin,
     RpadMixin,
     TrimMixin,
-
     # New Mixins
     PredicateMixin,
     ExpressionMixin,
@@ -309,6 +304,16 @@ class PostgresDialect(
     PostgresFilterMixin,
     PostgresReturningMixin,
     PostgresGroupingMixin,
+    # One bundle, eight derived-statement formatters: it overrides the four
+    # DQL/DML formatters, EXPLAIN, CTAS, the two materialized-view formatters
+    # and CREATE VIEW's refusal. Each overridden statement's provider comes
+    # after it here -- PostgresExplainMixin / PostgresViewMixin below,
+    # PostgresMaterializedViewMixin and TableMixin (CreateTableAsMixin) further
+    # down, and DQLMixin/DMLMixin last -- and a mixin placed after the class it
+    # overrides never wins. It calls PostgresPgHintPlanMixin's private comment
+    # helper through ``self``, so that mixin's later position does not matter
+    # for method lookup.
+    PostgresHintedStatementsMixin,
     PostgresExplainMixin,
     PostgresMergeMixin,
     PostgresUpsertMixin,
@@ -353,7 +358,6 @@ class PostgresDialect(
     TruncateMixin,
     ILIKEMixin,
     CTEMixin,
-
     WindowFunctionMixin,
     PostgresJSONBEnhancedMixin,
     JSONMixin,
@@ -361,7 +365,6 @@ class PostgresDialect(
     # the core UUIDMixin table, which has a single fixed spelling per operation.
     PostgresUUIDMixin,
     UUIDMixin,
-
     # Before ArrayMixin: this answers True where the core answers False, and
     # it was listed in the backend block further down, so the core default
     # was what every caller actually saw.
@@ -375,21 +378,11 @@ class PostgresDialect(
     GraphMixin,
     GraphTableMixin,
     PostgresLockingMixin,
-
     MergeMixin,
-
     TemporalTableMixin,
     UpsertMixin,
     LateralJoinMixin,
     JoinMixin,
-    # One bundle, five core statement mixins: this overrides the four DQL/DML
-    # formatters, the CTAS formatter and the two materialized-view formatters.
-    # Each overridden statement's provider comes after it here -- TableMixin
-    # (CreateTableAsMixin), PostgresMaterializedViewMixin and DQLMixin/DMLMixin
-    # -- and a mixin placed after the class it overrides never wins. It calls
-    # PostgresPgHintPlanMixin's private comment helper through ``self``, so that
-    # mixin's later position does not matter for method lookup.
-    PostgresHintedStatementsMixin,
     PostgresMaterializedViewMixin,  # Before ViewMixin to override format_*_materialized_view_*
     ViewMixin,
     SchemaMixin,
@@ -526,6 +519,7 @@ class PostgresDialect(
     # categorized by topic (JSON Path, Range, hstore, pgvector, PostGIS, etc.)
     # and assembled into POSTGRES_FUNCTION_VERSIONS.
     from .function_versions import POSTGRES_FUNCTION_VERSIONS as _FV
+
     _POSTGRES_FUNCTION_VERSIONS = _FV
 
     def __init__(
@@ -620,16 +614,6 @@ class PostgresDialect(
         ``RelationSourceMixin`` default it would otherwise inherit.
         """
         return True
-
-    def supports_statement_hints(self) -> bool:
-        """Whether this dialect spells ``/*+ ... */`` hints on a statement.
-
-        PostgreSQL has the comment grammar when pg_hint_plan is installed, so
-        this answers with the extension probe.  A statement carrying hints on a
-        server without it is refused by ``BaseExpression._render`` rather than
-        rendered with a comment the planner would ignore.
-        """
-        return self.supports_pg_hint_plan()
 
     def create_schema_differ(self) -> "SchemaDiffer":
         """Return the PostgreSQL schema differ for this dialect."""

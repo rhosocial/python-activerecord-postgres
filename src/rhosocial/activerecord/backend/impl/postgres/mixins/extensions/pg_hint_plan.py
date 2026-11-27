@@ -3,12 +3,19 @@
 
 Capability detection is version-aware via the shared extension feature map.
 
-Hints are values carried by a statement, not nodes of their own: this module
-is the only place that renders them, through the private phrase helper and the
-formatter overrides of :class:`PostgresHintedStatementsMixin`.
+Hints are values carried by a *derived* statement, not nodes of their own: the
+``hints`` parameter lives on the PostgreSQL-derived classes in
+:mod:`...expression.hinted_statements`, so core never sees it.  This module is
+the only place that renders it, through the private phrase helper and the
+formatter overrides of :class:`PostgresHintedStatementsMixin`.  Each override
+handles both the generic expression and the derived one (``fmt^c : {e, e'} -> S``
+of backend-expression-families §5.3): the generic expression renders exactly as
+before, and only a derived instance carrying hints is prefixed.
 """
 
 from typing import Tuple
+
+from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 from ...expression.hint import (
     CorrectionKind,
@@ -16,7 +23,29 @@ from ...expression.hint import (
     assert_hint_payload,
     hint_payload,
 )
+from ...expression.ddl.mv import (
+    PostgresCreateMaterializedViewExpression,
+    PostgresRefreshMaterializedViewStatement,
+)
+from ...expression.hinted_statements import (
+    PostgresCreateTableAsStatement,
+    PostgresDeleteStatement,
+    PostgresExplainStatement,
+    PostgresInsertStatement,
+    PostgresQueryStatement,
+    PostgresUpdateStatement,
+)
 from ...expression.load_library import PostgresLoadLibraryExpression
+
+#: The hinted statement kinds an outer statement may wrap. A hint belongs to
+#: the outermost statement, so finding one of these inside another statement's
+#: query slot is a structural error, not a second comment position.
+_NESTED_HINTED_STATEMENTS = (
+    PostgresQueryStatement,
+    PostgresInsertStatement,
+    PostgresUpdateStatement,
+    PostgresDeleteStatement,
+)
 
 
 class PostgresPgHintPlanMixin:
@@ -49,8 +78,7 @@ class PostgresPgHintPlanMixin:
         arguments.extend(hint["indexes"])
         if hint["correction_kind"] is not None:
             arguments.append(
-                str(CorrectionKind(hint["correction_kind"]))
-                + str(hint["correction_amount"])
+                str(CorrectionKind(hint["correction_kind"])) + str(hint["correction_amount"])
             )
         if hint["workers"] is not None:
             arguments.append(str(hint["workers"]))
@@ -78,49 +106,103 @@ class PostgresPgHintPlanMixin:
 
 
 class PostgresHintedStatementsMixin:
-    """Prefix a statement's SQL with its pg_hint_plan comment.
+    """Prefix a hinted statement's SQL with its pg_hint_plan comment.
 
-    Each override calls the formatter below it through ``super()`` -- core's
-    for the DQL/DML statements and for CTAS, PostgreSQL's own for the two
-    materialized-view statements -- and only adds the comment when the
-    statement carries hints.  This mixin therefore has to precede every class
-    it overrides in the dialect's base list: ``TableMixin`` (which carries the
-    core CTAS formatter), ``PostgresMaterializedViewMixin`` and the core
-    DQL/DML mixins.  See the bundle rule in ``dialect.py``.
+    Each override calls the formatter below it through ``super()`` and only
+    adds the comment when the expression is the PostgreSQL-derived class that
+    carries the parameter.  A generic statement has no ``hints`` attribute at
+    all, so the type -- not a probe -- says whether the node carries one.
 
-    pg_hint_plan honours a head hint on all seven: a DQL or DML statement,
-    ``CREATE TABLE ... AS``, ``CREATE MATERIALIZED VIEW ... AS``, ``REFRESH
-    MATERIALIZED VIEW`` and ``EXPLAIN``.  ``CREATE VIEW`` is absent on purpose:
-    it is not planned at creation time, so a hint there would be inert.
+    This mixin must precede every class it overrides in the dialect's base list:
+    ``PostgresExplainMixin`` and ``PostgresViewMixin`` (the EXPLAIN and CREATE
+    VIEW formatters it wraps), ``PostgresMaterializedViewMixin`` (the two
+    materialized-view formatters), ``TableMixin`` (core's CTAS formatter) and
+    the core DQL/DML mixins.  See the bundle rule in ``dialect.py``.
+
+    pg_hint_plan honours a head hint on all eight statements it plans: a DQL
+    or DML statement, ``CREATE TABLE ... AS``, ``CREATE MATERIALIZED VIEW ... AS``,
+    ``REFRESH MATERIALIZED VIEW`` and ``EXPLAIN``.  ``CREATE VIEW`` is absent
+    on purpose: it is not planned at creation time, so a hint there is inert
+    (and is refused rather than dropped).
     """
+
+    def _require_hint_plan(self) -> None:
+        """Refuse a hinted statement on a dialect that cannot spell the comment."""
+        if not self.supports_pg_hint_plan():
+            raise UnsupportedFeatureError(
+                self.name,
+                "optimizer hints",
+                "install and enable the pg_hint_plan extension, or drop the hints.",
+            )
+
+    @staticmethod
+    def _refuse_nested_hint(inner) -> None:
+        """A hint belongs to the statement whose SQL is planned, not a nested one."""
+        raise TypeError(
+            f"a pg_hint_plan hint belongs to the outermost statement: "
+            f"{type(inner).__name__} carries hints inside another statement. "
+            f"Give the hint to the outermost statement instead"
+        )
 
     def format_query_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_query_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresQueryStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
     def format_insert_statement(self, expr) -> Tuple[str, tuple]:
+        from rhosocial.activerecord.backend.expression.statements.dml import (
+            SelectSource,
+        )
+
+        source = expr.source
+        if (
+            isinstance(source, SelectSource)
+            and isinstance(source.select_query, PostgresQueryStatement)
+            and source.select_query.hints
+        ):
+            self._refuse_nested_hint(source.select_query)
         sql, params = super().format_insert_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresInsertStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
     def format_update_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_update_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresUpdateStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
     def format_delete_statement(self, expr) -> Tuple[str, tuple]:
         sql, params = super().format_delete_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresDeleteStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
+
+    def format_explain_statement(self, expr) -> Tuple[str, tuple]:
+        # The comment goes ahead of the EXPLAIN keyword, which is the position
+        # pg_hint_plan documents; the wrapped statement must not carry its own.
+        if isinstance(expr.statement, _NESTED_HINTED_STATEMENTS) and expr.statement.hints:
+            self._refuse_nested_hint(expr.statement)
+        sql, params = super().format_explain_statement(expr)
+        if not isinstance(expr, PostgresExplainStatement):
+            return sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
     def format_create_table_as_statement(self, expr) -> Tuple[str, tuple]:
         """Prefix ``CREATE TABLE ... AS`` with its head hint.
@@ -129,13 +211,17 @@ class PostgresHintedStatementsMixin:
         core's portable implementation.  The head hint is honoured by the
         planner because the statement is planned when it runs (measured
         against pg_hint_plan 1.8.1 on PG 18: ``used hint`` and the plan
-        changes).
+        changes).  Give the hint to this statement, not to the query it wraps.
         """
+        if isinstance(expr.as_query, PostgresQueryStatement) and expr.as_query.hints:
+            self._refuse_nested_hint(expr.as_query)
         sql, params = super().format_create_table_as_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresCreateTableAsStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
     def format_create_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
         """Prefix ``CREATE MATERIALIZED VIEW ... AS`` with its head hint.
@@ -144,23 +230,44 @@ class PostgresHintedStatementsMixin:
         builder (grammar order, storage parameters, tablespace), so the SQL
         this wraps is the same bytes that formatter produced.
         """
+        if isinstance(expr.query, PostgresQueryStatement) and expr.query.hints:
+            self._refuse_nested_hint(expr.query)
         sql, params = super().format_create_materialized_view_statement(expr)
-        hints = expr.hints
-        if not hints:
+        if not isinstance(expr, PostgresCreateMaterializedViewExpression):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
 
-    def format_refresh_materialized_view_statement(self, expr) -> Tuple[str, tuple]:
+    def format_refresh_materialized_view_pg_statement(self, expr) -> Tuple[str, tuple]:
         """Prefix ``REFRESH MATERIALIZED VIEW`` with its head hint.
 
-        ``super()`` is ``PostgresMaterializedViewMixin``'s version-gated
-        version, which delegates to core for the statement text.
+        ``PostgresRefreshMaterializedViewStatement`` declares this formatter
+        (it has its own PostgreSQL statement kind, with the ``concurrently``
+        alias), so the override lives here rather than on the generic refresh
+        formatter.  ``super()`` is ``PostgresMaterializedViewMixin``'s
+        version-gated implementation.
         """
-        sql, params = super().format_refresh_materialized_view_statement(expr)
-        hints = expr.hints
-        if not hints:
+        sql, params = super().format_refresh_materialized_view_pg_statement(expr)
+        if not isinstance(expr, PostgresRefreshMaterializedViewStatement):
             return sql, params
-        return self._hint_comment(hints) + sql, params
+        if not expr.hints:
+            return sql, params
+        self._require_hint_plan()
+        return self._hint_comment(expr.hints) + sql, params
+
+    def format_create_view_statement(self, expr) -> Tuple[str, tuple]:
+        """Refuse a hinted query inside ``CREATE VIEW``.
+
+        A view is not planned when it is created, so pg_hint_plan ignores the
+        comment (measured: no log line).  The hint is therefore not rendered
+        here; a hinted query inside the view body is refused by name rather
+        than silently made inert.
+        """
+        if isinstance(expr.query, PostgresQueryStatement) and expr.query.hints:
+            self._refuse_nested_hint(expr.query)
+        return super().format_create_view_statement(expr)
 
 
 __all__ = [

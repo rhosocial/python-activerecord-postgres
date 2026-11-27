@@ -29,6 +29,14 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresCopyFromStatement,
     PostgresCopyToStatement,
+    PostgresCreateMaterializedViewExpression,
+    PostgresCreateTableAsStatement,
+    PostgresDeleteStatement,
+    PostgresExplainStatement,
+    PostgresInsertStatement,
+    PostgresQueryStatement,
+    PostgresRefreshMaterializedViewStatement,
+    PostgresUpdateStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.registry import backend_registry
 
@@ -65,6 +73,33 @@ def test_a_hint_payload_is_not_a_registered_kind(dialect):
     with pytest.raises(RegistryError) as excinfo:
         dialect.artifact_registry().resolve_node("postgres_hint")
     assert excinfo.value.reason is RegistryReason.KIND_NOT_REGISTERED
+
+
+def test_the_eight_hinted_statement_kinds_resolve(dialect):
+    """The hinted statements are PostgreSQL's kinds, owned by this backend.
+
+    Six extend a core class and live in the hinted-statements module; two were
+    already PostgreSQL-derived materialized-view statements and were extended
+    in place. Either way each is declared by this backend's expression package,
+    so the dialect's table must resolve its own kind without the caller naming
+    the registry.
+    """
+    registry = dialect.artifact_registry()
+    for cls in (
+        PostgresQueryStatement,
+        PostgresInsertStatement,
+        PostgresUpdateStatement,
+        PostgresDeleteStatement,
+        PostgresExplainStatement,
+        PostgresCreateTableAsStatement,
+        PostgresCreateMaterializedViewExpression,
+        PostgresRefreshMaterializedViewStatement,
+    ):
+        resolved = registry.resolve_node(cls.kind())
+        assert resolved is cls, (
+            f"{cls.kind()} resolved to {resolved.__module__}.{resolved.__name__}, "
+            f"not to the class that declares it"
+        )
 
 
 def test_dialect_registry_carries_core_kinds_too(dialect):

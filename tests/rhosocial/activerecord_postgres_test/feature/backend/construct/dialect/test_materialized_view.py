@@ -889,11 +889,22 @@ class TestMaterializedViewProtocolAndSurface:
         assert _dialect(version).supports_materialized_view_concurrent_refresh() is expected
 
     def test_pg_only_capability_has_pg_owned_formatter_for_refresh(self):
-        """T-04 (refresh half): CONCURRENTLY gating lives in the PG mixin."""
+        """T-04 (refresh half): CONCURRENTLY gating lives in the PG mixin.
+
+        The hint wrapper sits in front of the PostgreSQL body when
+        pg_hint_plan owns the statement's prefix; it delegates through
+        ``super()``, so the gating method is still the PG mixin's.
+        """
         dialect = _dialect()
         assert dialect.supports_materialized_view_concurrent_refresh() is True
         owner = dialect.format_refresh_materialized_view_pg_statement.__qualname__
-        assert owner.startswith("PostgresMaterializedViewMixin.")
+        assert owner.startswith(
+            ("PostgresHintedStatementsMixin.", "PostgresMaterializedViewMixin.")
+        ), owner
+        assert (
+            "format_refresh_materialized_view_pg_statement"
+            in PostgresMaterializedViewMixin.__dict__
+        )
 
 
 class TestCreateMaterializedViewRefusesBoundParameters:

@@ -12,8 +12,8 @@ by what they hold. ``test_value_kind_plane`` asserts that plane (wire name,
 payload type, round-trip) because the class matrix sees only one row for it
 whatever the payloads are.
 
-Current census, for the record: 622 registered classes, 622 constructible, 0
-pinned unconstructible, 558 rendered, 41 refused as unsupported, 20 classified
+Current census, for the record: 625 registered classes, 625 constructible, 0
+pinned unconstructible, 562 rendered, 40 refused as unsupported, 20 classified
 non-renders, 3 with no formatter declared. The two gap tables
 (``_CODEC_GAPS`` / ``_CODEC_RENDER_GAPS``) are the only places a parameter may
 be lost, each pinned per class *and* channel with its exception type.
@@ -129,7 +129,10 @@ from typing import Dict
 
 import pytest
 
-from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedDataTypeError, UnsupportedFeatureError
+from rhosocial.activerecord.backend.dialect.exceptions import (
+    UnsupportedDataTypeError,
+    UnsupportedFeatureError,
+)
 from rhosocial.activerecord.backend.expression import graph as graph_mod
 from rhosocial.activerecord.backend.expression.advanced_functions import (
     CaseExpression,
@@ -238,6 +241,7 @@ from rhosocial.activerecord.backend.expression.statements.dml import (
     MergeAction,
     MergeActionType,
     MergeStatement,
+    ValuesSource,
 )
 from rhosocial.activerecord.backend.expression.types import (
     ArrayType,
@@ -321,6 +325,18 @@ from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     hint_payload,
     make_hint_payload,
 )
+from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
+    PostgresCreateMaterializedViewExpression,
+    PostgresRefreshMaterializedViewStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresCreateTableAsStatement,
+    PostgresDeleteStatement,
+    PostgresExplainStatement,
+    PostgresInsertStatement,
+    PostgresQueryStatement,
+    PostgresUpdateStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.expression.pg_stat import (
     PostgresPgStatStatement,
 )
@@ -356,11 +372,11 @@ from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_r
 def postgres_dialect():
     """This module's dialect, with pg_hint_plan available.
 
-    The matrix includes a hinted ``QueryStatement``, and ``BaseExpression``
-    renders hints only on a dialect whose support switch answers true — that
-    is the whole point of the switch. These are construction tests, so no
-    server is contacted; the extension is simulated on the dialect the way
-    ``introspect_and_adapt()`` would record it.
+    The matrix includes the eight PostgreSQL-derived hinted statements, and
+    this backend renders hints only on a dialect whose ``supports_pg_hint_plan()``
+    answers true — that is the whole point of the switch. These are construction
+    tests, so no server is contacted; the extension is simulated on the dialect
+    the way ``introspect_and_adapt()`` would record it.
     """
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
     from rhosocial.activerecord.backend.impl.postgres.protocols.base import (
@@ -497,17 +513,13 @@ def _graph_column(dialect, variable="n", name="id"):
 
 def _one_column_query(dialect, table="t"):
     """A one-column SELECT over a named table: the smallest valid query side."""
-    return QueryStatement(
-        dialect, select=[Column(dialect, "a")], from_=_table_obj(dialect, table)
-    )
+    return QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table_obj(dialect, table))
 
 
 def _compound_arms(dialect):
     """Two single-column SELECTs over two tables, no bind parameters."""
     return [
-        QueryStatement(
-            dialect, select=[Column(dialect, "a")], from_=_table_obj(dialect)
-        ),
+        QueryStatement(dialect, select=[Column(dialect, "a")], from_=_table_obj(dialect)),
         QueryStatement(
             dialect,
             select=[Column(dialect, "a")],
@@ -613,9 +625,7 @@ def register_specials():
     # PostgreSQL spells a compound SELECT, so the matrix can assert it.
     register_special_constructor(
         "statements.dql.SetOperationStatement",
-        lambda d: SetOperationStatement(
-            d, op="union_all", parts=_compound_arms(d)
-        ),
+        lambda d: SetOperationStatement(d, op="union_all", parts=_compound_arms(d)),
     )
     # ``which`` names a UUID constant and nothing else. The guess's "x" is a
     # caller error, which the formatter reports as ``TypeError`` now that the
@@ -777,23 +787,43 @@ def register_specials():
     )
     register_special_constructor(
         "ddl.table_settings.PostgresAlterTableSettingsStatement",
-        lambda d: PostgresAlterTableSettingsStatement(
-            d, table_name="t", mode=LoggingMode.LOGGED
-        ),
+        lambda d: PostgresAlterTableSettingsStatement(d, table_name="t", mode=LoggingMode.LOGGED),
     )
 
-    # -- pg_hint_plan: a hint payload rides on a statement -------------------
+    # -- pg_hint_plan: a hint payload rides on a derived statement -----------
     # A hint is a comment carried by one statement, not a node of its own, so
-    # there is nothing to register for a hint: core's ``QueryStatement`` carries
-    # the payload through its ``hints`` keyword. The phrase registered here is
-    # the one a host object used to make unwritable: ``Leading`` with a nested
-    # join pair. The targets are relation references -- a ``NamedRelationRef``
-    # for the last one, so the resolver runs on the wire -- and the builder
-    # normalises ``HintGroup`` to ``("a", "b")``, so the round-trip proves the
-    # nested array survives every reader.
+    # there is nothing to register for a hint. Core's statement classes carry no
+    # ``hints`` parameter: the payload rides on the PostgreSQL-derived classes
+    # in ``postgres.expression.hinted_statements`` (case B of the format), and
+    # each of the eight is registered below with a hint attached, so the matrix
+    # proves the payload survives every encoding and that the prefix survives
+    # with it. The generic base statements stay registered in their plain form.
     register_special_constructor(
         "statements.dql.QueryStatement",
-        lambda d: QueryStatement(
+        lambda d: QueryStatement(d, [Column(d, "a")], _table_obj(d)),
+    )
+    register_special_constructor(
+        "statements.ddl_table.CreateTableAsStatement",
+        lambda d: CreateTableAsStatement(d, _table_obj(d, "ct"), _one_column_query(d)),
+    )
+    register_special_constructor(
+        "statements.ddl_view.CreateMaterializedViewStatement",
+        lambda d: CreateMaterializedViewStatement(
+            d, MaterializedView(d, "mv"), _one_column_query(d)
+        ),
+    )
+    register_special_constructor(
+        "statements.ddl_view.RefreshMaterializedViewStatement",
+        lambda d: RefreshMaterializedViewStatement(d, MaterializedView(d, "mv")),
+    )
+    # The derived query's hint is the one a host object used to make unwritable:
+    # ``Leading`` with a nested join pair. The targets are relation references --
+    # a ``NamedRelationRef`` for the last one, so the resolver runs on the wire --
+    # and the builder normalises ``HintGroup`` to ``("a", "b")``, so the
+    # round-trip proves the nested array survives every reader.
+    register_special_constructor(
+        "hinted_statements.PostgresQueryStatement",
+        lambda d: PostgresQueryStatement(
             d,
             [Column(d, "a")],
             _table_obj(d),
@@ -806,22 +836,42 @@ def register_specials():
             ),
         ),
     )
-    # The three composite statements that became hint-carrying with core's
-    # ``f8c16ce0``. A hint is a payload on the outermost statement, so each is
-    # built with one rather than in its plain form: the matrix must prove the
-    # hint survives every encoding and that the prefix survives with it.
     register_special_constructor(
-        "statements.ddl_table.CreateTableAsStatement",
-        lambda d: CreateTableAsStatement(
+        "hinted_statements.PostgresInsertStatement",
+        lambda d: PostgresInsertStatement(
             d,
-            _table_obj(d, "ct"),
-            _one_column_query(d),
+            _table_obj(d),
+            ValuesSource(d, [[Literal(d, 1)]]),
+            ["a"],
             hints=(hint_seq_scan(d, "t"),),
         ),
     )
     register_special_constructor(
-        "statements.ddl_view.CreateMaterializedViewStatement",
-        lambda d: CreateMaterializedViewStatement(
+        "hinted_statements.PostgresUpdateStatement",
+        lambda d: PostgresUpdateStatement(
+            d,
+            _table_obj(d),
+            {"a": Literal(d, 1)},
+            hints=(hint_seq_scan(d, "t"),),
+        ),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresDeleteStatement",
+        lambda d: PostgresDeleteStatement(d, _table_obj(d), hints=(hint_seq_scan(d, "t"),)),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresExplainStatement",
+        lambda d: PostgresExplainStatement(d, _one_column_query(d), hints=(hint_seq_scan(d, "t"),)),
+    )
+    register_special_constructor(
+        "hinted_statements.PostgresCreateTableAsStatement",
+        lambda d: PostgresCreateTableAsStatement(
+            d, _table_obj(d, "ct"), _one_column_query(d), hints=(hint_seq_scan(d, "t"),)
+        ),
+    )
+    register_special_constructor(
+        "ddl.mv.PostgresCreateMaterializedViewExpression",
+        lambda d: PostgresCreateMaterializedViewExpression(
             d,
             MaterializedView(d, "mv"),
             _one_column_query(d),
@@ -829,11 +879,9 @@ def register_specials():
         ),
     )
     register_special_constructor(
-        "statements.ddl_view.RefreshMaterializedViewStatement",
-        lambda d: RefreshMaterializedViewStatement(
-            d,
-            MaterializedView(d, "mv"),
-            hints=(hint_seq_scan(d, "mv"),),
+        "ddl.mv.PostgresRefreshMaterializedViewStatement",
+        lambda d: PostgresRefreshMaterializedViewStatement(
+            d, MaterializedView(d, "mv"), hints=(hint_seq_scan(d, "mv"),)
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------
@@ -866,21 +914,15 @@ def register_specials():
     )
     register_special_constructor(
         "ddl.pg_partman.PostgresPgPartmanUpdateConfigExpression",
-        lambda d: PostgresPgPartmanUpdateConfigExpression(
-            d, parent_table="t", retention="7 days"
-        ),
+        lambda d: PostgresPgPartmanUpdateConfigExpression(d, parent_table="t", retention="7 days"),
     )
     register_special_constructor(
         "ddl.policy.PostgresAlterPolicyStatement",
-        lambda d: PostgresAlterPolicyStatement(
-            d, name="p", table_name="t", new_name="q"
-        ),
+        lambda d: PostgresAlterPolicyStatement(d, name="p", table_name="t", new_name="q"),
     )
     register_special_constructor(
         "ddl.publication.PostgresCreatePublicationStatement",
-        lambda d: PostgresCreatePublicationStatement(
-            d, name="pub", tables=["t"]
-        ),
+        lambda d: PostgresCreatePublicationStatement(d, name="pub", tables=["t"]),
     )
 
     # -- PostgreSQL DDL type definitions ------------------------------------
@@ -916,9 +958,7 @@ def register_specials():
         "ddl.type.PostgresCompositeTypeDefinition",
         lambda d: PostgresCompositeTypeDefinition(
             d,
-            attributes=[
-                PostgresCompositeTypeAttribute("a", IntegerType(d))
-            ],
+            attributes=[PostgresCompositeTypeAttribute("a", IntegerType(d))],
         ),
     )
     register_special_constructor(
@@ -954,9 +994,7 @@ def register_specials():
         lambda d: PostgresAlterMaterializedViewStatement(
             d,
             view=MaterializedView(d, "mv"),
-            action=PostgresSetMaterializedViewPropertiesAction(
-                d, properties={"fillfactor": "70"}
-            ),
+            action=PostgresSetMaterializedViewPropertiesAction(d, properties={"fillfactor": "70"}),
         ),
     )
     register_special_constructor(
@@ -966,7 +1004,9 @@ def register_specials():
     register_special_constructor(
         "ddl.domain.PostgresAlterDomainExpression",
         lambda d: PostgresAlterDomainExpression(
-            d, name="dom", action=RenameDomainAction(d, "dom2"),
+            d,
+            name="dom",
+            action=RenameDomainAction(d, "dom2"),
         ),
     )
 
@@ -1071,9 +1111,7 @@ def register_specials():
         return EdgeTableObject(d, "knows")
 
     def path_pattern(d):
-        return graph_mod.PathPattern(
-            d, graph_mod.GraphVertex(d, "n", node_table(d))
-        )
+        return graph_mod.PathPattern(d, graph_mod.GraphVertex(d, "n", node_table(d)))
 
     register_special_constructor(
         "graph.GraphVertex", lambda d: graph_mod.GraphVertex(d, "n", node_table(d))
@@ -1115,7 +1153,8 @@ def register_specials():
     register_special_constructor(
         "graph.CreatePropertyGraphStatement",
         lambda d: graph_mod.CreatePropertyGraphStatement(
-            d, graph=PropertyGraph(d, "g"),
+            d,
+            graph=PropertyGraph(d, "g"),
             vertex_tables=[graph_mod.VertexTable(d, node_table(d))],
         ),
     )
@@ -1152,9 +1191,7 @@ def register_specials():
     )
     # ``raw`` is keyword-only and names the SQL spelling, so the guess supplies
     # nothing and the type declares no name at all.
-    register_special_constructor(
-        "types.custom.CustomType", lambda d: CustomType(d, raw="mytype")
-    )
+    register_special_constructor("types.custom.CustomType", lambda d: CustomType(d, raw="mytype"))
 
     # -- core nodes with a required slot the guess fills with a string -------
     # ``op`` is a closed word set and refuses the placeholder; the two datetime
@@ -1205,9 +1242,7 @@ def register_specials():
     )
     register_special_constructor(
         "datetime.DatetimeDiffExpression",
-        lambda d: DatetimeDiffExpression(
-            d, IntervalUnit.DAY, Column(d, "a"), Column(d, "b")
-        ),
+        lambda d: DatetimeDiffExpression(d, IntervalUnit.DAY, Column(d, "a"), Column(d, "b")),
     )
     register_special_constructor(
         "datetime.DatetimeSubtractExpression",
@@ -1295,9 +1330,7 @@ def register_specials():
         "values.PostgresLtreeValue",
         lambda d: PostgresLtreeValue(
             d,
-            pg_ltree.ltree_ancestor(
-                d, Column(d, "v"), pg_ltree.ltree_literal(d, "a.b")
-            ),
+            pg_ltree.ltree_ancestor(d, Column(d, "v"), pg_ltree.ltree_literal(d, "a.b")),
         ),
     )
 
@@ -1335,9 +1368,9 @@ UNCONSTRUCTIBLE = (
     # statement -- each carried a payload the introspective filler could not
     # supply (a type name, a query kind). Each now has a special constructor,
     # so the matrix renders them instead of skipping them. The pg_hint_plan
-    # entries that used to be here are gone: a hint is a payload carried by
-    # core's ``QueryStatement`` through ``hints=``, and that query has a
-    # special constructor above.
+    # entries that used to be here are gone: a hint is a payload carried by the
+    # PostgreSQL-derived query (and the seven sibling classes) through
+    # ``hints=``, and each derived class has a special constructor above.
 )
 
 #: Classes that construct but cannot render, for a reason belonging to their own
@@ -1371,6 +1404,7 @@ def _no_such_formatter(formatter_name: str) -> str:
     """
     return f"does not support the '{formatter_name}' statement"
 
+
 LEGITIMATE_NON_RENDERS = {
     # ---- a marker class that exists in order to refuse ------------------
     # ``_PostgresUnsupportedDomainAction`` is constructed precisely so an ALTER DOMAIN
@@ -1382,7 +1416,6 @@ LEGITIMATE_NON_RENDERS = {
         ValueError,
         "Unsupported ALTER DOMAIN action",
     ),
-
     # ---- a core type PostgreSQL spells another way ------------------------
     # Core's generic ENUM type is for engines that dispatch on the name ``enum``.
     # PostgreSQL has no such type -- ``CREATE TYPE ... AS ENUM`` goes through
@@ -1391,7 +1424,6 @@ LEGITIMATE_NON_RENDERS = {
         UnsupportedDataTypeError,
         "does not support the generic type 'enum'",
     ),
-
     # ---- bases that name an expression category, not a renderable thing ----
     # Each of these is a base class that deliberately declares no
     # ``format_method``, so ``to_sql()`` reports that there is nothing to
@@ -1471,7 +1503,6 @@ LEGITIMATE_NON_RENDERS = {
         UnsupportedDataTypeError,
         "does not support the generic type None",
     ),
-
     # ---- the root of the row-source tree ---------------------------------
     # The root of the row-source tree. No concrete source renders through
     # ``format_table_source``; each overrides ``format_method``. Rendering the base
@@ -1487,7 +1518,6 @@ LEGITIMATE_NON_RENDERS = {
         UnsupportedFeatureError,
         _no_such_formatter("format_table_source"),
     ),
-
     # ---- core types PostgreSQL has no formatter for ----------------------
     # Core defines these two generic types for engines that spell them VARBINARY
     # or BINARY. PostgreSQL has no such type -- bytea is modelled separately -- so
@@ -1501,7 +1531,6 @@ LEGITIMATE_NON_RENDERS = {
         UnsupportedDataTypeError,
         "does not support the generic type 'varbinary'",
     ),
-
     # ---- a core base whose formatter reads a field it never declares -------
     # ``_Annotation`` renders through ``format_declared_result``, which hoists
     # the wrapped node's alias and the annotation's own. Core's ``_Annotation``
@@ -1512,7 +1541,6 @@ LEGITIMATE_NON_RENDERS = {
         AttributeError,
         "has no attribute 'alias'",
     ),
-
     # ---- SQL standard pivot, which is not PostgreSQL syntax --------------
     # Core models the SQL:2003 PIVOT / UNPIVOT for engines that spell it that way.
     # PostgreSQL has no PIVOT keyword, so the dialect declares no
@@ -1843,9 +1871,7 @@ def assert_sql_roundtrip_classified(fqn, instance, dialect, registry):
     return "rendered"
 
 
-@pytest.fixture(
-    params=[fqn for fqn in sorted(REGISTERED)], ids=sorted(REGISTERED)
-)
+@pytest.fixture(params=[fqn for fqn in sorted(REGISTERED)], ids=sorted(REGISTERED))
 def expr_case(request, postgres_dialect):
     fqn = request.param
     cls = REGISTERED[fqn]
@@ -1857,9 +1883,7 @@ def expr_case(request, postgres_dialect):
             f"it or add it to the tuple with a reason -- do not let it disappear "
             f"into a skip."
         )
-        pytest.skip(
-            f"{fqn}: pinned in UNCONSTRUCTIBLE, cannot be constructed ({source})"
-        )
+        pytest.skip(f"{fqn}: pinned in UNCONSTRUCTIBLE, cannot be constructed ({source})")
     return fqn, instance
 
 
@@ -1870,9 +1894,10 @@ class TestExpressionRoundtripAll:
         fqn, instance = expr_case
         lost = _channels_that_lose_params(fqn, instance, postgres_dialect, MATRIX_REGISTRY)
         pinned = _CODEC_GAPS.get(fqn, {})
-        assert sorted(lost) == sorted(pinned), (
-            f"{fqn} lost {sorted(lost)} but _CODEC_GAPS pins {sorted(pinned)}.\n"
-            + "\n".join(f"  {channel}: {why}" for channel, why in lost.items())
+        assert sorted(lost) == sorted(
+            pinned
+        ), f"{fqn} lost {sorted(lost)} but _CODEC_GAPS pins {sorted(pinned)}.\n" + "\n".join(
+            f"  {channel}: {why}" for channel, why in lost.items()
         )
         for channel, expected in pinned.items():
             marker = expected if isinstance(expected, str) else expected.__name__
@@ -1899,11 +1924,7 @@ class TestMatrixIntegrity:
         """
         dialect = postgres_dialect
         actual = tuple(
-            sorted(
-                fqn
-                for fqn in REGISTERED
-                if make_instance(REGISTERED[fqn], dialect)[0] is None
-            )
+            sorted(fqn for fqn in REGISTERED if make_instance(REGISTERED[fqn], dialect)[0] is None)
         )
         assert actual == tuple(sorted(UNCONSTRUCTIBLE)), (
             "the set of expression classes the generic constructor cannot build "
@@ -1922,16 +1943,15 @@ class TestMatrixIntegrity:
         a deliberate decision.
         """
         unknown = set(UNCONSTRUCTIBLE) - set(REGISTERED)
-        assert not unknown, (
-            f"UNCONSTRUCTIBLE names classes that were not registered: {sorted(unknown)}"
-        )
+        assert (
+            not unknown
+        ), f"UNCONSTRUCTIBLE names classes that were not registered: {sorted(unknown)}"
 
     def test_legitimate_non_renders_are_real_classes(self):
         """Every pinned non-render names a class that was actually collected."""
         unknown = set(LEGITIMATE_NON_RENDERS) - set(REGISTERED)
         assert not unknown, (
-            f"LEGITIMATE_NON_RENDERS names classes that were not registered: "
-            f"{sorted(unknown)}"
+            f"LEGITIMATE_NON_RENDERS names classes that were not registered: " f"{sorted(unknown)}"
         )
 
     def test_pinned_non_render_really_does_not_render(self, postgres_dialect):
@@ -1943,14 +1963,12 @@ class TestMatrixIntegrity:
         for fqn, (expected_type, fragment) in LEGITIMATE_NON_RENDERS.items():
             instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
             assert instance is not None, (
-                f"{fqn} is pinned as a non-render but could not be constructed "
-                f"({source})"
+                f"{fqn} is pinned as a non-render but could not be constructed " f"({source})"
             )
             with pytest.raises(expected_type) as exc_info:
                 instance.to_sql()
             assert fragment in str(exc_info.value), (
-                f"{fqn}: expected the message to mention {fragment!r}, got: "
-                f"{exc_info.value}"
+                f"{fqn}: expected the message to mention {fragment!r}, got: " f"{exc_info.value}"
             )
 
     def test_unmodelled_formatter_list_is_exact(self, postgres_dialect):
@@ -2080,9 +2098,9 @@ class TestMatrixIntegrity:
 
         for wire, (host, _host_type) in cases.items():
             literal = Literal(dialect, host)
-            assert literal.value_kind.wire == wire, (
-                f"{wire}: built a literal of kind {literal.value_kind.wire}"
-            )
+            assert (
+                literal.value_kind.wire == wire
+            ), f"{wire}: built a literal of kind {literal.value_kind.wire}"
             artifact = serialize(literal)
             assert artifact["kind"] == wire, artifact
             payload = artifact["params"]["value"]
@@ -2130,9 +2148,7 @@ class TestMatrixIntegrity:
         matrix in this repository. Removing this assertion would restore that
         blindness silently.
         """
-        core_classes = [
-            fqn for fqn in REGISTERED if fqn.startswith(f"{CORE_EXPR_PKG}.")
-        ]
+        core_classes = [fqn for fqn in REGISTERED if fqn.startswith(f"{CORE_EXPR_PKG}.")]
         assert core_classes, (
             "the matrix collects no core expression classes; core statements "
             "rendered by this dialect would go unasserted"
@@ -2155,8 +2171,7 @@ class TestMatrixIntegrity:
             except Exception:
                 unresolved.append(fqn)
         assert not unresolved, (
-            f"the matrix covers classes the kind whitelist cannot "
-            f"resolve: {unresolved}"
+            f"the matrix covers classes the kind whitelist cannot " f"resolve: {unresolved}"
         )
 
     def test_coverage_report(self, postgres_dialect):
@@ -2184,6 +2199,7 @@ class TestMatrixIntegrity:
             print(f"  not constructible: {fqn}")
         for feature, methods in sorted(UNMODELLED_FORMATTERS.items()):
             print(f"  not modelled: {feature} ({len(methods)} formatters)")
+
 
 # ---------------------------------------------------------------------------
 # The set-operation statement, rendered
@@ -2231,9 +2247,7 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
             dialect,
             select=[Column(dialect, "a"), Literal(dialect, 1)],
             from_=_table_obj(dialect),
-            where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "a"), Literal(dialect, 5)
-            ),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "a"), Literal(dialect, 5)),
         ),
         QueryStatement(
             dialect,
@@ -2246,9 +2260,7 @@ def test_set_operation_statement_parameters_concatenate_in_part_order(
     rendered, params = node.to_sql()
 
     assert rendered == (
-        'SELECT "a", %s FROM "t" WHERE "a" = %s '
-        "UNION ALL "
-        'SELECT "a", %s FROM "u"'
+        'SELECT "a", %s FROM "t" WHERE "a" = %s ' "UNION ALL " 'SELECT "a", %s FROM "u"'
     )
     assert params == (1, 5, 2)
 
@@ -2271,16 +2283,17 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     def unquoted(name):
         return Table(dialect, name, name_need_quote=False)
 
-    hinted = QueryStatement(
+    hinted = PostgresQueryStatement(
         dialect,
         [Column(dialect, "a")],
         _table_obj(dialect),
         hints=(hint_leading(dialect, HintGroup(unquoted("a"), unquoted("b")), unquoted("c")),),
     )
 
-    assert hinted.hints[0]["sequence"] == (("a", "b"), "c"), (
-        "HintGroup must normalise to a tuple inside the payload"
-    )
+    assert hinted.hints[0]["sequence"] == (
+        ("a", "b"),
+        "c",
+    ), "HintGroup must normalise to a tuple inside the payload"
     assert serialize(hinted)["params"]["hints"][0]["sequence"] == [["a", "b"], "c"]
 
     sql, params = hinted.to_sql()
@@ -2305,13 +2318,41 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
     # when SQL is asked for: the constructor collects even a pair the renderer
     # will refuse.
     for bad_pair in ((), ("a", "b c"), (1,)):
-        unvalidated = QueryStatement(
+        unvalidated = PostgresQueryStatement(
             dialect,
             [Column(dialect, "a")],
             _table_obj(dialect),
-            hints=(
-                make_hint_payload(HintKind.LEADING, sequence=(bad_pair, "c")),
-            ),
+            hints=(make_hint_payload(HintKind.LEADING, sequence=(bad_pair, "c")),),
         )
         with pytest.raises(TypeError):
             unvalidated.to_sql()
+
+
+def test_the_eight_hinted_statement_specials_attach_hints(postgres_dialect):
+    """Every hinted kind is built by its special constructor, with a payload.
+
+    The round-trip above compares an instance with its own rebuild, so a
+    special-constructor key that matched nothing would leave the class on the
+    heuristic path and the hint uncovered -- while still reporting green. This
+    test pins the constructor source and the attached payload for each of the
+    eight, so a key typo fails instead of hiding.
+    """
+    dialect = postgres_dialect
+    hinted_fqns = (
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresQueryStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresInsertStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresUpdateStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresDeleteStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresExplainStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements.PostgresCreateTableAsStatement",
+        "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresCreateMaterializedViewExpression",
+        "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresRefreshMaterializedViewStatement",
+    )
+    for fqn in hinted_fqns:
+        instance, source = make_instance(REGISTERED[fqn], dialect)
+        assert instance is not None, f"{fqn} could not be constructed"
+        assert source == "special", (
+            f"{fqn} fell through to the {source} path; its special constructor "
+            f"is not registered under a name it matches"
+        )
+        assert instance.hints, f"{fqn} was built without a hint payload"

@@ -17,7 +17,7 @@ a materialized view cannot be relocated to another tablespace after creation.
 """
 
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, Sequence, TYPE_CHECKING
+from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
@@ -27,6 +27,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_view import (
     RefreshMaterializedViewStatement,
 )
 
+from ..hint import normalise_hints
 from ...storage_parameters import validate_storage_parameters
 
 if TYPE_CHECKING:
@@ -99,6 +100,8 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
         storage_options: Optional[Dict[Any, Any]] = None,
         if_not_exists: bool = False,
         allow_unlisted_storage_parameters: bool = False,
+        *,
+        hints: Tuple[Mapping[str, Any], ...] = (),
     ):
         super().__init__(
             dialect,
@@ -118,6 +121,7 @@ WITH (FILLFACTOR = 70) AS SELECT ... WITH DATA'
             )
         self.if_not_exists = if_not_exists
         self.allow_unlisted_storage_parameters = allow_unlisted_storage_parameters
+        self.hints = normalise_hints(hints)
 
 
 class PostgresDropMaterializedViewExpression(DropMaterializedViewStatement):
@@ -203,6 +207,8 @@ class PostgresRefreshMaterializedViewStatement(RefreshMaterializedViewStatement)
         concurrently: bool = False,
         with_data: bool = False,
         no_data: bool = False,
+        *,
+        hints: Tuple[Mapping[str, Any], ...] = (),
     ):
         super().__init__(
             dialect,
@@ -211,6 +217,7 @@ class PostgresRefreshMaterializedViewStatement(RefreshMaterializedViewStatement)
             with_data=with_data,
             no_data=no_data,
         )
+        self.hints = normalise_hints(hints)
 
     @property
     def name(self) -> str:

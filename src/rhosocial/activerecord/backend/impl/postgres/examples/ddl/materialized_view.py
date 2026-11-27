@@ -65,7 +65,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresDropMaterializedViewExpression,
     PostgresRefreshMaterializedViewStatement,
     PostgresRenameMaterializedViewAction,
-    PostgresResetMaterializedViewPropertiesAction,
+    PostgresResetMaterializedViewPropertiesAction,  # noqa: F401 -- pinned by the example test
     PostgresSetMaterializedViewPropertiesAction,
     PostgresSetMaterializedViewSchemaAction,
 )

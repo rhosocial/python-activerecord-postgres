@@ -22,16 +22,37 @@ backend.execute(*load_pg_hint_plan(dialect).to_sql())
 
 ## 构造提示
 
-pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语句。builder 返回的是普通字典负载（`HintPayload`），既不是 SQL 字符串也不是表达式节点；只有 dialect formatter 负责渲染注释，注释附着在承载提示的语句上。通过语句的 `hints=` 关键字传入负载：
+pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语句。builder 返回的是普通字典负载（`HintPayload`），既不是 SQL 字符串也不是表达式节点；只有 dialect formatter 负责渲染注释。
+
+提示是 PostgreSQL 专有语法，因此不放在 core 的语句上。后端**派生自己的语句类**，每个只增加一个关键字参数 `hints`（框架表达式/格式化规则的情形 B：`E_c = derive(E_core, +params_c)`，原参数保持不动）。派生类继承基类的 `format_method`，因此不新增表达式/格式化对；PostgreSQL formatter 同时处理通用表达式与派生表达式——通用语句的字节与以前完全一致，只有带非空提示的派生实例才会加前缀。
+
+八条语句在 PostgreSQL 类上承载提示：
+
+| PostgreSQL 类 | 语句 | 模块 |
+|---|---|---|
+| `PostgresQueryStatement` | `SELECT` | `expression/hinted_statements.py` |
+| `PostgresInsertStatement` | `INSERT` | `expression/hinted_statements.py` |
+| `PostgresUpdateStatement` | `UPDATE` | `expression/hinted_statements.py` |
+| `PostgresDeleteStatement` | `DELETE` | `expression/hinted_statements.py` |
+| `PostgresExplainStatement` | `EXPLAIN` | `expression/hinted_statements.py` |
+| `PostgresCreateTableAsStatement` | `CREATE TABLE ... AS` | `expression/hinted_statements.py` |
+| `PostgresCreateMaterializedViewExpression` | `CREATE MATERIALIZED VIEW ... AS` | `expression/ddl/mv.py` |
+| `PostgresRefreshMaterializedViewStatement` | `REFRESH MATERIALIZED VIEW` | `expression/ddl/mv.py` |
+
+最后两个在提示支持之前就已经是 PostgreSQL 派生类，本次就地扩展；其余六个是 core 语句在本后端的对应类。
+
+通过语句的 `hints=` 关键字传入负载：
 
 ```python
-from rhosocial.activerecord.backend.expression import QueryStatement
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresQueryStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading, hint_hash_join, hint_seq_scan,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
 
-query = QueryStatement(
+query = PostgresQueryStatement(
     dialect,
     select=[...],
     from_=...,
@@ -46,40 +67,42 @@ sql, params = query.to_sql()
 backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQL))
 ```
 
-`InsertStatement`、`UpdateStatement`、`DeleteStatement` 与 `ExplainStatement` 同样接受 `hints=` 关键字。`ExplainStatement` 会把注释写在 `EXPLAIN` 关键字之前，这正是 pg_hint_plan 要求的位置：
+`PostgresExplainStatement` 会把注释写在 `EXPLAIN` 关键字之前，这正是 pg_hint_plan 要求的位置：
 
 ```python
-from rhosocial.activerecord.backend.expression import ExplainStatement
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresExplainStatement,
+)
 
-explained = ExplainStatement(
+explained = PostgresExplainStatement(
     dialect, query, hints=(hint_seq_scan(dialect, "a"),)
 )
 sql, params = explained.to_sql()
 # /*+ SeqScan(a) */ EXPLAIN SELECT ...
 ```
 
-若 `ExplainStatement` 包裹的语句自身已带提示，它会拒绝渲染（两个前缀会重叠，位置有歧义）。
+无论外层是通用还是 PostgreSQL 的 `EXPLAIN`，只要被包裹的语句自身已带提示，它都会拒绝渲染（两个注释位置会有歧义）。
 
-`hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`CreateTableAsStatement`（`CREATE TABLE ... AS`）、`CreateMaterializedViewStatement`（`CREATE MATERIALIZED VIEW ... AS`）与 `RefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
+`hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`PostgresCreateTableAsStatement`（`CREATE TABLE ... AS`）、`PostgresCreateMaterializedViewExpression`（`CREATE MATERIALIZED VIEW ... AS`）与 `PostgresRefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
 
 ```python
-from rhosocial.activerecord.backend.expression.statements.ddl_table import (
-    CreateTableAsStatement,
+from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+    PostgresCreateTableAsStatement,
 )
 
-ctas = CreateTableAsStatement(
+ctas = PostgresCreateTableAsStatement(
     dialect, Table(dialect, "ct"), query, hints=(hint_seq_scan(dialect, "t"),)
 )
 sql, params = ctas.to_sql()
 # /*+ SeqScan(t) */ CREATE TABLE "ct" AS SELECT ...
 ```
 
-对这三条语句，提示要交给**语句本身**，而不是它所包裹的查询：pg_hint_plan 拒绝一个语句中出现两个注释块，formatter 也会按名拒绝带提示的被包裹查询。`CREATE VIEW` 是唯一不能携带提示的语句：它在创建时不被规划，pg_hint_plan 会忽略该注释（实测：完全没有日志行）；应改为提示读取该视图的查询。
+对这三条语句，提示要交给**语句本身**，而不是它所包裹的查询：pg_hint_plan 拒绝一个语句中出现两个注释块，formatter 也会按名拒绝带提示的被包裹查询（`TypeError`，"a pg_hint_plan hint belongs to the outermost statement"）。`CREATE VIEW` 没有任何带提示的类：它在创建时不被规划，pg_hint_plan 会忽略该注释（实测：完全没有日志行）；视图体里的带提示查询会被拒绝，而不是悄悄失效。应改为提示读取该视图的查询。
 
-提示负载是键齐全的普通字典（不适用的字段为 `None`/`()`，可用 `make_hint_payload()` 构造），因此能随 artifact 序列化往返；它不是表达式节点，也不会单独渲染。方言若支持该注释语法就渲染它，不支持则对带提示的语句抛出 `UnsupportedFeatureError`，而不是悄悄丢弃提示：
+提示负载是键齐全的普通字典（不适用的字段为 `None`/`()`，可用 `make_hint_payload()` 构造），因此能随 artifact 序列化往返；它不是表达式节点，也不会单独渲染。承载它的 PostgreSQL 语句才是拥有该参数的节点；方言不支持该注释语法时，对带提示的语句抛出 `UnsupportedFeatureError`，而不是悄悄丢弃提示：
 
 ```python
-dialect.supports_statement_hints()   # 仅在 pg_hint_plan 可用时为 True
+dialect.supports_pg_hint_plan()   # 仅在 pg_hint_plan 可用时为 True
 ```
 
 提示注释位于语句之前，因此执行带提示的查询时要显式传 `stmt_type`：后端无法从 SQL 首词推断语句类型。
