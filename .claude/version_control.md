@@ -2777,9 +2777,13 @@ if dialect.supports_recursive_cte():
     ...  # exercise the recursive-CTE path
 ```
 
-Note that `supports_*` names are not uniform: some take an argument (for
-example `supports_collation_name(name)`, `supports_json_table()`), and many
-take none.
+All `supports_*` capability probes take only `self` and return a `bool`.
+A probe that needs a version, an extension state or a catalogue fact reads it
+from the dialect it is bound to (`self.version`, `get_extension_version(...)`,
+`self.name`); it never takes an argument. Passing a name, type or version into
+a probe is now a rule violation, and `feature/rules/backend` locks the
+signature with an AST guard. Version-dependent answers belong *inside* the
+probe, not in its parameters.
 
 **Capability Version Tracking**:
 
