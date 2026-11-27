@@ -31,6 +31,7 @@ Function modules and their corresponding PostgreSQL documentation:
 - pageinspect: Low-level page inspection - https://www.postgresql.org/docs/current/pageinspect.html
 - pgstattuple: Tuple-level statistics - https://www.postgresql.org/docs/current/pgstattuple.html
 - pg_logicalinspect: Logical snapshot inspection - https://www.postgresql.org/docs/current/pglogicalinspect.html
+- pg_jsonschema: JSON Schema validation - https://github.com/supabase/pg_jsonschema
 - fuzzystrmatch: Fuzzy string matching functions - https://www.postgresql.org/docs/current/fuzzystrmatch.html
 - earthdistance: Earth distance functions - https://www.postgresql.org/docs/current/earthdistance.html
 - hypopg: Hypothetical index functions - https://hypopg.readthedocs.io/
@@ -433,6 +434,14 @@ from .amcheck import SkipMode, bt_index_check, bt_index_parent_check, verify_hea
 from .pageinspect import get_raw_page, page_header, bt_page_stats, heap_page_items
 from .pgstattuple import pgstattuple, pgstatindex, pg_relpages
 from .pg_logicalinspect import pg_get_logical_snapshot_meta, pg_get_logical_snapshot_info
+
+# pg_jsonschema functions
+from .pg_jsonschema import (
+    json_matches_schema,
+    jsonb_matches_schema,
+    jsonschema_is_valid,
+    jsonschema_validation_errors,
+)
 
 # fuzzystrmatch functions
 from .fuzzystrmatch import (
@@ -934,6 +943,11 @@ __all__ = [
     "pg_relpages",
     "pg_get_logical_snapshot_meta",
     "pg_get_logical_snapshot_info",
+    # pg_jsonschema functions
+    "json_matches_schema",
+    "jsonb_matches_schema",
+    "jsonschema_is_valid",
+    "jsonschema_validation_errors",
     # fuzzystrmatch functions
     "levenshtein",
     "levenshtein_less_equal",

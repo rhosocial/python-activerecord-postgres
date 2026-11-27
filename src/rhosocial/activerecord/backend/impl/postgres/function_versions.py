@@ -354,6 +354,21 @@ UNACCENT_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "unaccent": FunctionVersionRequirement(extension="unaccent", ext_feature="function"),
 }
 
+PG_JSONSCHEMA_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
+    "json_matches_schema": FunctionVersionRequirement(
+        extension="pg_jsonschema", ext_feature="validation", min_pg_version=(14, 0, 0)
+    ),
+    "jsonb_matches_schema": FunctionVersionRequirement(
+        extension="pg_jsonschema", ext_feature="validation", min_pg_version=(14, 0, 0)
+    ),
+    "jsonschema_is_valid": FunctionVersionRequirement(
+        extension="pg_jsonschema", ext_feature="validation", min_pg_version=(14, 0, 0)
+    ),
+    "jsonschema_validation_errors": FunctionVersionRequirement(
+        extension="pg_jsonschema", ext_feature="validation", min_pg_version=(14, 0, 0)
+    ),
+}
+
 DIAGNOSTICS_FUNCTION_VERSIONS: Dict[str, FunctionVersionRequirement] = {
     "bt_index_check": FunctionVersionRequirement(extension="amcheck", ext_feature="integrity"),
     "bt_index_parent_check": FunctionVersionRequirement(extension="amcheck", ext_feature="integrity"),
@@ -418,6 +433,7 @@ _ALL_CATEGORIES = [
     PG_HINT_PLAN_FUNCTION_VERSIONS,
     UNACCENT_FUNCTION_VERSIONS,
     DIAGNOSTICS_FUNCTION_VERSIONS,
+    PG_JSONSCHEMA_FUNCTION_VERSIONS,
     POSTGIS_FUNCTION_VERSIONS,
 ]
 
