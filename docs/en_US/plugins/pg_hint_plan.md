@@ -22,31 +22,54 @@ backend.execute(*load_pg_hint_plan(dialect).to_sql())
 
 ## Building hints
 
-Hint builders return **typed expression nodes**; they never assemble SQL strings. The dialect formatter is the only place that renders the comment.
+A pg_hint_plan hint is a comment carried by **one statement**, not a statement of its own. Builders return plain hint payloads (`PostgresHint`), never SQL strings; the dialect formatter is the only place that renders the comment, and it rides on the statement that carries the hints.
 
 ```python
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresHintedQueryStatement,
+)
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
-    hint_seq_scan, hint_index_scan, hint_hash_join, hint_leading,
-    hint_rows, hint_parallel, hint_set, pg_hint_plan_hinted_query,
+    hint_seq_scan, hint_hash_join, hint_leading, hint_rows,
+    hint_parallel, hint_set,
 )
 from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
 
-hints = [
-    hint_leading(dialect, HintGroup("a", "b"), "c"),   # Leading((a b) c)
-    hint_hash_join(dialect, "a", "b"),
-    hint_seq_scan(dialect, "a"),
-]
-hinted = pg_hint_plan_hinted_query(dialect, query, hints)
-sql, params = hinted.to_sql()
+query = PostgresHintedQueryStatement(
+    dialect,
+    select=[...],
+    from_=...,
+    hints=(
+        hint_leading(dialect, HintGroup("a", "b"), "c"),   # Leading((a b) c)
+        hint_hash_join(dialect, "a", "b"),
+        hint_seq_scan(dialect, "a"),
+    ),
+)
+sql, params = query.to_sql()
 # /*+ Leading((a b) c) HashJoin(a b) SeqScan(a) */ SELECT ...
 backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQL))
 ```
+
+The same `hints=` keyword is accepted by `PostgresHintedInsertStatement`, `PostgresHintedUpdateStatement`, `PostgresHintedDeleteStatement` and `PostgresHintedExplainStatement`. The last one writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
+
+```python
+from rhosocial.activerecord.backend.impl.postgres.expression import (
+    PostgresHintedExplainStatement,
+)
+
+explained = PostgresHintedExplainStatement(
+    dialect, query, hints=(hint_seq_scan(dialect, "a"),)
+)
+sql, params = explained.to_sql()
+# /*+ SeqScan(a) */ EXPLAIN SELECT ...
+```
+
+A hint payload is a plain dictionary with every key present (`PostgresHint.as_dict()`), so it survives artifact serialization; it is not an expression node and never renders on its own.
 
 The hint comment precedes the statement, so pass an explicit `stmt_type` when
 executing a hinted query: the backend cannot infer the statement type from the
 first word of the SQL.
 
-`dialect.build_hinted_query(query, hints)` is the equivalent dialect-level builder. Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
+`PostgresHintedQueryStatement` and its four siblings are the DSL entry points. Available builders: `hint_seq_scan`, `hint_tid_scan`, `hint_index_scan`, `hint_index_only_scan`, `hint_bitmap_scan`, `hint_no_seq_scan`, `hint_no_index_scan`, `hint_hash_join`, `hint_merge_join`, `hint_nest_loop`, `hint_leading`, `hint_rows`, `hint_parallel`, `hint_set`.
 
 Identifiers and GUC values are validated with full matches; unsafe comment terminators and statement separators are rejected before rendering.
 
