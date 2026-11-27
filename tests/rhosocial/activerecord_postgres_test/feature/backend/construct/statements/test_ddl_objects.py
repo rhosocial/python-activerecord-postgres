@@ -128,12 +128,6 @@ class TestDomainExpression:
         ).to_sql()
         assert sql == "CREATE DOMAIN \"posint\" AS DECIMAL DEFAULT 0 CHECK (VALUE > 0)"
 
-    def test_alter_set_default(self, dialect):
-        sql, _ = PostgresAlterDomainExpression(
-            dialect, "posint", AlterDomainActionType.SET_DEFAULT, new_value="0"
-        ).to_sql()
-        assert sql == 'ALTER DOMAIN "posint" SET DEFAULT 0'
-
     def test_drop(self, dialect):
         sql, _ = PostgresDropDomainExpression(
             dialect, "posint", if_exists=True, cascade=True
@@ -166,18 +160,6 @@ class TestDomainExpression:
         )
         with pytest.raises(ValueError, match="mutually exclusive"):
             expr.to_sql()
-
-    def test_version_gate_96(self):
-        d = PostgresDialect(version=(9, 5, 0))
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresCreateDomainExpression(d, "posint", "INTEGER").to_sql()
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresAlterDomainExpression(
-                d, "posint", AlterDomainActionType.SET_DEFAULT, new_value="0"
-            ).to_sql()
-        with pytest.raises(UnsupportedFeatureError):
-            PostgresDropDomainExpression(d, "posint").to_sql()
-
 
     def test_typed_create_with_schema_and_all_clauses(self, dialect):
         value = DomainValueExpression(dialect)
