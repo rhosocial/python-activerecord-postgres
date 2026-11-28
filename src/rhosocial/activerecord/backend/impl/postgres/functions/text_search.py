@@ -80,8 +80,8 @@ def to_tsvector(
     """
     return core.FunctionCall(
         dialect, "to_tsvector",
-        core.Literal(dialect, config),
-        document if isinstance(document, bases.BaseExpression) else core.Literal(dialect, document),
+        core.Parameter(dialect, config),
+        document if isinstance(document, bases.BaseExpression) else core.Parameter(dialect, document),
     )
 
 
@@ -108,8 +108,8 @@ def to_tsquery(
     """
     return core.FunctionCall(
         dialect, "to_tsquery",
-        core.Literal(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        core.Parameter(dialect, config),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -136,8 +136,8 @@ def plainto_tsquery(
     """
     return core.FunctionCall(
         dialect, "plainto_tsquery",
-        core.Literal(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        core.Parameter(dialect, config),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -164,8 +164,8 @@ def phraseto_tsquery(
     """
     return core.FunctionCall(
         dialect, "phraseto_tsquery",
-        core.Literal(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        core.Parameter(dialect, config),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -192,8 +192,8 @@ def websearch_to_tsquery(
     """
     return core.FunctionCall(
         dialect, "websearch_to_tsquery",
-        core.Literal(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        core.Parameter(dialect, config),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -223,9 +223,9 @@ def ts_rank(
     args: list = []
     if weights is not None:
         weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
-        args.append(core.Literal(dialect, weights_str))
-    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector))
-    args.append(query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query))
+        args.append(core.Parameter(dialect, weights_str))
+    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector))
+    args.append(query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query))
     return core.FunctionCall(dialect, "ts_rank", *args)
 
 
@@ -255,9 +255,9 @@ def ts_rank_cd(
     args: list = []
     if weights is not None:
         weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
-        args.append(core.Literal(dialect, weights_str))
-    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector))
-    args.append(query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query))
+        args.append(core.Parameter(dialect, weights_str))
+    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector))
+    args.append(query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query))
     return core.FunctionCall(dialect, "ts_rank_cd", *args)
 
 
@@ -290,12 +290,12 @@ def ts_headline(
         >>> ts_headline(dialect, 'content', "to_tsquery('hello')", options='StartSel=<b>, StopSel=</b>')
     """
     args: list = [
-        core.Literal(dialect, config),
-        document if isinstance(document, bases.BaseExpression) else core.Literal(dialect, document),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        core.Parameter(dialect, config),
+        document if isinstance(document, bases.BaseExpression) else core.Parameter(dialect, document),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     ]
     if options is not None:
-        args.append(options if isinstance(options, bases.BaseExpression) else core.Literal(dialect, options))
+        args.append(options if isinstance(options, bases.BaseExpression) else core.Parameter(dialect, options))
     return core.FunctionCall(dialect, "ts_headline", *args)
 
 
@@ -321,7 +321,7 @@ def tsvector_strip(
     """
     return core.FunctionCall(
         dialect, "strip",
-        vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector),
+        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
     )
 
 
@@ -349,8 +349,8 @@ def tsvector_setweight(
     """
     return core.FunctionCall(
         dialect, "setweight",
-        vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector),
-        weight if isinstance(weight, bases.BaseExpression) else core.Literal(dialect, weight),
+        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
+        weight if isinstance(weight, bases.BaseExpression) else core.Parameter(dialect, weight),
     )
 
 
@@ -376,7 +376,7 @@ def tsvector_length(
     """
     return core.FunctionCall(
         dialect, "length",
-        vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector),
+        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
     )
 
 
@@ -403,8 +403,8 @@ def ts_matches(
     """
     return BinaryExpression(
         dialect, "@@",
-        vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -430,8 +430,8 @@ def ts_matches_expr(
     """
     return BinaryExpression(
         dialect, "@@@",
-        vector if isinstance(vector, bases.BaseExpression) else core.Literal(dialect, vector),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -455,8 +455,8 @@ def tsvector_concat(
     """
     return BinaryExpression(
         dialect, "||",
-        vec1 if isinstance(vec1, bases.BaseExpression) else core.Literal(dialect, vec1),
-        vec2 if isinstance(vec2, bases.BaseExpression) else core.Literal(dialect, vec2),
+        vec1 if isinstance(vec1, bases.BaseExpression) else core.Parameter(dialect, vec1),
+        vec2 if isinstance(vec2, bases.BaseExpression) else core.Parameter(dialect, vec2),
     )
 
 

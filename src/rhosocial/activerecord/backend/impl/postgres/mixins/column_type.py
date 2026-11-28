@@ -91,10 +91,10 @@ from rhosocial.activerecord.backend.expression.column_types import (
     UUIDColumn,
     VectorColumn,
 )
-from ..column_types import (
+from ..expression.column_types import (
     PostgresAreaGeometryColumn,
     PostgresBitStringColumn,
-    PostgisGeometryColumn,
+    PostgresPostgisGeometryColumn,
     PostgresGeometryColumn,
     PostgresHstoreColumn,
     PostgresIdentifierColumn,
@@ -265,7 +265,7 @@ POSTGRES_COLUMN_TYPES: Dict[Any, Optional[Type[ColumnBase]]] = {
 #: ``UseColumnType`` once its adapter is in place.
 POSTGRES_EXTRA_COLUMN_TYPES: Dict[Any, Type[ColumnBase]] = {
     PostgresBitString: PostgresBitStringColumn,
-    PostgresGeometry: PostgisGeometryColumn,
+    PostgresGeometry: PostgresPostgisGeometryColumn,
     Point: PostgresGeometryColumn,
     Line: PostgresGeometryColumn,
     LineSegment: PostgresGeometryColumn,

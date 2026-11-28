@@ -57,8 +57,8 @@ def geometry_distance(
     """
     return BinaryExpression(
         dialect, "<->",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -81,8 +81,8 @@ def geometry_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -105,8 +105,8 @@ def geometry_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -129,8 +129,8 @@ def geometry_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -153,8 +153,8 @@ def geometry_strictly_left(
     """
     return BinaryExpression(
         dialect, "<<",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -177,8 +177,8 @@ def geometry_strictly_right(
     """
     return BinaryExpression(
         dialect, ">>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -201,8 +201,8 @@ def geometry_not_extend_right(
     """
     return BinaryExpression(
         dialect, "&<",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -225,8 +225,8 @@ def geometry_not_extend_left(
     """
     return BinaryExpression(
         dialect, "&>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Literal(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Literal(dialect, geom2),
+        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
     )
 
 
@@ -247,7 +247,7 @@ def geometry_area(
     Returns:
         FunctionCall for area(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "area", geom_expr)
 
 
@@ -266,7 +266,7 @@ def geometry_center(
     Returns:
         FunctionCall for center(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "center", geom_expr)
 
 
@@ -285,7 +285,7 @@ def geometry_length(
     Returns:
         FunctionCall for length(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "length", geom_expr)
 
 
@@ -304,7 +304,7 @@ def geometry_width(
     Returns:
         FunctionCall for width(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "width", geom_expr)
 
 
@@ -323,7 +323,7 @@ def geometry_height(
     Returns:
         FunctionCall for height(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "height", geom_expr)
 
 
@@ -342,7 +342,7 @@ def geometry_npoints(
     Returns:
         FunctionCall for npoints(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Literal(dialect, geom)
+    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
     return core.FunctionCall(dialect, "npoints", geom_expr)
 
 

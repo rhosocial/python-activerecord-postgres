@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.expression import (
     ForeignKeyConstraint,
     FunctionCall,
     InsertStatement,
-    Literal,
+    Parameter,
     QueryStatement,
     RefreshMaterializedViewStatement,
     TableConstraint,

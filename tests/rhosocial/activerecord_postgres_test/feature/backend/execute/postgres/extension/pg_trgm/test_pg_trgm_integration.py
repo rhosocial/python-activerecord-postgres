@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression import RawSQL
 from rhosocial.activerecord.backend.expression.predicates import (
     ComparisonPredicate,
@@ -82,10 +82,10 @@ def _setup_trgm_table(backend, dialect, table):
     backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "hello world")],
-        [Literal(dialect, "hello earth")],
-        [Literal(dialect, "hi there")],
-        [Literal(dialect, "completely different")],
+        [Parameter(dialect, "hello world")],
+        [Parameter(dialect, "hello earth")],
+        [Parameter(dialect, "hi there")],
+        [Parameter(dialect, "completely different")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -119,9 +119,9 @@ def _setup_trgm_ops_table(backend, dialect, table):
     backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "PostgreSQL database")],
-        [Literal(dialect, "MySQL database")],
-        [Literal(dialect, "completely unrelated")],
+        [Parameter(dialect, "PostgreSQL database")],
+        [Parameter(dialect, "MySQL database")],
+        [Parameter(dialect, "completely unrelated")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -166,7 +166,7 @@ def _setup_trgm_idx_table(backend, dialect, table):
     )
 
     rows = [
-        [Literal(dialect, "application development")],
+        [Parameter(dialect, "application development")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -200,7 +200,7 @@ def _setup_trgm_word_table(backend, dialect, table):
     backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "The quick brown fox jumps over the lazy dog")],
+        [Parameter(dialect, "The quick brown fox jumps over the lazy dog")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -245,10 +245,10 @@ async def _async_setup_trgm_table(backend, dialect, table):
     await backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "hello world")],
-        [Literal(dialect, "hello earth")],
-        [Literal(dialect, "hi there")],
-        [Literal(dialect, "completely different")],
+        [Parameter(dialect, "hello world")],
+        [Parameter(dialect, "hello earth")],
+        [Parameter(dialect, "hi there")],
+        [Parameter(dialect, "completely different")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -282,9 +282,9 @@ async def _async_setup_trgm_ops_table(backend, dialect, table):
     await backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "PostgreSQL database")],
-        [Literal(dialect, "MySQL database")],
-        [Literal(dialect, "completely unrelated")],
+        [Parameter(dialect, "PostgreSQL database")],
+        [Parameter(dialect, "MySQL database")],
+        [Parameter(dialect, "completely unrelated")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -329,7 +329,7 @@ async def _async_setup_trgm_idx_table(backend, dialect, table):
     )
 
     rows = [
-        [Literal(dialect, "application development")],
+        [Parameter(dialect, "application development")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -363,7 +363,7 @@ async def _async_setup_trgm_word_table(backend, dialect, table):
     await backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "The quick brown fox jumps over the lazy dog")],
+        [Parameter(dialect, "The quick brown fox jumps over the lazy dog")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -424,13 +424,13 @@ class TestPgTrgmIntegration:
         # Test similarity function for "hello world" (id=1)
         sim_func = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -447,13 +447,13 @@ class TestPgTrgmIntegration:
         # Query for id=1 ("hello world")
         sim_func_world = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred_world = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query_world = QueryStatement(
             dialect=dialect,
@@ -467,13 +467,13 @@ class TestPgTrgmIntegration:
         # Query for id=4 ("completely different")
         sim_func_diff = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred_diff = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 4),
+            Parameter(dialect, 4),
         )
         query_diff = QueryStatement(
             dialect=dialect,
@@ -498,18 +498,18 @@ class TestPgTrgmIntegration:
         sim_func_select = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "PostgreSQL"),
+            Parameter(dialect, "PostgreSQL"),
         ).as_("sim")
         # Use a separate FunctionCall without alias in WHERE (aliases invalid in WHERE)
         sim_func_where = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "PostgreSQL"),
+            Parameter(dialect, "PostgreSQL"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             sim_func_where,
-            Literal(dialect, 0.3),
+            Parameter(dialect, 0.3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -534,12 +534,12 @@ class TestPgTrgmIntegration:
         where_tablename = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "tablename"),
-            Literal(dialect, TABLE_TRGM_IDX),
+            Parameter(dialect, TABLE_TRGM_IDX),
         )
         where_indexname = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "indexname"),
-            Literal(dialect, "idx_trgm_name"),
+            Parameter(dialect, "idx_trgm_name"),
         )
         # Combine both conditions with AND
         combined_pred = LogicalPredicate(
@@ -547,7 +547,7 @@ class TestPgTrgmIntegration:
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQL because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Parameter("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
         # Replace with FunctionCall once expression system supports star args.
         count_func = RawSQL(
@@ -567,12 +567,12 @@ class TestPgTrgmIntegration:
         sim_func = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "application"),
+            Parameter(dialect, "application"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             sim_func,
-            Literal(dialect, 0.3),
+            Parameter(dialect, 0.3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -591,7 +591,7 @@ class TestPgTrgmIntegration:
 
         func = FunctionCall(
             dialect, "show_trgm",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("trigrams")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -609,13 +609,13 @@ class TestPgTrgmIntegration:
         # Test word_similarity function
         ws_func = FunctionCall(
             dialect, "word_similarity",
-            Literal(dialect, "fox"),
+            Parameter(dialect, "fox"),
             Column(dialect, "description"),
         ).as_("ws")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -669,13 +669,13 @@ class TestAsyncPgTrgmIntegration:
         # Test similarity function for "hello world" (id=1)
         sim_func = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -692,13 +692,13 @@ class TestAsyncPgTrgmIntegration:
         # Query for id=1 ("hello world")
         sim_func_world = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred_world = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query_world = QueryStatement(
             dialect=dialect,
@@ -712,13 +712,13 @@ class TestAsyncPgTrgmIntegration:
         # Query for id=4 ("completely different")
         sim_func_diff = FunctionCall(
             dialect, "similarity",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
             Column(dialect, "name"),
         ).as_("sim")
         where_pred_diff = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 4),
+            Parameter(dialect, 4),
         )
         query_diff = QueryStatement(
             dialect=dialect,
@@ -744,18 +744,18 @@ class TestAsyncPgTrgmIntegration:
         sim_func_select = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "PostgreSQL"),
+            Parameter(dialect, "PostgreSQL"),
         ).as_("sim")
         # Use a separate FunctionCall without alias in WHERE (aliases invalid in WHERE)
         sim_func_where = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "PostgreSQL"),
+            Parameter(dialect, "PostgreSQL"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             sim_func_where,
-            Literal(dialect, 0.3),
+            Parameter(dialect, 0.3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -781,19 +781,19 @@ class TestAsyncPgTrgmIntegration:
         where_tablename = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "tablename"),
-            Literal(dialect, TABLE_TRGM_IDX_ASYNC),
+            Parameter(dialect, TABLE_TRGM_IDX_ASYNC),
         )
         where_indexname = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "indexname"),
-            Literal(dialect, "idx_trgm_name_async"),
+            Parameter(dialect, "idx_trgm_name_async"),
         )
         combined_pred = LogicalPredicate(
             dialect, "AND",
             where_tablename,
             where_indexname,
         )
-        # TODO: COUNT(*) requires RawSQL because Literal("*")
+        # TODO: COUNT(*) requires RawSQL because Parameter("*")
         # gets parameterized as $1 and PostgreSQL can't determine its type.
         count_func = RawSQL(
             dialect, 'COUNT(*) AS "cnt"'
@@ -812,12 +812,12 @@ class TestAsyncPgTrgmIntegration:
         sim_func = FunctionCall(
             dialect, "similarity",
             Column(dialect, "name"),
-            Literal(dialect, "application"),
+            Parameter(dialect, "application"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             sim_func,
-            Literal(dialect, 0.3),
+            Parameter(dialect, 0.3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -837,7 +837,7 @@ class TestAsyncPgTrgmIntegration:
 
         func = FunctionCall(
             dialect, "show_trgm",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("trigrams")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -856,13 +856,13 @@ class TestAsyncPgTrgmIntegration:
         # Test word_similarity function
         ws_func = FunctionCall(
             dialect, "word_similarity",
-            Literal(dialect, "fox"),
+            Parameter(dialect, "fox"),
             Column(dialect, "description"),
         ).as_("ws")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,

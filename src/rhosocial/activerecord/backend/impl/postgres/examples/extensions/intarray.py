@@ -57,7 +57,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.expression.core import CastExpression, FunctionCall, Literal
+    from rhosocial.activerecord.backend.expression.core import CastExpression, FunctionCall, Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.expression.operators import (
         BinaryExpression,
@@ -135,11 +135,11 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "Article A"), Literal(dialect, "{1,2,3}")],
-                    [Literal(dialect, "Article B"), Literal(dialect, "{2,3,4}")],
-                    [Literal(dialect, "Article C"), Literal(dialect, "{5,6,7}")],
-                    [Literal(dialect, "Article D"), Literal(dialect, "{1,3,5,7}")],
-                    [Literal(dialect, "Article E"), Literal(dialect, "{2,4,6}")],
+                    [Parameter(dialect, "Article A"), Parameter(dialect, "{1,2,3}")],
+                    [Parameter(dialect, "Article B"), Parameter(dialect, "{2,3,4}")],
+                    [Parameter(dialect, "Article C"), Parameter(dialect, "{5,6,7}")],
+                    [Parameter(dialect, "Article D"), Parameter(dialect, "{1,3,5,7}")],
+                    [Parameter(dialect, "Article E"), Parameter(dialect, "{2,4,6}")],
                 ],
             ),
         )
@@ -160,7 +160,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "@>",
                 Column(dialect, "tag_ids"),
-                CastExpression(dialect, Literal(dialect, "{1,3}"), IntegerType(dialect)),
+                CastExpression(dialect, Parameter(dialect, "{1,3}"), IntegerType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -179,7 +179,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "&&",
                 Column(dialect, "tag_ids"),
-                CastExpression(dialect, Literal(dialect, "{1,6}"), IntegerType(dialect)),
+                CastExpression(dialect, Parameter(dialect, "{1,6}"), IntegerType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -191,7 +191,7 @@ if __name__ == "__main__":
 
         # Example 5: idx() function - find position of element in array
         # idx(array, element) returns 0 if not found (1-based index)
-        idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Literal(dialect, 3)).as_("pos_of_3")
+        idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Parameter(dialect, 3)).as_("pos_of_3")
 
         query = QueryStatement(
             dialect=dialect,
@@ -221,7 +221,7 @@ if __name__ == "__main__":
                 unique_sorted_func,
             ],
             from_=Table(dialect, "tags"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 4)),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 4)),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)

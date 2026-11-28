@@ -5,7 +5,7 @@ try:
 except ImportError:
     from typing_extensions import Annotated, Optional
 
-from rhosocial.activerecord.backend.expression.core import Column, Literal
+from rhosocial.activerecord.backend.expression.core import Column, Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefaultConstraint,
     ColumnDefinition,
@@ -57,7 +57,7 @@ DIALECT = PostgresDialect((16, 2, 0))
 SQL_TYPE = UUIDType()
 FALLBACK_SQL_TYPE = TextType()
 SQL_TYPE_MARKER = UseSqlType(SQL_TYPE, FALLBACK_SQL_TYPE)
-DEFAULT_VALUE = Literal(DIALECT, "new", inline=True)
+DEFAULT_VALUE = Parameter(DIALECT, "new", inline=True)
 DEFAULT_CONSTRAINT = UseConstraint(
     ColumnDefaultConstraint,
     name="df_status_default",

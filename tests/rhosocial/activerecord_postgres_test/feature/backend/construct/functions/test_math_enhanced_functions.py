@@ -4,7 +4,7 @@ Tests for PostgreSQL-specific enhanced math functions.
 
 These include additional mathematical functions beyond the basic math module.
 """
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Parameter
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions.math_enhanced import (
     round_,
@@ -33,13 +33,13 @@ class TestMathEnhancedFunctions:
 
     def test_round__with_precision(self, postgres_dialect: PostgresDialect):
         """Test round_() with precision."""
-        result = round_(postgres_dialect, Column(postgres_dialect, "price"), Literal(postgres_dialect, 2))
+        result = round_(postgres_dialect, Column(postgres_dialect, "price"), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "ROUND(" in sql
 
     def test_round__with_literal(self, postgres_dialect: PostgresDialect):
         """Test round_() with literal value."""
-        result = round_(postgres_dialect, Literal(postgres_dialect, 3.14159), Literal(postgres_dialect, 2))
+        result = round_(postgres_dialect, Parameter(postgres_dialect, 3.14159), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "ROUND(" in sql
 
@@ -50,7 +50,7 @@ class TestMathEnhancedFunctions:
         PostgreSQL accepts both, and the classed node carries only the
         canonical one (measured live 2026-10-18, 17.11: both answer 1024).
         """
-        result = pow(postgres_dialect, Column(postgres_dialect, "base"), Literal(postgres_dialect, 2))
+        result = pow(postgres_dialect, Column(postgres_dialect, "base"), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "POWER(" in sql
 
@@ -66,7 +66,7 @@ class TestMathEnhancedFunctions:
 
     def test_power(self, postgres_dialect: PostgresDialect):
         """Test power() function (the canonical spelling; pow() aliases it)."""
-        result = power(postgres_dialect, Literal(postgres_dialect, 2), Literal(postgres_dialect, 3))
+        result = power(postgres_dialect, Parameter(postgres_dialect, 2), Parameter(postgres_dialect, 3))
         sql, _ = result.to_sql()
         assert "POWER(" in sql
 
@@ -79,13 +79,13 @@ class TestMathEnhancedFunctions:
 
     def test_sqrt_with_literal(self, postgres_dialect: PostgresDialect):
         """Test sqrt() with literal value."""
-        result = sqrt(postgres_dialect, Literal(postgres_dialect, 16))
+        result = sqrt(postgres_dialect, Parameter(postgres_dialect, 16))
         sql, _ = result.to_sql()
         assert "SQRT(" in sql
 
     def test_mod(self, postgres_dialect: PostgresDialect):
         """Test mod() function."""
-        result = mod(postgres_dialect, Column(postgres_dialect, "total"), Literal(postgres_dialect, 10))
+        result = mod(postgres_dialect, Column(postgres_dialect, "total"), Parameter(postgres_dialect, 10))
         sql, _ = result.to_sql()
         assert "MOD(" in sql
 
@@ -108,7 +108,7 @@ class TestMathEnhancedFunctions:
 
     def test_ceil_with_literal(self, postgres_dialect: PostgresDialect):
         """Test ceil() with literal value."""
-        result = ceil(postgres_dialect, Literal(postgres_dialect, 3.14))
+        result = ceil(postgres_dialect, Parameter(postgres_dialect, 3.14))
         sql, _ = result.to_sql()
         assert "CEIL(" in sql
 
@@ -121,7 +121,7 @@ class TestMathEnhancedFunctions:
 
     def test_floor_with_literal(self, postgres_dialect: PostgresDialect):
         """Test floor() with literal value."""
-        result = floor(postgres_dialect, Literal(postgres_dialect, 3.14))
+        result = floor(postgres_dialect, Parameter(postgres_dialect, 3.14))
         sql, _ = result.to_sql()
         assert "FLOOR(" in sql
 
@@ -134,13 +134,13 @@ class TestMathEnhancedFunctions:
 
     def test_trunc_with_literal(self, postgres_dialect: PostgresDialect):
         """Test trunc() with literal value."""
-        result = trunc(postgres_dialect, Literal(postgres_dialect, 3.14))
+        result = trunc(postgres_dialect, Parameter(postgres_dialect, 3.14))
         sql, _ = result.to_sql()
         assert "TRUNC(" in sql
 
     def test_trunc_with_precision(self, postgres_dialect: PostgresDialect):
         """Test trunc() with precision."""
-        result = trunc(postgres_dialect, Literal(postgres_dialect, 3.14159), Literal(postgres_dialect, 2))
+        result = trunc(postgres_dialect, Parameter(postgres_dialect, 3.14159), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "TRUNC(" in sql
 
@@ -165,9 +165,9 @@ class TestMathEnhancedFunctions:
         """Test max_() with literal values (uses GREATEST)."""
         result = max_(
             postgres_dialect,
-            Literal(postgres_dialect, 1),
-            Literal(postgres_dialect, 2),
-            Literal(postgres_dialect, 3),
+            Parameter(postgres_dialect, 1),
+            Parameter(postgres_dialect, 2),
+            Parameter(postgres_dialect, 3),
         )
         sql, _ = result.to_sql()
         assert "GREATEST(" in sql
@@ -193,9 +193,9 @@ class TestMathEnhancedFunctions:
         """Test min_() with literal values (uses LEAST)."""
         result = min_(
             postgres_dialect,
-            Literal(postgres_dialect, 1),
-            Literal(postgres_dialect, 2),
-            Literal(postgres_dialect, 3),
+            Parameter(postgres_dialect, 1),
+            Parameter(postgres_dialect, 2),
+            Parameter(postgres_dialect, 3),
         )
         sql, _ = result.to_sql()
         assert "LEAST(" in sql
@@ -209,19 +209,19 @@ class TestMathEnhancedFunctions:
 
     def test_avg_with_literal(self, postgres_dialect: PostgresDialect):
         """Test avg() with literal value."""
-        result = avg(postgres_dialect, Literal(postgres_dialect, 100))
+        result = avg(postgres_dialect, Parameter(postgres_dialect, 100))
         sql, _ = result.to_sql()
         assert "AVG(" in sql
 
     def test_round__with_string_integer(self, postgres_dialect: PostgresDialect):
         """Test round_() with string integer value."""
-        result = round_(postgres_dialect, Literal(postgres_dialect, "123"), Literal(postgres_dialect, 2))
+        result = round_(postgres_dialect, Parameter(postgres_dialect, "123"), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "ROUND(" in sql
 
     def test_round__with_string_float(self, postgres_dialect: PostgresDialect):
         """Test round_() with string float value."""
-        result = round_(postgres_dialect, Literal(postgres_dialect, "3.14159"), Literal(postgres_dialect, 2))
+        result = round_(postgres_dialect, Parameter(postgres_dialect, "3.14159"), Parameter(postgres_dialect, 2))
         sql, _ = result.to_sql()
         assert "ROUND(" in sql
 
@@ -236,26 +236,26 @@ class TestMathEnhancedFunctions:
         """A string is a value. It used to be parsed as a number when it looked
         like one and read as a column name when it did not, so the same call
         meant two different things depending on the argument's spelling."""
-        result = round_(postgres_dialect, Literal(postgres_dialect, "3.5"), 2)
+        result = round_(postgres_dialect, Parameter(postgres_dialect, "3.5"), 2)
         sql, params = result.to_sql()
         assert "ROUND(" in sql
         assert params == ("3.5", 2)
 
     def test_pow_with_string_integer(self, postgres_dialect: PostgresDialect):
         """Test pow() with string integer exponent (canonical POWER spelling)."""
-        result = pow(postgres_dialect, Column(postgres_dialect, "base"), Literal(postgres_dialect, "2"))
+        result = pow(postgres_dialect, Column(postgres_dialect, "base"), Parameter(postgres_dialect, "2"))
         sql, _ = result.to_sql()
         assert "POWER(" in sql
 
     def test_sqrt_with_string_integer(self, postgres_dialect: PostgresDialect):
         """Test sqrt() with string integer value."""
-        result = sqrt(postgres_dialect, Literal(postgres_dialect, "16"))
+        result = sqrt(postgres_dialect, Parameter(postgres_dialect, "16"))
         sql, _ = result.to_sql()
         assert "SQRT(" in sql
 
     def test_mod_with_string_divisor(self, postgres_dialect: PostgresDialect):
         """Test mod() with string divisor."""
-        result = mod(postgres_dialect, Column(postgres_dialect, "total"), Literal(postgres_dialect, "10"))
+        result = mod(postgres_dialect, Column(postgres_dialect, "total"), Parameter(postgres_dialect, "10"))
         sql, _ = result.to_sql()
         assert "MOD(" in sql
 
@@ -263,8 +263,8 @@ class TestMathEnhancedFunctions:
         """String arguments are values, so they are bound rather than quoted
         as identifiers."""
         result = max_(postgres_dialect,
-                      Literal(postgres_dialect, "a"),
-                      Literal(postgres_dialect, "b"))
+                      Parameter(postgres_dialect, "a"),
+                      Parameter(postgres_dialect, "b"))
         sql, params = result.to_sql()
         assert "GREATEST(" in sql
         assert params == ("a", "b")
@@ -273,14 +273,14 @@ class TestMathEnhancedFunctions:
         """String arguments are values, so they are bound rather than quoted
         as identifiers."""
         result = min_(postgres_dialect,
-                      Literal(postgres_dialect, "a"),
-                      Literal(postgres_dialect, "b"))
+                      Parameter(postgres_dialect, "a"),
+                      Parameter(postgres_dialect, "b"))
         sql, params = result.to_sql()
         assert "LEAST(" in sql
         assert params == ("a", "b")
 
     def test_avg_with_string_literal(self, postgres_dialect: PostgresDialect):
         """Test avg() with string numeric value."""
-        result = avg(postgres_dialect, Literal(postgres_dialect, "100"))
+        result = avg(postgres_dialect, Parameter(postgres_dialect, "100"))
         sql, _ = result.to_sql()
         assert "AVG(" in sql

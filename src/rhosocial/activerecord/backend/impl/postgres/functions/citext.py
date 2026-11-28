@@ -3,7 +3,7 @@
 PostgreSQL citext Extension Functions.
 
 This module provides SQL expression generators for PostgreSQL citext
-extension functions. All functions return Expression objects (Literal,
+extension functions. All functions return Expression objects (Parameter,
 BaseExpression) that integrate with the expression-dialect architecture.
 
 The citext extension provides a case-insensitive character string type.
@@ -20,7 +20,7 @@ Supported functions:
 
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
-- They return Expression objects (Literal, BaseExpression, etc.)
+- They return Expression objects (Parameter, BaseExpression, etc.)
 - They do not concatenate SQL strings directly
 """
 
@@ -43,7 +43,7 @@ def citext_literal(
 ) -> "bases.BaseExpression":
     """Create a citext literal expression with type cast.
 
-    Wraps a string value as a Literal expression with a citext type cast,
+    Wraps a string value as a Parameter expression with a citext type cast,
     producing SQL like 'value'::citext. The resulting expression can be
     used directly in WHERE clauses against citext columns to ensure
     case-insensitive comparison behavior.
@@ -61,7 +61,7 @@ def citext_literal(
         >>> citext_literal(dialect, 'Hello World')
         # Produces: 'Hello World'::citext
     """
-    converted = value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)
+    converted = value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value)
     return core.CastExpression(dialect, converted, PostgresCitextType(dialect))
 
 

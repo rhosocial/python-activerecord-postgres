@@ -79,13 +79,13 @@ def crosstab(
     if categories_sql is not None:
         return core.FunctionCall(
             dialect, "crosstab",
-            source_sql if isinstance(source_sql, bases.BaseExpression) else core.Literal(dialect, source_sql),
+            source_sql if isinstance(source_sql, bases.BaseExpression) else core.Parameter(dialect, source_sql),
             categories_sql if isinstance(categories_sql, bases.BaseExpression)
-            else core.Literal(dialect, categories_sql),
+            else core.Parameter(dialect, categories_sql),
         )
     return core.FunctionCall(
         dialect, "crosstab",
-        source_sql if isinstance(source_sql, bases.BaseExpression) else core.Literal(dialect, source_sql),
+        source_sql if isinstance(source_sql, bases.BaseExpression) else core.Parameter(dialect, source_sql),
     )
 
 
@@ -129,17 +129,17 @@ def connectby(
         >>> connectby(dialect, 'employees', 'emp_id', 'manager_id', '1', max_depth=3, branch_delim='~')
     """
     args = [
-        table_name if isinstance(table_name, bases.BaseExpression) else core.Literal(dialect, table_name),
-        key_column if isinstance(key_column, bases.BaseExpression) else core.Literal(dialect, key_column),
-        parent_column if isinstance(parent_column, bases.BaseExpression) else core.Literal(dialect, parent_column),
-        start_value if isinstance(start_value, bases.BaseExpression) else core.Literal(dialect, start_value),
+        table_name if isinstance(table_name, bases.BaseExpression) else core.Parameter(dialect, table_name),
+        key_column if isinstance(key_column, bases.BaseExpression) else core.Parameter(dialect, key_column),
+        parent_column if isinstance(parent_column, bases.BaseExpression) else core.Parameter(dialect, parent_column),
+        start_value if isinstance(start_value, bases.BaseExpression) else core.Parameter(dialect, start_value),
     ]
     if max_depth is not None:
-        args.append(max_depth if isinstance(max_depth, bases.BaseExpression) else core.Literal(dialect, max_depth))
+        args.append(max_depth if isinstance(max_depth, bases.BaseExpression) else core.Parameter(dialect, max_depth))
     if branch_delim is not None:
         args.append(
             branch_delim if isinstance(branch_delim, bases.BaseExpression)
-            else core.Literal(dialect, branch_delim))
+            else core.Parameter(dialect, branch_delim))
     return core.FunctionCall(dialect, "connectby", *args)
 
 
@@ -173,12 +173,12 @@ def normal_rand(
         >>> normal_rand(dialect, 50, 0, 1, seed=42)
     """
     args = [
-        num_values if isinstance(num_values, bases.BaseExpression) else core.Literal(dialect, num_values),
-        mean if isinstance(mean, bases.BaseExpression) else core.Literal(dialect, mean),
-        stddev if isinstance(stddev, bases.BaseExpression) else core.Literal(dialect, stddev),
+        num_values if isinstance(num_values, bases.BaseExpression) else core.Parameter(dialect, num_values),
+        mean if isinstance(mean, bases.BaseExpression) else core.Parameter(dialect, mean),
+        stddev if isinstance(stddev, bases.BaseExpression) else core.Parameter(dialect, stddev),
     ]
     if seed is not None:
-        args.append(seed if isinstance(seed, bases.BaseExpression) else core.Literal(dialect, seed))
+        args.append(seed if isinstance(seed, bases.BaseExpression) else core.Parameter(dialect, seed))
     return core.FunctionCall(dialect, "normal_rand", *args)
 
 

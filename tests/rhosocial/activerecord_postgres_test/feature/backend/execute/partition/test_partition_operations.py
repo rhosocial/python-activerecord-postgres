@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.expression import (
     DeleteStatement,
     FunctionCall,
     InsertStatement,
-    Literal,
+    Parameter,
     LogicalPredicate,
     OrderByClause,
     QualifiedIdentifier,
@@ -141,10 +141,10 @@ def _delete_partition_events_for_range_expression(dialect, start, end):
             dialect,
             "AND",
             ComparisonPredicate(
-                dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)
+                dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, start)
             ),
             ComparisonPredicate(
-                dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)
+                dialect, "<", Column(dialect, "created_at"), Parameter(dialect, end)
             ),
         ),
     )
@@ -157,7 +157,7 @@ def _insert_partition_events_expression(dialect, rows):
         columns=["id", "created_at", "payload"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, value) for value in row] for row in rows],
+            [[Parameter(dialect, value) for value in row] for row in rows],
         ),
     )
 
@@ -323,7 +323,7 @@ def _insert_production_events_expression(dialect, rows):
         columns=["id", "created_at", "tenant_id", "payload"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, value) for value in row] for row in rows],
+            [[Parameter(dialect, value) for value in row] for row in rows],
         ),
     )
 
@@ -332,15 +332,15 @@ def _select_production_payloads_expression(dialect, start, end, *, tenant_id: Op
     predicate = LogicalPredicate(
         dialect,
         "AND",
-        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
-        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
+        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, start)),
+        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Parameter(dialect, end)),
     )
     if tenant_id is not None:
         predicate = LogicalPredicate(
             dialect,
             "AND",
             ComparisonPredicate(
-                dialect, "=", Column(dialect, "tenant_id"), Literal(dialect, tenant_id)
+                dialect, "=", Column(dialect, "tenant_id"), Parameter(dialect, tenant_id)
             ),
             predicate,
         )
@@ -362,16 +362,16 @@ def _production_range_query_expression(dialect, start, end, *, tenant_id: int):
             dialect,
             "AND",
             ComparisonPredicate(
-                dialect, "=", Column(dialect, "tenant_id"), Literal(dialect, tenant_id)
+                dialect, "=", Column(dialect, "tenant_id"), Parameter(dialect, tenant_id)
             ),
             LogicalPredicate(
                 dialect,
                 "AND",
                 ComparisonPredicate(
-                    dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)
+                    dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, start)
                 ),
                 ComparisonPredicate(
-                    dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)
+                    dialect, "<", Column(dialect, "created_at"), Parameter(dialect, end)
                 ),
             ),
         ),

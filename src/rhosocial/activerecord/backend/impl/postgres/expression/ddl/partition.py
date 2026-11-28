@@ -20,7 +20,7 @@ from math import isfinite
 from typing import Any, Dict, Optional, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
+from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter
 from rhosocial.activerecord.backend.expression.operators import RawSQL
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
@@ -55,7 +55,7 @@ class PostgresPartitionValue(BaseExpression):
     - ``None`` renders as ``NULL``.
     - RANGE ``MINVALUE`` and ``MAXVALUE`` render as keywords.
     - LIST renders those strings as quoted values.
-    - Same-dialect ``FunctionCall``, ``Literal``, and ``RawSQL`` values
+    - Same-dialect ``FunctionCall``, ``Parameter``, and ``RawSQL`` values
       delegate through their own formatters and retain their parameters.
     - Other scalar values use a whitelist; arbitrary objects are rejected.
 
@@ -117,12 +117,12 @@ class PostgresPartitionValue(BaseExpression):
                     if current.alias is not None:
                         raise ValueError("partition value expressions must not have aliases")
                     pending.extend(current.args)
-                elif isinstance(current, (Literal, RawSQL)):
+                elif isinstance(current, (Parameter, RawSQL)):
                     if getattr(current, "alias", None) is not None:
                         raise ValueError("partition value expressions must not have aliases")
                 else:
                     raise TypeError(
-                        "partition value expressions must be FunctionCall, Literal, "
+                        "partition value expressions must be FunctionCall, Parameter, "
                         "or RawSQL"
                     )
         else:

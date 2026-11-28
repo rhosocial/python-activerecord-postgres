@@ -84,8 +84,8 @@ def heap_force_freeze(
     """
     return core.FunctionCall(
         dialect, "heap_force_freeze",
-        reloid if isinstance(reloid, bases.BaseExpression) else core.Literal(dialect, reloid),
-        tids if isinstance(tids, bases.BaseExpression) else core.Literal(dialect, tids),
+        reloid if isinstance(reloid, bases.BaseExpression) else core.Parameter(dialect, reloid),
+        tids if isinstance(tids, bases.BaseExpression) else core.Parameter(dialect, tids),
     )
 
 
@@ -125,8 +125,8 @@ def heap_force_kill(
     """
     return core.FunctionCall(
         dialect, "heap_force_kill",
-        reloid if isinstance(reloid, bases.BaseExpression) else core.Literal(dialect, reloid),
-        tids if isinstance(tids, bases.BaseExpression) else core.Literal(dialect, tids),
+        reloid if isinstance(reloid, bases.BaseExpression) else core.Parameter(dialect, reloid),
+        tids if isinstance(tids, bases.BaseExpression) else core.Parameter(dialect, tids),
     )
 
 

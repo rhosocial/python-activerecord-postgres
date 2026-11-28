@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 )
 
 if TYPE_CHECKING:
-    from ...expression.statements.ddl_sequence import (
+    from ..expression.statements.ddl_sequence import (
         AlterSequenceStatement,
         CreateSequenceStatement,
     )

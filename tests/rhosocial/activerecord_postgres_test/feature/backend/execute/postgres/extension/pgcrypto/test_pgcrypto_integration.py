@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -79,11 +79,11 @@ def _setup_users_table(backend, dialect, table):
     # INSERT with nested function calls: crypt('mysecretpassword', gen_salt('bf'))
     crypt_func = FunctionCall(
         dialect, "crypt",
-        Literal(dialect, "mysecretpassword"),
-        FunctionCall(dialect, "gen_salt", Literal(dialect, "bf")),
+        Parameter(dialect, "mysecretpassword"),
+        FunctionCall(dialect, "gen_salt", Parameter(dialect, "bf")),
     )
     rows = [
-        [Literal(dialect, "alice"), crypt_func],
+        [Parameter(dialect, "alice"), crypt_func],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -119,8 +119,8 @@ def _setup_encrypt_table(backend, dialect, table):
     # INSERT with function call: pgp_sym_encrypt('sensitive information', 'encryption_key')
     encrypt_func = FunctionCall(
         dialect, "pgp_sym_encrypt",
-        Literal(dialect, "sensitive information"),
-        Literal(dialect, "encryption_key"),
+        Parameter(dialect, "sensitive information"),
+        Parameter(dialect, "encryption_key"),
     )
     rows = [
         [encrypt_func],
@@ -171,11 +171,11 @@ async def _async_setup_users_table(backend, dialect, table):
     # INSERT with nested function calls: crypt('mysecretpassword', gen_salt('bf'))
     crypt_func = FunctionCall(
         dialect, "crypt",
-        Literal(dialect, "mysecretpassword"),
-        FunctionCall(dialect, "gen_salt", Literal(dialect, "bf")),
+        Parameter(dialect, "mysecretpassword"),
+        FunctionCall(dialect, "gen_salt", Parameter(dialect, "bf")),
     )
     rows = [
-        [Literal(dialect, "alice"), crypt_func],
+        [Parameter(dialect, "alice"), crypt_func],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -211,8 +211,8 @@ async def _async_setup_encrypt_table(backend, dialect, table):
     # INSERT with function call: pgp_sym_encrypt('sensitive information', 'encryption_key')
     encrypt_func = FunctionCall(
         dialect, "pgp_sym_encrypt",
-        Literal(dialect, "sensitive information"),
-        Literal(dialect, "encryption_key"),
+        Parameter(dialect, "sensitive information"),
+        Parameter(dialect, "encryption_key"),
     )
     rows = [
         [encrypt_func],
@@ -272,7 +272,7 @@ class TestPgcryptoIntegration:
         # Verify password: password_hash = crypt('mysecretpassword', password_hash)
         crypt_func = FunctionCall(
             dialect, "crypt",
-            Literal(dialect, "mysecretpassword"),
+            Parameter(dialect, "mysecretpassword"),
             Column(dialect, "password_hash"),
         )
         # TODO: Subquery wrapper needed because ComparisonPredicate lacks .as_().
@@ -285,7 +285,7 @@ class TestPgcryptoIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "username"),
-            Literal(dialect, "alice"),
+            Parameter(dialect, "alice"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -300,7 +300,7 @@ class TestPgcryptoIntegration:
         # Wrong password should not match
         crypt_func_wrong = FunctionCall(
             dialect, "crypt",
-            Literal(dialect, "wrongpassword"),
+            Parameter(dialect, "wrongpassword"),
             Column(dialect, "password_hash"),
         )
         # TODO: Subquery wrapper needed because ComparisonPredicate lacks .as_().
@@ -327,7 +327,7 @@ class TestPgcryptoIntegration:
         # gen_salt should produce different salts each time
         salt_func1 = FunctionCall(
             dialect, "gen_salt",
-            Literal(dialect, "bf"),
+            Parameter(dialect, "bf"),
         ).as_("salt")
         query1 = QueryStatement(dialect=dialect, select=[salt_func1])
         sql, params = query1.to_sql()
@@ -335,7 +335,7 @@ class TestPgcryptoIntegration:
 
         salt_func2 = FunctionCall(
             dialect, "gen_salt",
-            Literal(dialect, "bf"),
+            Parameter(dialect, "bf"),
         ).as_("salt")
         query2 = QueryStatement(dialect=dialect, select=[salt_func2])
         sql, params = query2.to_sql()
@@ -355,8 +355,8 @@ class TestPgcryptoIntegration:
         # Test SHA-256 digest
         digest_func = FunctionCall(
             dialect, "digest",
-            Literal(dialect, "hello"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "sha256"),
         ).as_("hash")
         query = QueryStatement(dialect=dialect, select=[digest_func])
         sql, params = query.to_sql()
@@ -372,8 +372,8 @@ class TestPgcryptoIntegration:
         # Same input should produce same hash
         digest_func2 = FunctionCall(
             dialect, "digest",
-            Literal(dialect, "hello"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "sha256"),
         ).as_("hash")
         query2 = QueryStatement(dialect=dialect, select=[digest_func2])
         sql, params = query2.to_sql()
@@ -393,10 +393,10 @@ class TestPgcryptoIntegration:
             dialect, "encode",
             FunctionCall(
                 dialect, "digest",
-                Literal(dialect, "hello"),
-                Literal(dialect, "md5"),
+                Parameter(dialect, "hello"),
+                Parameter(dialect, "md5"),
             ),
-            Literal(dialect, "hex"),
+            Parameter(dialect, "hex"),
         ).as_("hash_hex")
         query = QueryStatement(dialect=dialect, select=[encode_func])
         sql, params = query.to_sql()
@@ -414,9 +414,9 @@ class TestPgcryptoIntegration:
         # HMAC with SHA-256
         hmac_func1 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "secret_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "secret_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query1 = QueryStatement(dialect=dialect, select=[hmac_func1])
         sql, params = query1.to_sql()
@@ -427,9 +427,9 @@ class TestPgcryptoIntegration:
         # Same inputs should produce same HMAC
         hmac_func2 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "secret_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "secret_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query2 = QueryStatement(dialect=dialect, select=[hmac_func2])
         sql, params = query2.to_sql()
@@ -445,9 +445,9 @@ class TestPgcryptoIntegration:
         # Different key should produce different HMAC
         hmac_func3 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "other_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "other_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query3 = QueryStatement(dialect=dialect, select=[hmac_func3])
         sql, params = query3.to_sql()
@@ -466,12 +466,12 @@ class TestPgcryptoIntegration:
         decrypt_func = FunctionCall(
             dialect, "pgp_sym_decrypt",
             Column(dialect, "secret_data"),
-            Literal(dialect, "encryption_key"),
+            Parameter(dialect, "encryption_key"),
         ).as_("decrypted")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -487,7 +487,7 @@ class TestPgcryptoIntegration:
         decrypt_func_wrong = FunctionCall(
             dialect, "pgp_sym_decrypt",
             Column(dialect, "secret_data"),
-            Literal(dialect, "wrong_key"),
+            Parameter(dialect, "wrong_key"),
         ).as_("decrypted")
         query_wrong = QueryStatement(
             dialect=dialect,
@@ -535,7 +535,7 @@ class TestAsyncPgcryptoIntegration:
         # Verify password: password_hash = crypt('mysecretpassword', password_hash)
         crypt_func = FunctionCall(
             dialect, "crypt",
-            Literal(dialect, "mysecretpassword"),
+            Parameter(dialect, "mysecretpassword"),
             Column(dialect, "password_hash"),
         )
         # TODO: Subquery wrapper needed because ComparisonPredicate lacks .as_().
@@ -548,7 +548,7 @@ class TestAsyncPgcryptoIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "username"),
-            Literal(dialect, "alice"),
+            Parameter(dialect, "alice"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -563,7 +563,7 @@ class TestAsyncPgcryptoIntegration:
         # Wrong password should not match
         crypt_func_wrong = FunctionCall(
             dialect, "crypt",
-            Literal(dialect, "wrongpassword"),
+            Parameter(dialect, "wrongpassword"),
             Column(dialect, "password_hash"),
         )
         # TODO: Subquery wrapper needed because ComparisonPredicate lacks .as_().
@@ -591,7 +591,7 @@ class TestAsyncPgcryptoIntegration:
         # gen_salt should produce different salts each time
         salt_func1 = FunctionCall(
             dialect, "gen_salt",
-            Literal(dialect, "bf"),
+            Parameter(dialect, "bf"),
         ).as_("salt")
         query1 = QueryStatement(dialect=dialect, select=[salt_func1])
         sql, params = query1.to_sql()
@@ -599,7 +599,7 @@ class TestAsyncPgcryptoIntegration:
 
         salt_func2 = FunctionCall(
             dialect, "gen_salt",
-            Literal(dialect, "bf"),
+            Parameter(dialect, "bf"),
         ).as_("salt")
         query2 = QueryStatement(dialect=dialect, select=[salt_func2])
         sql, params = query2.to_sql()
@@ -620,8 +620,8 @@ class TestAsyncPgcryptoIntegration:
         # Test SHA-256 digest
         digest_func = FunctionCall(
             dialect, "digest",
-            Literal(dialect, "hello"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "sha256"),
         ).as_("hash")
         query = QueryStatement(dialect=dialect, select=[digest_func])
         sql, params = query.to_sql()
@@ -637,8 +637,8 @@ class TestAsyncPgcryptoIntegration:
         # Same input should produce same hash
         digest_func2 = FunctionCall(
             dialect, "digest",
-            Literal(dialect, "hello"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "sha256"),
         ).as_("hash")
         query2 = QueryStatement(dialect=dialect, select=[digest_func2])
         sql, params = query2.to_sql()
@@ -659,10 +659,10 @@ class TestAsyncPgcryptoIntegration:
             dialect, "encode",
             FunctionCall(
                 dialect, "digest",
-                Literal(dialect, "hello"),
-                Literal(dialect, "md5"),
+                Parameter(dialect, "hello"),
+                Parameter(dialect, "md5"),
             ),
-            Literal(dialect, "hex"),
+            Parameter(dialect, "hex"),
         ).as_("hash_hex")
         query = QueryStatement(dialect=dialect, select=[encode_func])
         sql, params = query.to_sql()
@@ -681,9 +681,9 @@ class TestAsyncPgcryptoIntegration:
         # HMAC with SHA-256
         hmac_func1 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "secret_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "secret_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query1 = QueryStatement(dialect=dialect, select=[hmac_func1])
         sql, params = query1.to_sql()
@@ -694,9 +694,9 @@ class TestAsyncPgcryptoIntegration:
         # Same inputs should produce same HMAC
         hmac_func2 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "secret_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "secret_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query2 = QueryStatement(dialect=dialect, select=[hmac_func2])
         sql, params = query2.to_sql()
@@ -712,9 +712,9 @@ class TestAsyncPgcryptoIntegration:
         # Different key should produce different HMAC
         hmac_func3 = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message"),
-            Literal(dialect, "other_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message"),
+            Parameter(dialect, "other_key"),
+            Parameter(dialect, "sha256"),
         ).as_("mac")
         query3 = QueryStatement(dialect=dialect, select=[hmac_func3])
         sql, params = query3.to_sql()
@@ -734,12 +734,12 @@ class TestAsyncPgcryptoIntegration:
         decrypt_func = FunctionCall(
             dialect, "pgp_sym_decrypt",
             Column(dialect, "secret_data"),
-            Literal(dialect, "encryption_key"),
+            Parameter(dialect, "encryption_key"),
         ).as_("decrypted")
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "id"),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -755,7 +755,7 @@ class TestAsyncPgcryptoIntegration:
         decrypt_func_wrong = FunctionCall(
             dialect, "pgp_sym_decrypt",
             Column(dialect, "secret_data"),
-            Literal(dialect, "wrong_key"),
+            Parameter(dialect, "wrong_key"),
         ).as_("decrypted")
         query_wrong = QueryStatement(
             dialect=dialect,

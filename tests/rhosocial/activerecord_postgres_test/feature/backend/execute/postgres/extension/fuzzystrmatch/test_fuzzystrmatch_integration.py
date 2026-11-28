@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -72,10 +72,10 @@ def _setup_lev_table(backend, dialect, table):
     backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "kitten")],
-        [Literal(dialect, "sitting")],
-        [Literal(dialect, "sunday")],
-        [Literal(dialect, "saturday")],
+        [Parameter(dialect, "kitten")],
+        [Parameter(dialect, "sitting")],
+        [Parameter(dialect, "sunday")],
+        [Parameter(dialect, "saturday")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -109,9 +109,9 @@ def _setup_diff_table(backend, dialect, table):
     backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "Smith")],
-        [Literal(dialect, "Smythe")],
-        [Literal(dialect, "Johnson")],
+        [Parameter(dialect, "Smith")],
+        [Parameter(dialect, "Smythe")],
+        [Parameter(dialect, "Johnson")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -156,10 +156,10 @@ async def _async_setup_lev_table(backend, dialect, table):
     await backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "kitten")],
-        [Literal(dialect, "sitting")],
-        [Literal(dialect, "sunday")],
-        [Literal(dialect, "saturday")],
+        [Parameter(dialect, "kitten")],
+        [Parameter(dialect, "sitting")],
+        [Parameter(dialect, "sunday")],
+        [Parameter(dialect, "saturday")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -193,9 +193,9 @@ async def _async_setup_diff_table(backend, dialect, table):
     await backend.execute(sql, params)
 
     rows = [
-        [Literal(dialect, "Smith")],
-        [Literal(dialect, "Smythe")],
-        [Literal(dialect, "Johnson")],
+        [Parameter(dialect, "Smith")],
+        [Parameter(dialect, "Smythe")],
+        [Parameter(dialect, "Johnson")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -249,8 +249,8 @@ class TestFuzzystrmatchIntegration:
         # Levenshtein distance between 'kitten' and 'sitting' is 3
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "kitten"),
-            Literal(dialect, "sitting"),
+            Parameter(dialect, "kitten"),
+            Parameter(dialect, "sitting"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -260,8 +260,8 @@ class TestFuzzystrmatchIntegration:
         # Levenshtein distance between 'sunday' and 'saturday' is 3
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "sunday"),
-            Literal(dialect, "saturday"),
+            Parameter(dialect, "sunday"),
+            Parameter(dialect, "saturday"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -271,8 +271,8 @@ class TestFuzzystrmatchIntegration:
         # Same word should have distance 0
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "hello"),
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -282,13 +282,13 @@ class TestFuzzystrmatchIntegration:
         # Find words within Levenshtein distance of 3 from 'kitten'
         lev_func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "kitten"),
+            Parameter(dialect, "kitten"),
             Column(dialect, "word"),
         )
         where_pred = ComparisonPredicate(
             dialect, "<=",
             lev_func,
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -308,31 +308,31 @@ class TestFuzzystrmatchIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Homophones should have the same soundex code
-        func1 = FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("code")
+        func1 = FunctionCall(dialect, "soundex", Parameter(dialect, "Robert")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = backend.execute(sql, params, options=opts)
 
-        func2 = FunctionCall(dialect, "soundex", Literal(dialect, "Rupert")).as_("code")
+        func2 = FunctionCall(dialect, "soundex", Parameter(dialect, "Rupert")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = backend.execute(sql, params, options=opts)
         assert result1.data[0]["code"] == result2.data[0]["code"]
 
         # Note: Ashcraft and Ashcroft have the same soundex
-        func3 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcraft")).as_("code")
+        func3 = FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcraft")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func3])
         sql, params = query.to_sql()
         result3 = backend.execute(sql, params, options=opts)
 
-        func4 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcroft")).as_("code")
+        func4 = FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcroft")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func4])
         sql, params = query.to_sql()
         result4 = backend.execute(sql, params, options=opts)
         assert result3.data[0]["code"] == result4.data[0]["code"]
 
         # soundex code is 4 characters: letter + 3 digits
-        func = FunctionCall(dialect, "soundex", Literal(dialect, "Hello")).as_("code")
+        func = FunctionCall(dialect, "soundex", Parameter(dialect, "Hello")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -349,8 +349,8 @@ class TestFuzzystrmatchIntegration:
         # Smith and Smythe should have high similarity
         func = FunctionCall(
             dialect, "difference",
-            Literal(dialect, "Smith"),
-            Literal(dialect, "Smythe"),
+            Parameter(dialect, "Smith"),
+            Parameter(dialect, "Smythe"),
         ).as_("diff")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -360,8 +360,8 @@ class TestFuzzystrmatchIntegration:
         # Smith and Johnson should have low similarity
         func = FunctionCall(
             dialect, "difference",
-            Literal(dialect, "Smith"),
-            Literal(dialect, "Johnson"),
+            Parameter(dialect, "Smith"),
+            Parameter(dialect, "Johnson"),
         ).as_("diff")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -372,12 +372,12 @@ class TestFuzzystrmatchIntegration:
         diff_func = FunctionCall(
             dialect, "difference",
             Column(dialect, "name"),
-            Literal(dialect, "Smith"),
+            Parameter(dialect, "Smith"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             diff_func,
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -398,8 +398,8 @@ class TestFuzzystrmatchIntegration:
 
         func = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "hello"),
-            Literal(dialect, 6),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -410,8 +410,8 @@ class TestFuzzystrmatchIntegration:
         # Words with similar pronunciation should have similar metaphone codes
         func1 = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "phone"),
-            Literal(dialect, 6),
+            Parameter(dialect, "phone"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
@@ -419,8 +419,8 @@ class TestFuzzystrmatchIntegration:
 
         func2 = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "fone"),
-            Literal(dialect, 6),
+            Parameter(dialect, "fone"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
@@ -434,7 +434,7 @@ class TestFuzzystrmatchIntegration:
 
         func = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -444,7 +444,7 @@ class TestFuzzystrmatchIntegration:
         # dmetaphone provides better encoding for various languages
         func1 = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "Phillip"),
+            Parameter(dialect, "Phillip"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
@@ -452,7 +452,7 @@ class TestFuzzystrmatchIntegration:
 
         func2 = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "Filip"),
+            Parameter(dialect, "Filip"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
@@ -494,8 +494,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Levenshtein distance between 'kitten' and 'sitting' is 3
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "kitten"),
-            Literal(dialect, "sitting"),
+            Parameter(dialect, "kitten"),
+            Parameter(dialect, "sitting"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -505,8 +505,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Levenshtein distance between 'sunday' and 'saturday' is 3
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "sunday"),
-            Literal(dialect, "saturday"),
+            Parameter(dialect, "sunday"),
+            Parameter(dialect, "saturday"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -516,8 +516,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Same word should have distance 0
         func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "hello"),
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -527,13 +527,13 @@ class TestAsyncFuzzystrmatchIntegration:
         # Find words within Levenshtein distance of 3 from 'kitten'
         lev_func = FunctionCall(
             dialect, "levenshtein",
-            Literal(dialect, "kitten"),
+            Parameter(dialect, "kitten"),
             Column(dialect, "word"),
         )
         where_pred = ComparisonPredicate(
             dialect, "<=",
             lev_func,
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -554,31 +554,31 @@ class TestAsyncFuzzystrmatchIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Homophones should have the same soundex code
-        func1 = FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("code")
+        func1 = FunctionCall(dialect, "soundex", Parameter(dialect, "Robert")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
         result1 = await backend.execute(sql, params, options=opts)
 
-        func2 = FunctionCall(dialect, "soundex", Literal(dialect, "Rupert")).as_("code")
+        func2 = FunctionCall(dialect, "soundex", Parameter(dialect, "Rupert")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
         result2 = await backend.execute(sql, params, options=opts)
         assert result1.data[0]["code"] == result2.data[0]["code"]
 
         # Note: Ashcraft and Ashcroft have the same soundex
-        func3 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcraft")).as_("code")
+        func3 = FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcraft")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func3])
         sql, params = query.to_sql()
         result3 = await backend.execute(sql, params, options=opts)
 
-        func4 = FunctionCall(dialect, "soundex", Literal(dialect, "Ashcroft")).as_("code")
+        func4 = FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcroft")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func4])
         sql, params = query.to_sql()
         result4 = await backend.execute(sql, params, options=opts)
         assert result3.data[0]["code"] == result4.data[0]["code"]
 
         # soundex code is 4 characters: letter + 3 digits
-        func = FunctionCall(dialect, "soundex", Literal(dialect, "Hello")).as_("code")
+        func = FunctionCall(dialect, "soundex", Parameter(dialect, "Hello")).as_("code")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
         result = await backend.execute(sql, params, options=opts)
@@ -596,8 +596,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Smith and Smythe should have high similarity
         func = FunctionCall(
             dialect, "difference",
-            Literal(dialect, "Smith"),
-            Literal(dialect, "Smythe"),
+            Parameter(dialect, "Smith"),
+            Parameter(dialect, "Smythe"),
         ).as_("diff")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -607,8 +607,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Smith and Johnson should have low similarity
         func = FunctionCall(
             dialect, "difference",
-            Literal(dialect, "Smith"),
-            Literal(dialect, "Johnson"),
+            Parameter(dialect, "Smith"),
+            Parameter(dialect, "Johnson"),
         ).as_("diff")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -619,12 +619,12 @@ class TestAsyncFuzzystrmatchIntegration:
         diff_func = FunctionCall(
             dialect, "difference",
             Column(dialect, "name"),
-            Literal(dialect, "Smith"),
+            Parameter(dialect, "Smith"),
         )
         where_pred = ComparisonPredicate(
             dialect, ">=",
             diff_func,
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -646,8 +646,8 @@ class TestAsyncFuzzystrmatchIntegration:
 
         func = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "hello"),
-            Literal(dialect, 6),
+            Parameter(dialect, "hello"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -658,8 +658,8 @@ class TestAsyncFuzzystrmatchIntegration:
         # Words with similar pronunciation should have similar metaphone codes
         func1 = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "phone"),
-            Literal(dialect, 6),
+            Parameter(dialect, "phone"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
@@ -667,8 +667,8 @@ class TestAsyncFuzzystrmatchIntegration:
 
         func2 = FunctionCall(
             dialect, "metaphone",
-            Literal(dialect, "fone"),
-            Literal(dialect, 6),
+            Parameter(dialect, "fone"),
+            Parameter(dialect, 6),
         ).as_("meta")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()
@@ -683,7 +683,7 @@ class TestAsyncFuzzystrmatchIntegration:
 
         func = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "hello"),
+            Parameter(dialect, "hello"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func])
         sql, params = query.to_sql()
@@ -693,7 +693,7 @@ class TestAsyncFuzzystrmatchIntegration:
         # dmetaphone provides better encoding for various languages
         func1 = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "Phillip"),
+            Parameter(dialect, "Phillip"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func1])
         sql, params = query.to_sql()
@@ -701,7 +701,7 @@ class TestAsyncFuzzystrmatchIntegration:
 
         func2 = FunctionCall(
             dialect, "dmetaphone",
-            Literal(dialect, "Filip"),
+            Parameter(dialect, "Filip"),
         ).as_("dmeta")
         query = QueryStatement(dialect=dialect, select=[func2])
         sql, params = query.to_sql()

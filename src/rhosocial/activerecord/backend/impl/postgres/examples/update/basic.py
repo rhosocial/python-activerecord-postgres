@@ -36,7 +36,7 @@ if __name__ == "__main__":
         DropTableStatement,
         UpdateStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.core import Parameter, Column
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.expression.statements import (
         ColumnDefinition,
@@ -69,8 +69,8 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['name', 'age'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'Alice'), Literal(dialect, 25)],
-            [Literal(dialect, 'Bob'), Literal(dialect, 30)],
+            [Parameter(dialect, 'Alice'), Parameter(dialect, 25)],
+            [Parameter(dialect, 'Bob'), Parameter(dialect, 30)],
         ]),
     )
     sql, params = insert.to_sql()
@@ -83,8 +83,8 @@ if __name__ == "__main__":
     update_expr = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'users'),
-        assignments={'age': Literal(dialect, 26)},
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+        assignments={'age': Parameter(dialect, 26)},
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Parameter(dialect, 'Alice')),
     )
     sql, params = update_expr.to_sql()
     print(f"UPDATE SQL: {sql}")
@@ -100,7 +100,7 @@ if __name__ == "__main__":
     update_all = UpdateStatement(
         dialect=dialect,
         table=Table(dialect, 'users'),
-        assignments={'age': Literal(dialect, 99)},
+        assignments={'age': Parameter(dialect, 99)},
     )
     sql, params = update_all.to_sql()
     print(f"UPDATE all SQL: {sql}")

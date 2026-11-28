@@ -84,11 +84,11 @@ def create_parent(
     """
     return core.FunctionCall(
         dialect, "create_parent",
-        parent_table if isinstance(parent_table, bases.BaseExpression) else core.Literal(dialect, parent_table),
-        control if isinstance(control, bases.BaseExpression) else core.Literal(dialect, control),
-        interval if isinstance(interval, bases.BaseExpression) else core.Literal(dialect, interval),
-        partition_type if isinstance(partition_type, bases.BaseExpression) else core.Literal(dialect, partition_type),
-        premake if isinstance(premake, bases.BaseExpression) else core.Literal(dialect, premake),
+        parent_table if isinstance(parent_table, bases.BaseExpression) else core.Parameter(dialect, parent_table),
+        control if isinstance(control, bases.BaseExpression) else core.Parameter(dialect, control),
+        interval if isinstance(interval, bases.BaseExpression) else core.Parameter(dialect, interval),
+        partition_type if isinstance(partition_type, bases.BaseExpression) else core.Parameter(dialect, partition_type),
+        premake if isinstance(premake, bases.BaseExpression) else core.Parameter(dialect, premake),
     )
 
 
@@ -125,7 +125,7 @@ def run_maintenance(
     if parent_table is not None:
         args.append(
             parent_table if isinstance(parent_table, bases.BaseExpression)
-            else core.Literal(dialect, parent_table))
+            else core.Parameter(dialect, parent_table))
     return core.FunctionCall(dialect, "run_maintenance", *args)
 
 

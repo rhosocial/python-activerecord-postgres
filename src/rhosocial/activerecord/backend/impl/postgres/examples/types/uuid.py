@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.core import Parameter, Column
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -101,8 +101,8 @@ if __name__ == "__main__":
         into=Table(dialect, 'events'),
         columns=['name'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'user_created')],
-            [Literal(dialect, 'order_placed')],
+            [Parameter(dialect, 'user_created')],
+            [Parameter(dialect, 'order_placed')],
         ]),
     )
     sql, params = insert_default.to_sql()
@@ -115,7 +115,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'events'),
         columns=['id', 'name'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, '550e8400-e29b-41d4-a716-446655440000'), Literal(dialect, 'explicit_uuid')],
+            [Parameter(dialect, '550e8400-e29b-41d4-a716-446655440000'), Parameter(dialect, 'explicit_uuid')],
         ]),
     )
     sql, params = insert_explicit.to_sql()

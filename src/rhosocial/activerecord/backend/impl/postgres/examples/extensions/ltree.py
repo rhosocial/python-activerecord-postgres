@@ -58,7 +58,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.operators import BinaryExpression
     from rhosocial.activerecord.backend.expression.statements.dml import (
         InsertStatement,
@@ -136,15 +136,15 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "Electronics"), Literal(dialect, "electronics")],
-                    [Literal(dialect, "Computers"), Literal(dialect, "electronics.computers")],
-                    [Literal(dialect, "Laptops"), Literal(dialect, "electronics.computers.laptops")],
-                    [Literal(dialect, "Desktops"), Literal(dialect, "electronics.computers.desktops")],
-                    [Literal(dialect, "Phones"), Literal(dialect, "electronics.phones")],
-                    [Literal(dialect, "Smartphones"), Literal(dialect, "electronics.phones.smartphones")],
-                    [Literal(dialect, "Clothing"), Literal(dialect, "clothing")],
-                    [Literal(dialect, "Men"), Literal(dialect, "clothing.men")],
-                    [Literal(dialect, "Shirts"), Literal(dialect, "clothing.men.shirts")],
+                    [Parameter(dialect, "Electronics"), Parameter(dialect, "electronics")],
+                    [Parameter(dialect, "Computers"), Parameter(dialect, "electronics.computers")],
+                    [Parameter(dialect, "Laptops"), Parameter(dialect, "electronics.computers.laptops")],
+                    [Parameter(dialect, "Desktops"), Parameter(dialect, "electronics.computers.desktops")],
+                    [Parameter(dialect, "Phones"), Parameter(dialect, "electronics.phones")],
+                    [Parameter(dialect, "Smartphones"), Parameter(dialect, "electronics.phones.smartphones")],
+                    [Parameter(dialect, "Clothing"), Parameter(dialect, "clothing")],
+                    [Parameter(dialect, "Men"), Parameter(dialect, "clothing.men")],
+                    [Parameter(dialect, "Shirts"), Parameter(dialect, "clothing.men.shirts")],
                 ],
             ),
         )
@@ -164,7 +164,7 @@ if __name__ == "__main__":
             from_=Table(dialect, "categories"),
             where=BinaryExpression(
                 dialect, "@>",
-                Literal(dialect, "electronics.computers"),
+                Parameter(dialect, "electronics.computers"),
                 Column(dialect, "path"),
             ),
             order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
@@ -185,7 +185,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "<@",
                 Column(dialect, "path"),
-                Literal(dialect, "electronics.computers.laptops"),
+                Parameter(dialect, "electronics.computers.laptops"),
             ),
             order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
         )
@@ -206,7 +206,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "~",
                 Column(dialect, "path"),
-                Literal(dialect, "electronics.*{1}"),
+                Parameter(dialect, "electronics.*{1}"),
             ),
             order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
         )
@@ -225,7 +225,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "~",
                 Column(dialect, "path"),
-                Literal(dialect, "electronics.*"),
+                Parameter(dialect, "electronics.*"),
             ),
             order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
         )

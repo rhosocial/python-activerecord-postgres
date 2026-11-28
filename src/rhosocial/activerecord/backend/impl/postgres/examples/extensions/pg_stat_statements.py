@@ -52,7 +52,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -151,7 +151,7 @@ if __name__ == "__main__":
         backend.execute(sql, params)
 
         # Insert data
-        rows = [[Literal(dialect, f"item{i}"), Literal(dialect, i * 10)] for i in range(5)]
+        rows = [[Parameter(dialect, f"item{i}"), Parameter(dialect, i * 10)] for i in range(5)]
         insert_expr = InsertStatement(
             dialect=dialect,
             into=Table(dialect, 'stats_demo'),
@@ -169,7 +169,7 @@ if __name__ == "__main__":
             where=ComparisonPredicate(
                 Column(dialect, "value"),
                 ">",
-                Literal(dialect, 20),
+                Parameter(dialect, 20),
             ),
         )
         sql, params = query.to_sql()

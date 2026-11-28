@@ -40,7 +40,7 @@ if __name__ == "__main__":
     from rhosocial.activerecord.backend.expression import (
         QueryStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.pg_cron import (
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         schedule_func = cron_schedule(
             dialect,
             "0 * * * *",
-            Literal(dialect, "SELECT 1"),
+            Parameter(dialect, "SELECT 1"),
         )
         query = QueryStatement(
             dialect=dialect,

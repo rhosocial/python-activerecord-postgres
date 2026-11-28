@@ -66,7 +66,7 @@ def gen_salt(
     """
     return core.FunctionCall(
         dialect, "gen_salt",
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
     )
 
 
@@ -96,8 +96,8 @@ def crypt(
     """
     return core.FunctionCall(
         dialect, "crypt",
-        password if isinstance(password, bases.BaseExpression) else core.Literal(dialect, password),
-        salt if isinstance(salt, bases.BaseExpression) else core.Literal(dialect, salt),
+        password if isinstance(password, bases.BaseExpression) else core.Parameter(dialect, password),
+        salt if isinstance(salt, bases.BaseExpression) else core.Parameter(dialect, salt),
     )
 
 
@@ -141,9 +141,9 @@ def encrypt(
     """
     return core.FunctionCall(
         dialect, "encrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
     )
 
 
@@ -173,9 +173,9 @@ def decrypt(
     """
     return core.FunctionCall(
         dialect, "decrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
     )
 
 
@@ -202,7 +202,7 @@ def gen_random_bytes(
     """
     return core.FunctionCall(
         dialect, "gen_random_bytes",
-        length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length),
+        length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length),
     )
 
 
@@ -243,9 +243,9 @@ def hmac(
     """
     return core.FunctionCall(
         dialect, "hmac",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
     )
 
 
@@ -281,8 +281,8 @@ def digest(
     """
     return core.FunctionCall(
         dialect, "digest",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Literal(dialect, algorithm),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
     )
 
 
@@ -315,8 +315,8 @@ def pgp_sym_encrypt(
     """
     return core.FunctionCall(
         dialect, "pgp_sym_encrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
     )
 
 
@@ -343,8 +343,8 @@ def pgp_sym_decrypt(
     """
     return core.FunctionCall(
         dialect, "pgp_sym_decrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Literal(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Literal(dialect, key),
+        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
+        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
     )
 
 

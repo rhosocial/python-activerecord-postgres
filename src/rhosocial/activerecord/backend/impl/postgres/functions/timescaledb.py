@@ -16,9 +16,9 @@ if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _inline(dialect: "SQLDialectBase", value) -> core.Literal:
+def _inline(dialect: "SQLDialectBase", value) -> core.Parameter:
     """An inline literal, used for DDL positions that accept no bind parameters."""
-    return value if isinstance(value, core.Literal) else core.Literal(dialect, value, inline=True)
+    return value if isinstance(value, core.Parameter) else core.Parameter(dialect, value, inline=True)
 
 
 def create_hypertable(
@@ -39,7 +39,7 @@ def create_hypertable(
         number_partitions: Number of space partitions; requires
             ``partitioning_column``.
     """
-    relation_expr = relation if isinstance(relation, bases.BaseExpression) else core.Literal(
+    relation_expr = relation if isinstance(relation, bases.BaseExpression) else core.Parameter(
         dialect, relation
     )
     arguments = [
@@ -55,7 +55,7 @@ def create_hypertable(
                 or number_partitions < 0
             ):
                 raise ValueError("number_partitions must be a non-negative integer")
-            arguments.append(core.Literal(dialect, number_partitions))
+            arguments.append(core.Parameter(dialect, number_partitions))
     elif number_partitions is not None:
         raise ValueError("number_partitions requires partitioning_column")
     return core.FunctionCall(dialect, "create_hypertable", *arguments)

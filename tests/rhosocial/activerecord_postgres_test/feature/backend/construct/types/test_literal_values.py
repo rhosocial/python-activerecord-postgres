@@ -1,8 +1,8 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/types/test_literal_values.py
 """Value literals on PostgreSQL: binding and the three tier-2 spellings.
 
-Core collapsed the twelve typed-value classes into one ``Literal`` node
-carrying a value kind (baseline ``550ae740``), and made the bind-or-inline
+Core collapsed the twelve typed-value classes into one ``Parameter`` node
+(baseline ``550ae740``), and made the bind-or-inline
 question a per-position flag on that node: ``inline=False`` (the default, every
 DQL/DML data position) emits a placeholder and hands the host value to psycopg;
 ``inline=True`` (the DDL syntax positions that accept no bind parameters)
@@ -17,7 +17,7 @@ positions of each:
   psycopg untouched -- bytes, ``uuid.UUID`` and ``timedelta`` are all natively
   bindable, so any conversion there would be work the driver already does;
 * the **inline position** must produce the exact literal text, through
-  ``Literal(..., inline=True)`` -- the caller-owned flag, since core removed
+  ``Parameter(..., inline=True)`` -- the caller-owned flag, since core removed
   the pass that used to lift a tree's literals into the DDL class.
 
 The interval spelling is per-component signed, and that is a measured answer,
@@ -38,7 +38,7 @@ import uuid as uuid_module
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.literal import (
     PostgresLiteralValueMixin,
@@ -81,23 +81,23 @@ class TestDataPositionBindsTheHostValue:
 
     def test_binary_binds_bytes(self):
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, b"\x01\x02").to_sql() == ("%s", (b"\x01\x02",))
+        assert Parameter(dialect, b"\x01\x02").to_sql() == ("%s", (b"\x01\x02",))
 
     def test_uuid_binds_the_uuid_object(self):
         dialect = PostgresDialect(version=(18, 0, 0))
         value = uuid_module.UUID(UUID_TEXT)
-        assert Literal(dialect, value).to_sql() == ("%s", (value,))
+        assert Parameter(dialect, value).to_sql() == ("%s", (value,))
 
     def test_interval_binds_the_timedelta(self):
         dialect = PostgresDialect(version=(18, 0, 0))
         value = datetime.timedelta(days=2, seconds=11045, microseconds=6)
-        assert Literal(dialect, value).to_sql() == ("%s", (value,))
+        assert Parameter(dialect, value).to_sql() == ("%s", (value,))
 
     def test_date_binds_the_host_value(self):
         """A tier-1 kind binds through the same node, unchanged."""
         dialect = PostgresDialect(version=(18, 0, 0))
         value = datetime.date(2026, 10, 17)
-        assert Literal(dialect, value).to_sql() == ("%s", (value,))
+        assert Parameter(dialect, value).to_sql() == ("%s", (value,))
 
 
 class TestInlinePositionLiterals:
@@ -105,21 +105,21 @@ class TestInlinePositionLiterals:
 
     def test_binary_is_a_cast_hex_bytea(self):
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, b"\x01\x02", inline=True).to_sql() == (
+        assert Parameter(dialect, b"\x01\x02", inline=True).to_sql() == (
             "'\\x0102'::bytea",
             (),
         )
 
     def test_binary_accepts_a_bytearray(self):
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, bytearray(b"\xff\x00"), inline=True).to_sql() == (
+        assert Parameter(dialect, bytearray(b"\xff\x00"), inline=True).to_sql() == (
             "'\\xff00'::bytea",
             (),
         )
 
     def test_uuid_is_the_quoted_form_with_a_cast(self):
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, uuid_module.UUID(UUID_TEXT), inline=True).to_sql() == (
+        assert Parameter(dialect, uuid_module.UUID(UUID_TEXT), inline=True).to_sql() == (
             f"'{UUID_TEXT}'::uuid",
             (),
         )
@@ -147,7 +147,7 @@ class TestInlinePositionLiterals:
     def test_interval_spelling(self, value, expected):
         """Every component carries the sign; measured live (see module docstring)."""
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, value, inline=True).to_sql() == (
+        assert Parameter(dialect, value, inline=True).to_sql() == (
             f"INTERVAL '{expected}'",
             (),
         )
@@ -155,7 +155,7 @@ class TestInlinePositionLiterals:
     def test_tier_one_string_still_inlines_through_the_base(self):
         """Tier-1 kinds inline via the base's portable forms; the escape stays its."""
         dialect = PostgresDialect(version=(18, 0, 0))
-        assert Literal(dialect, "it's", inline=True).to_sql() == ("'it''s'", ())
+        assert Parameter(dialect, "it's", inline=True).to_sql() == ("'it''s'", ())
 
     def test_unspelled_host_type_keeps_the_base_refusal(self):
         """A type neither the base nor PostgreSQL names fails explicitly.
@@ -165,5 +165,5 @@ class TestInlinePositionLiterals:
         """
         dialect = PostgresDialect(version=(18, 0, 0))
         with pytest.raises(TypeError, match="no inline SQL literal form"):
-            Literal(dialect, {1, 2, 3}, inline=True).to_sql()
+            Parameter(dialect, {1, 2, 3}, inline=True).to_sql()
 

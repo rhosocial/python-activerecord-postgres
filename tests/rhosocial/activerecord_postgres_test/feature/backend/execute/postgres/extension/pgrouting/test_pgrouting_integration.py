@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.pgrouting import (
     pgr_dijkstra,
     pgr_astar,
@@ -86,24 +86,24 @@ def pgrouting_env(postgres_backend_single):
             [
                 # Edge 1->2
                 [
-                    Literal(dialect, 1), Literal(dialect, 2),
-                    Literal(dialect, 1.0), Literal(dialect, 1.0),
-                    Literal(dialect, 0.0), Literal(dialect, 0.0),
-                    Literal(dialect, 1.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 1), Parameter(dialect, 2),
+                    Parameter(dialect, 1.0), Parameter(dialect, 1.0),
+                    Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 1.0), Parameter(dialect, 0.0),
                 ],
                 # Edge 2->3
                 [
-                    Literal(dialect, 2), Literal(dialect, 3),
-                    Literal(dialect, 2.0), Literal(dialect, 2.0),
-                    Literal(dialect, 1.0), Literal(dialect, 0.0),
-                    Literal(dialect, 2.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 2), Parameter(dialect, 3),
+                    Parameter(dialect, 2.0), Parameter(dialect, 2.0),
+                    Parameter(dialect, 1.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 2.0), Parameter(dialect, 0.0),
                 ],
                 # Edge 1->3
                 [
-                    Literal(dialect, 1), Literal(dialect, 3),
-                    Literal(dialect, 4.0), Literal(dialect, 4.0),
-                    Literal(dialect, 0.0), Literal(dialect, 0.0),
-                    Literal(dialect, 2.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 1), Parameter(dialect, 3),
+                    Parameter(dialect, 4.0), Parameter(dialect, 4.0),
+                    Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 2.0), Parameter(dialect, 0.0),
                 ],
             ],
         ),
@@ -133,8 +133,8 @@ class TestPgroutingIntegration:
         dijkstra_func = pgr_dijkstra(
             dialect,
             "SELECT id, source, target, cost, reverse_cost FROM test_route_edges",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -154,8 +154,8 @@ class TestPgroutingIntegration:
         astar_func = pgr_astar(
             dialect,
             "SELECT id, source, target, cost, reverse_cost, x1, y1, x2, y2 FROM test_route_edges",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -215,24 +215,24 @@ async def async_pgrouting_env(async_postgres_backend_single):
             [
                 # Edge 1->2
                 [
-                    Literal(dialect, 1), Literal(dialect, 2),
-                    Literal(dialect, 1.0), Literal(dialect, 1.0),
-                    Literal(dialect, 0.0), Literal(dialect, 0.0),
-                    Literal(dialect, 1.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 1), Parameter(dialect, 2),
+                    Parameter(dialect, 1.0), Parameter(dialect, 1.0),
+                    Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 1.0), Parameter(dialect, 0.0),
                 ],
                 # Edge 2->3
                 [
-                    Literal(dialect, 2), Literal(dialect, 3),
-                    Literal(dialect, 2.0), Literal(dialect, 2.0),
-                    Literal(dialect, 1.0), Literal(dialect, 0.0),
-                    Literal(dialect, 2.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 2), Parameter(dialect, 3),
+                    Parameter(dialect, 2.0), Parameter(dialect, 2.0),
+                    Parameter(dialect, 1.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 2.0), Parameter(dialect, 0.0),
                 ],
                 # Edge 1->3
                 [
-                    Literal(dialect, 1), Literal(dialect, 3),
-                    Literal(dialect, 4.0), Literal(dialect, 4.0),
-                    Literal(dialect, 0.0), Literal(dialect, 0.0),
-                    Literal(dialect, 2.0), Literal(dialect, 0.0),
+                    Parameter(dialect, 1), Parameter(dialect, 3),
+                    Parameter(dialect, 4.0), Parameter(dialect, 4.0),
+                    Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                    Parameter(dialect, 2.0), Parameter(dialect, 0.0),
                 ],
             ],
         ),
@@ -263,8 +263,8 @@ class TestAsyncPgroutingIntegration:
         dijkstra_func = pgr_dijkstra(
             dialect,
             "SELECT id, source, target, cost, reverse_cost FROM test_route_edges_async",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -285,8 +285,8 @@ class TestAsyncPgroutingIntegration:
         astar_func = pgr_astar(
             dialect,
             "SELECT id, source, target, cost, reverse_cost, x1, y1, x2, y2 FROM test_route_edges_async",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,

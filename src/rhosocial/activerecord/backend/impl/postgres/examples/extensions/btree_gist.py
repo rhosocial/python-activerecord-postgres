@@ -57,7 +57,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
@@ -109,10 +109,10 @@ if __name__ == "__main__":
 
         # Example 2: Insert event data
         rows = [
-            [Literal(dialect, "Conference"), Literal(dialect, "2024-01-15 10:00:00")],
-            [Literal(dialect, "Workshop"), Literal(dialect, "2024-03-20 14:30:00")],
-            [Literal(dialect, "Meetup"), Literal(dialect, "2024-06-10 09:00:00")],
-            [Literal(dialect, "Hackathon"), Literal(dialect, "2024-09-05 16:45:00")],
+            [Parameter(dialect, "Conference"), Parameter(dialect, "2024-01-15 10:00:00")],
+            [Parameter(dialect, "Workshop"), Parameter(dialect, "2024-03-20 14:30:00")],
+            [Parameter(dialect, "Meetup"), Parameter(dialect, "2024-06-10 09:00:00")],
+            [Parameter(dialect, "Hackathon"), Parameter(dialect, "2024-09-05 16:45:00")],
         ]
         insert_expr = InsertStatement(
             dialect=dialect,
@@ -154,7 +154,7 @@ if __name__ == "__main__":
                 dialect,
                 ">",
                 Column(dialect, "created_at"),
-                Literal(dialect, "2024-03-01 00:00:00"),
+                Parameter(dialect, "2024-03-01 00:00:00"),
             ),
         )
         sql, params = query.to_sql()

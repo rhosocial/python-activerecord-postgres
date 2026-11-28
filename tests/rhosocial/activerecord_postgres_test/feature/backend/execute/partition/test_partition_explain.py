@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    Literal,
+    Parameter,
     LogicalPredicate,
     QueryStatement,
     ValuesSource,
@@ -110,7 +110,7 @@ def _seed_rows_expression(dialect):
         columns=["id", "created_at", "tenant_id", "payload"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, value) for value in row] for row in rows],
+            [[Parameter(dialect, value) for value in row] for row in rows],
         ),
     )
 
@@ -123,8 +123,8 @@ def _range_query_expression(dialect, start, end):
         where=LogicalPredicate(
             dialect,
             "AND",
-            ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
-            ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
+            ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, start)),
+            ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Parameter(dialect, end)),
         ),
     )
 

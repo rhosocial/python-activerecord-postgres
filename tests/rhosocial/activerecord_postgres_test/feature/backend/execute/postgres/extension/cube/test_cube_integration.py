@@ -6,8 +6,8 @@ These tests require a live PostgreSQL connection with cube extension installed
 and test:
 - CUBE column creation and data retrieval
 - cube_distance() function (<-> operator equivalent)
-- Containment operator @> via Literal
-- Overlap operator && via Literal
+- Containment operator @> via Parameter
+- Overlap operator && via Parameter
 - GiST index on CUBE column
 """
 
@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression import RawSQL
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -89,8 +89,8 @@ def cube_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "(1,2,3)"), PostgresCubeType(dialect))],
-                [cast(dialect, Literal(dialect, "(4,5,6)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(1,2,3)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(4,5,6)"), PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -124,8 +124,8 @@ def cube_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "(1,1)"), PostgresCubeType(dialect))],
-                [cast(dialect, Literal(dialect, "(4,5)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(1,1)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(4,5)"), PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -158,7 +158,7 @@ def cube_env(postgres_backend_single):
         columns=["c"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, "(1,2,3)"), PostgresCubeType(dialect))]],
+            [[cast(dialect, Parameter(dialect, "(1,2,3)"), PostgresCubeType(dialect))]],
         ),
     )
     sql, params = insert_idx.to_sql()
@@ -219,8 +219,8 @@ class TestCubeIntegration:
         dist_func = FunctionCall(
             dialect,
             "cube_distance",
-            cast(dialect, Literal(dialect, "(1,1)"), PostgresCubeType(dialect)),
-            cast(dialect, Literal(dialect, "(4,5)"), PostgresCubeType(dialect)),
+            cast(dialect, Parameter(dialect, "(1,1)"), PostgresCubeType(dialect)),
+            cast(dialect, Parameter(dialect, "(4,5)"), PostgresCubeType(dialect)),
         ).as_("distance")
         query = QueryStatement(
             dialect=dialect,
@@ -233,7 +233,7 @@ class TestCubeIntegration:
         assert float(result.data[0]['distance']) == pytest.approx(5.0, abs=1e-4)
 
     def test_cube_contains(self, cube_env):
-        """Test cube containment operator @> via Literal."""
+        """Test cube containment operator @> via Parameter."""
         backend, dialect = cube_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
@@ -242,8 +242,8 @@ class TestCubeIntegration:
             dialect,
             BinaryExpression(
             dialect, '@>',
-                cast(dialect, Literal(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
-                cast(dialect, Literal(dialect, "(5,5)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(5,5)"), PostgresCubeType(dialect)),
             ),
         ).as_("contains")
         query = QueryStatement(
@@ -260,8 +260,8 @@ class TestCubeIntegration:
             dialect,
             BinaryExpression(
             dialect, '@>',
-                cast(dialect, Literal(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
-                cast(dialect, Literal(dialect, "(15,15)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(0,0),(10,10)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(15,15)"), PostgresCubeType(dialect)),
             ),
         ).as_("contains")
         query2 = QueryStatement(
@@ -274,7 +274,7 @@ class TestCubeIntegration:
         assert result2.data[0]['contains'] is False
 
     def test_cube_overlap(self, cube_env):
-        """Test cube overlap operator && via Literal."""
+        """Test cube overlap operator && via Parameter."""
         backend, dialect = cube_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
@@ -283,8 +283,8 @@ class TestCubeIntegration:
             dialect,
             BinaryExpression(
             dialect, '&&',
-                cast(dialect, Literal(dialect, "(0,0),(5,5)"), PostgresCubeType(dialect)),
-                cast(dialect, Literal(dialect, "(3,3),(8,8)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(0,0),(5,5)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(3,3),(8,8)"), PostgresCubeType(dialect)),
             ),
         ).as_("overlaps")
         query = QueryStatement(
@@ -301,8 +301,8 @@ class TestCubeIntegration:
             dialect,
             BinaryExpression(
             dialect, '&&',
-                cast(dialect, Literal(dialect, "(0,0),(2,2)"), PostgresCubeType(dialect)),
-                cast(dialect, Literal(dialect, "(5,5),(8,8)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(0,0),(2,2)"), PostgresCubeType(dialect)),
+                cast(dialect, Parameter(dialect, "(5,5),(8,8)"), PostgresCubeType(dialect)),
             ),
         ).as_("overlaps")
         query2 = QueryStatement(
@@ -323,7 +323,7 @@ class TestCubeIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_cube_idx")),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_cube_idx")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -375,8 +375,8 @@ async def async_cube_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "(1,2,3)"), PostgresCubeType(dialect))],
-                [cast(dialect, Literal(dialect, "(4,5,6)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(1,2,3)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(4,5,6)"), PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -410,8 +410,8 @@ async def async_cube_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "(1,1)"), PostgresCubeType(dialect))],
-                [cast(dialect, Literal(dialect, "(4,5)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(1,1)"), PostgresCubeType(dialect))],
+                [cast(dialect, Parameter(dialect, "(4,5)"), PostgresCubeType(dialect))],
             ],
         ),
     )
@@ -444,7 +444,7 @@ async def async_cube_env(async_postgres_backend_single):
         columns=["c"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, "(1,2,3)"), PostgresCubeType(dialect))]],
+            [[cast(dialect, Parameter(dialect, "(1,2,3)"), PostgresCubeType(dialect))]],
         ),
     )
     sql, params = insert_idx.to_sql()
@@ -506,8 +506,8 @@ class TestAsyncCubeIntegration:
         dist_func = FunctionCall(
             dialect,
             "cube_distance",
-            cast(dialect, Literal(dialect, "(1,1)"), PostgresCubeType(dialect)),
-            cast(dialect, Literal(dialect, "(4,5)"), PostgresCubeType(dialect)),
+            cast(dialect, Parameter(dialect, "(1,1)"), PostgresCubeType(dialect)),
+            cast(dialect, Parameter(dialect, "(4,5)"), PostgresCubeType(dialect)),
         ).as_("distance")
         query = QueryStatement(
             dialect=dialect,
@@ -520,7 +520,7 @@ class TestAsyncCubeIntegration:
 
     @pytest.mark.asyncio
     async def test_async_cube_contains(self, async_cube_env):
-        """Test cube containment operator @> via Literal."""
+        """Test cube containment operator @> via Parameter."""
         backend, dialect = async_cube_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
@@ -554,7 +554,7 @@ class TestAsyncCubeIntegration:
 
     @pytest.mark.asyncio
     async def test_async_cube_overlap(self, async_cube_env):
-        """Test cube overlap operator && via Literal."""
+        """Test cube overlap operator && via Parameter."""
         backend, dialect = async_cube_env
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
@@ -597,7 +597,7 @@ class TestAsyncCubeIntegration:
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_cube_idx_async")
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_cube_idx_async")
             ),
         )
         sql, params = query.to_sql()

@@ -20,7 +20,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    Literal,
+    Parameter,
     OrderByClause,
     QueryStatement,
     ValuesSource,
@@ -72,11 +72,11 @@ class SQLXMLExample:
 
 
 def text_literal(dialect: PostgresDialect, value: str) -> CastExpression:
-    return CastExpression(dialect, Literal(dialect, value), TextType(dialect))
+    return CastExpression(dialect, Parameter(dialect, value), TextType(dialect))
 
 
 def xml_literal(dialect: PostgresDialect, value: str) -> CastExpression:
-    return CastExpression(dialect, Literal(dialect, value), XmlType(dialect))
+    return CastExpression(dialect, Parameter(dialect, value), XmlType(dialect))
 
 
 def render(example: SQLXMLExample) -> None:
@@ -144,7 +144,7 @@ def build_examples(dialect: PostgresDialect) -> Iterable[SQLXMLExample]:
                 dialect,
                 (text_literal(dialect, "Ada"), "first_name"),
                 (text_literal(dialect, "Lovelace"), "last_name"),
-                (Literal(dialect, 1815), "birth_year"),
+                (Parameter(dialect, 1815), "birth_year"),
             ),
         ),
     )
@@ -268,8 +268,8 @@ def prepare_example_data(backend: PostgresBackend, dialect: PostgresDialect) -> 
             ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, 1), xmlparse(dialect, xml_literal(dialect, load_xml("item_1.xml")))],
-                    [Literal(dialect, 2), xmlparse(dialect, xml_literal(dialect, load_xml("item_2.xml")))],
+                    [Parameter(dialect, 1), xmlparse(dialect, xml_literal(dialect, load_xml("item_1.xml")))],
+                    [Parameter(dialect, 2), xmlparse(dialect, xml_literal(dialect, load_xml("item_2.xml")))],
                 ],
             ),
             columns=["id", "payload"],

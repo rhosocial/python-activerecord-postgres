@@ -22,7 +22,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.core import (
-    Literal,
+    Parameter,
     RowCountWildcard,
     CountFunction,
     FunctionCall,
@@ -87,18 +87,18 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 'Intro to SQL'), Literal(dialect, 'Alice'), Literal(dialect, '2025-01-10')],
-                [Literal(dialect, 'Advanced Joins'), Literal(dialect, 'Bob'), Literal(dialect, '2025-01-15')],
-                [Literal(dialect, 'Indexing Deep Dive'), Literal(dialect, 'Alice'), Literal(dialect, '2025-02-01')],
-                [Literal(dialect, 'CTE Explained'), Literal(dialect, 'Charlie'), Literal(dialect, '2025-02-10')],
-                [Literal(dialect, 'Window Functions 101'), Literal(dialect, 'Bob'), Literal(dialect, '2025-02-20')],
-                [Literal(dialect, 'Recursive Queries'), Literal(dialect, 'Alice'), Literal(dialect, '2025-03-01')],
-                [Literal(dialect, 'JSONB in Postgres'), Literal(dialect, 'Charlie'), Literal(dialect, '2025-03-10')],
-                [Literal(dialect, 'Full-Text Search'), Literal(dialect, 'Bob'), Literal(dialect, '2025-03-15')],
-                [Literal(dialect, 'Array Operations'), Literal(dialect, 'Alice'), Literal(dialect, '2025-03-20')],
-                [Literal(dialect, 'Partitioning Tables'), Literal(dialect, 'Charlie'), Literal(dialect, '2025-04-01')],
-                [Literal(dialect, 'PL/pgSQL Basics'), Literal(dialect, 'Bob'), Literal(dialect, '2025-04-10')],
-                [Literal(dialect, 'Connection Pooling'), Literal(dialect, 'Alice'), Literal(dialect, '2025-04-15')],
+                [Parameter(dialect, 'Intro to SQL'), Parameter(dialect, 'Alice'), Parameter(dialect, '2025-01-10')],
+                [Parameter(dialect, 'Advanced Joins'), Parameter(dialect, 'Bob'), Parameter(dialect, '2025-01-15')],
+                [Parameter(dialect, 'Indexing Deep Dive'), Parameter(dialect, 'Alice'), Parameter(dialect, '2025-02-01')],
+                [Parameter(dialect, 'CTE Explained'), Parameter(dialect, 'Charlie'), Parameter(dialect, '2025-02-10')],
+                [Parameter(dialect, 'Window Functions 101'), Parameter(dialect, 'Bob'), Parameter(dialect, '2025-02-20')],
+                [Parameter(dialect, 'Recursive Queries'), Parameter(dialect, 'Alice'), Parameter(dialect, '2025-03-01')],
+                [Parameter(dialect, 'JSONB in Postgres'), Parameter(dialect, 'Charlie'), Parameter(dialect, '2025-03-10')],
+                [Parameter(dialect, 'Full-Text Search'), Parameter(dialect, 'Bob'), Parameter(dialect, '2025-03-15')],
+                [Parameter(dialect, 'Array Operations'), Parameter(dialect, 'Alice'), Parameter(dialect, '2025-03-20')],
+                [Parameter(dialect, 'Partitioning Tables'), Parameter(dialect, 'Charlie'), Parameter(dialect, '2025-04-01')],
+                [Parameter(dialect, 'PL/pgSQL Basics'), Parameter(dialect, 'Bob'), Parameter(dialect, '2025-04-10')],
+                [Parameter(dialect, 'Connection Pooling'), Parameter(dialect, 'Alice'), Parameter(dialect, '2025-04-15')],
             ],
         ),
     )

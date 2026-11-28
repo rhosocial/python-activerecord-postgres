@@ -18,7 +18,7 @@ if TYPE_CHECKING:
 
 
 def _expr(dialect: "SQLDialectBase", value) -> bases.BaseExpression:
-    return value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)
+    return value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value)
 
 
 def unaccent(
@@ -36,7 +36,7 @@ def unaccent(
     if dictionary is not None:
         if not isinstance(dictionary, str) or not dictionary.isidentifier():
             raise ValueError(f"Invalid unaccent dictionary name: {dictionary!r}")
-        return core.FunctionCall(dialect, "unaccent", core.Literal(dialect, dictionary), _expr(dialect, text))
+        return core.FunctionCall(dialect, "unaccent", core.Parameter(dialect, dictionary), _expr(dialect, text))
     return core.FunctionCall(dialect, "unaccent", _expr(dialect, text))
 
 

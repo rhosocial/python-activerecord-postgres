@@ -7,7 +7,7 @@ PostgreSQL-specific data type literals, including xid8 and array types.
 
 All functions follow the expression-dialect separation architecture:
 - First parameter is always the dialect instance
-- They return Expression objects (Literal with type cast, etc.)
+- They return Expression objects (Parameter with type cast, etc.)
 - They do not concatenate SQL strings directly
 """
 
@@ -29,7 +29,7 @@ def xid8_literal(
 ) -> "bases.BaseExpression":
     """Create an xid8 (64-bit transaction ID) literal expression.
 
-    Wraps an integer value as a Literal expression with an xid8 type cast,
+    Wraps an integer value as a Parameter expression with an xid8 type cast,
     producing SQL like ``value::xid8``.
 
     Args:
@@ -45,7 +45,7 @@ def xid8_literal(
         >>> xid8_literal(dialect, 123456789)
         # Produces: 123456789::xid8
     """
-    return core.CastExpression(dialect, core.Literal(dialect, value), PostgresXID8Type(dialect))
+    return core.CastExpression(dialect, core.Parameter(dialect, value), PostgresXID8Type(dialect))
 
 
 def array_literal(
@@ -82,10 +82,10 @@ def array_literal(
         if element_type:
             return core.CastExpression(
                 dialect,
-                core.Literal(dialect, "{}"),
+                core.Parameter(dialect, "{}"),
                 CustomType(dialect, raw=f"{element_type}[]"),
             )
-        return core.Literal(dialect, "{}")
+        return core.Parameter(dialect, "{}")
 
     formatted = []
     for e in elements:
@@ -97,7 +97,7 @@ def array_literal(
             formatted.append(str(e))
 
     array_str = "{" + ",".join(formatted) + "}"
-    result = core.Literal(dialect, array_str)
+    result = core.Parameter(dialect, array_str)
     if element_type:
         return core.CastExpression(
             dialect, result, CustomType(dialect, raw=f"{element_type}[]")

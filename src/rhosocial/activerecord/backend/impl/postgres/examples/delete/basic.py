@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -77,9 +77,9 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['name', 'email'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')],
-            [Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')],
-            [Literal(dialect, 'Charlie'), Literal(dialect, 'charlie@example.com')],
+            [Parameter(dialect, 'Alice'), Parameter(dialect, 'alice@example.com')],
+            [Parameter(dialect, 'Bob'), Parameter(dialect, 'bob@example.com')],
+            [Parameter(dialect, 'Charlie'), Parameter(dialect, 'charlie@example.com')],
         ]),
     )
     sql, params = insert_expr.to_sql()
@@ -97,7 +97,7 @@ if __name__ == "__main__":
             dialect,
             '=',
             Column(dialect, 'name'),
-            Literal(dialect, 'Alice'),
+            Parameter(dialect, 'Alice'),
         ),
     )
 
@@ -119,7 +119,7 @@ if __name__ == "__main__":
             dialect,
             '=',
             Column(dialect, 'name'),
-            Literal(dialect, 'Bob'),
+            Parameter(dialect, 'Bob'),
         ),
         returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
     )

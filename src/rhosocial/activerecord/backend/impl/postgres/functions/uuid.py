@@ -85,13 +85,13 @@ def uuid_generate_v3(
     """
     ns_expr = (
         namespace if isinstance(namespace, bases.BaseExpression)
-        else core.Literal(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
-        else core.Literal(dialect, namespace)
+        else core.Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else core.Parameter(dialect, namespace)
     )
     name_expr = (
         name if isinstance(name, bases.BaseExpression)
-        else core.Literal(dialect, str(name)) if isinstance(name, _uuid.UUID)
-        else core.Literal(dialect, name)
+        else core.Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else core.Parameter(dialect, name)
     )
     return core.FunctionCall(dialect, "uuid_generate_v3", ns_expr, name_expr)
 
@@ -138,13 +138,13 @@ def uuid_generate_v5(
     """
     ns_expr = (
         namespace if isinstance(namespace, bases.BaseExpression)
-        else core.Literal(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
-        else core.Literal(dialect, namespace)
+        else core.Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else core.Parameter(dialect, namespace)
     )
     name_expr = (
         name if isinstance(name, bases.BaseExpression)
-        else core.Literal(dialect, str(name)) if isinstance(name, _uuid.UUID)
-        else core.Literal(dialect, name)
+        else core.Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else core.Parameter(dialect, name)
     )
     return core.FunctionCall(dialect, "uuid_generate_v5", ns_expr, name_expr)
 

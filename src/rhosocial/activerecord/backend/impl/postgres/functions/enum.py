@@ -79,20 +79,20 @@ def enum_range(
     """
     if start_value is not None and end_value is not None:
         start_expr = start_value if isinstance(start_value, bases.BaseExpression) \
-            else core.Literal(dialect, start_value)
+            else core.Parameter(dialect, start_value)
         end_expr = end_value if isinstance(end_value, bases.BaseExpression) \
-            else core.Literal(dialect, end_value)
+            else core.Parameter(dialect, end_value)
         return core.FunctionCall(dialect, "enum_range", start_expr, end_expr)
     if enum_type is not None:
         type_expr = enum_type if isinstance(enum_type, bases.BaseExpression) \
-            else core.Literal(dialect, enum_type)
+            else core.Parameter(dialect, enum_type)
         return core.FunctionCall(
             dialect, "enum_range",
             core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
         )
     if enum_value is not None:
         value_expr = enum_value if isinstance(enum_value, bases.BaseExpression) \
-            else core.Literal(dialect, enum_value)
+            else core.Parameter(dialect, enum_value)
         return core.FunctionCall(dialect, "enum_range", value_expr)
     raise ValueError("Must provide enum_type, enum_value, or both start_value and end_value")
 
@@ -119,7 +119,7 @@ def enum_first(
         ("enum_first(CAST(%s AS regtype))", ('status',))
     """
     type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
-        else core.Literal(dialect, enum_type_or_value)
+        else core.Parameter(dialect, enum_type_or_value)
     return core.FunctionCall(
         dialect, "enum_first",
         core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
@@ -148,7 +148,7 @@ def enum_last(
         ("enum_last(CAST(%s AS regtype))", ('status',))
     """
     type_expr = enum_type_or_value if isinstance(enum_type_or_value, bases.BaseExpression) \
-        else core.Literal(dialect, enum_type_or_value)
+        else core.Parameter(dialect, enum_type_or_value)
     return core.FunctionCall(
         dialect, "enum_last",
         core.CastExpression(dialect, type_expr, PostgresRegTypeType(dialect)),
@@ -178,8 +178,8 @@ def enum_lt(
         >>> expr.to_sql()
         ('%s < %s', ('pending', 'active'))
     """
-    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
-    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Parameter(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Parameter(dialect, e2)
     return BinaryExpression(dialect, "<", left, right)
 
 
@@ -203,8 +203,8 @@ def enum_le(
         >>> expr.to_sql()
         ('%s <= %s', ('pending', 'active'))
     """
-    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
-    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Parameter(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Parameter(dialect, e2)
     return BinaryExpression(dialect, "<=", left, right)
 
 
@@ -228,8 +228,8 @@ def enum_gt(
         >>> expr.to_sql()
         ('%s > %s', ('pending', 'active'))
     """
-    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
-    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Parameter(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Parameter(dialect, e2)
     return BinaryExpression(dialect, ">", left, right)
 
 
@@ -253,8 +253,8 @@ def enum_ge(
         >>> expr.to_sql()
         ('%s >= %s', ('pending', 'active'))
     """
-    left = e1 if isinstance(e1, bases.BaseExpression) else core.Literal(dialect, e1)
-    right = e2 if isinstance(e2, bases.BaseExpression) else core.Literal(dialect, e2)
+    left = e1 if isinstance(e1, bases.BaseExpression) else core.Parameter(dialect, e1)
+    right = e2 if isinstance(e2, bases.BaseExpression) else core.Parameter(dialect, e2)
     return BinaryExpression(dialect, ">=", left, right)
 
 

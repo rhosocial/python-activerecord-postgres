@@ -50,7 +50,7 @@ if __name__ == "__main__":
         ColumnNotNullConstraint,
         ColumnPrimaryKeyConstraint,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.expression.statements.dml import (
         InsertStatement,
@@ -129,7 +129,7 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "Test@Example.COM"), Literal(dialect, "testuser")],
+                    [Parameter(dialect, "Test@Example.COM"), Parameter(dialect, "testuser")],
                 ],
             ),
         )
@@ -149,7 +149,7 @@ if __name__ == "__main__":
             ],
             from_=Table(dialect, "users"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "email", table="users"), Literal(dialect, "test@example.com")
+                dialect, "=", Column(dialect, "email", table="users"), Parameter(dialect, "test@example.com")
             ),
         )
         sql, params = query.to_sql()

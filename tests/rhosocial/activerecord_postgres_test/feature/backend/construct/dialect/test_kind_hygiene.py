@@ -77,7 +77,7 @@ def backend_classes():
 def core_kinds():
     """Core's kind set, walked from core's own package.
 
-    *Not* read from ``core_registry()``: that table is core's own frozen set,
+    *Not* read from ``CORE_EXPRESSIONS``: that mapping is core's own set,
     and a backend's classes are deliberately absent from it. Walking the
     package answers "what core defines", which is the question here -- not
     "what a registry happens to carry after some test module registered its

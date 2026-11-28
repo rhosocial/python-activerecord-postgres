@@ -7,7 +7,7 @@ The nodes only carry arguments; validation and SQL assembly happen here.
 import warnings
 from typing import Tuple
 
-from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
+from rhosocial.activerecord.backend.expression import Column, Parameter, QueryStatement
 from rhosocial.activerecord.backend.expression.core import AllColumnsWildcard, Subquery
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.operators import (
@@ -97,7 +97,7 @@ class PostgresPgvectorMixin:
                 self, vec.to_postgres_string(), vec.dimensions
             )
         else:
-            query_expr = core.Literal(self, expr.query_vector)
+            query_expr = core.Parameter(self, expr.query_vector)
         return BinaryExpression(
             self, _DISTANCE_OPERATOR[metric], column_expr, query_expr
         ).to_sql()
@@ -177,7 +177,7 @@ class PostgresPgvectorMixin:
                 )
             else:
                 similarity = ArithmeticOperation(
-                    self, "sub", Literal(self, 1), Subquery(self, distance)
+                    self, "sub", Parameter(self, 1), Subquery(self, distance)
                 )
                 select.append(similarity.as_(_SIMILARITY_ALIAS[metric]))
 

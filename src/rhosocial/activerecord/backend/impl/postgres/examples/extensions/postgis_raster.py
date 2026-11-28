@@ -57,7 +57,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.postgis_raster import (
@@ -134,7 +134,7 @@ if __name__ == "__main__":
                 dialect,
                 [
                     [
-                        Literal(dialect, "elevation_1x1"),
+                        Parameter(dialect, "elevation_1x1"),
                         st_rast_from_hexwkb(dialect, hex_wkb, srid=4326),
                     ],
                 ],
@@ -166,8 +166,8 @@ if __name__ == "__main__":
                 st_value(
                     dialect,
                     Column(dialect, "rast"),
-                    Literal(dialect, 1),
-                    Literal(dialect, 1),
+                    Parameter(dialect, 1),
+                    Parameter(dialect, 1),
                 ).as_("pixel_value"),
             ],
             from_=Table(dialect, "terrain_data"),

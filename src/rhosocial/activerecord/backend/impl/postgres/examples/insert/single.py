@@ -48,14 +48,14 @@ if __name__ == "__main__":
     # ============================================================
     from rhosocial.activerecord.backend.expression import InsertStatement, ValuesSource, QueryStatement
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
+    from rhosocial.activerecord.backend.expression.core import Parameter, AllColumnsWildcard
 
     insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'users'),
         columns=['name'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'Alice')],
+            [Parameter(dialect, 'Alice')],
         ]),
     )
     sql, params = insert_expr.to_sql()

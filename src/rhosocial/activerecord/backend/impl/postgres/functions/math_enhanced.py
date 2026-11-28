@@ -84,7 +84,7 @@ def round_(
     precision_expr = (
         precision
         if isinstance(precision, bases.BaseExpression)
-        else core.Literal(dialect, precision)
+        else core.Parameter(dialect, precision)
     )
     return RoundFunction.for_operand(
         dialect, type(expr), expr, precision_expr
@@ -297,7 +297,7 @@ def trunc(
     precision_expr = (
         precision
         if isinstance(precision, bases.BaseExpression)
-        else core.Literal(dialect, precision)
+        else core.Parameter(dialect, precision)
     )
     return TruncateFunction.for_operand(
         dialect, type(expr), expr, precision_expr

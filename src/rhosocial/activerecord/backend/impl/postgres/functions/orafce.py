@@ -68,8 +68,8 @@ def add_months(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("ADD_MONTHS"),
-        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
-        months if isinstance(months, bases.BaseExpression) else core.Literal(dialect, months),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Parameter(dialect, date_expr),
+        months if isinstance(months, bases.BaseExpression) else core.Parameter(dialect, months),
     )
 
 
@@ -96,7 +96,7 @@ def last_day(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("LAST_DAY"),
-        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Parameter(dialect, date_expr),
     )
 
 
@@ -127,8 +127,8 @@ def months_between(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("MONTHS_BETWEEN"),
-        date1 if isinstance(date1, bases.BaseExpression) else core.Literal(dialect, date1),
-        date2 if isinstance(date2, bases.BaseExpression) else core.Literal(dialect, date2),
+        date1 if isinstance(date1, bases.BaseExpression) else core.Parameter(dialect, date1),
+        date2 if isinstance(date2, bases.BaseExpression) else core.Parameter(dialect, date2),
     )
 
 
@@ -157,8 +157,8 @@ def next_day(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NEXT_DAY"),
-        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Literal(dialect, date_expr),
-        day if isinstance(day, bases.BaseExpression) else core.Literal(dialect, day),
+        date_expr if isinstance(date_expr, bases.BaseExpression) else core.Parameter(dialect, date_expr),
+        day if isinstance(day, bases.BaseExpression) else core.Parameter(dialect, day),
     )
 
 
@@ -189,8 +189,8 @@ def nvl(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NVL"),
-        expr1 if isinstance(expr1, bases.BaseExpression) else core.Literal(dialect, expr1),
-        expr2 if isinstance(expr2, bases.BaseExpression) else core.Literal(dialect, expr2),
+        expr1 if isinstance(expr1, bases.BaseExpression) else core.Parameter(dialect, expr1),
+        expr2 if isinstance(expr2, bases.BaseExpression) else core.Parameter(dialect, expr2),
     )
 
 
@@ -221,9 +221,9 @@ def nvl2(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("NVL2"),
-        expr1 if isinstance(expr1, bases.BaseExpression) else core.Literal(dialect, expr1),
-        expr2 if isinstance(expr2, bases.BaseExpression) else core.Literal(dialect, expr2),
-        expr3 if isinstance(expr3, bases.BaseExpression) else core.Literal(dialect, expr3),
+        expr1 if isinstance(expr1, bases.BaseExpression) else core.Parameter(dialect, expr1),
+        expr2 if isinstance(expr2, bases.BaseExpression) else core.Parameter(dialect, expr2),
+        expr3 if isinstance(expr3, bases.BaseExpression) else core.Parameter(dialect, expr3),
     )
 
 
@@ -259,11 +259,11 @@ def decode(
         >>> decode(dialect, 'status', "'active'", '1', "'inactive'", '0', default='-1')
         >>> decode(dialect, 'color', "'red'", "'R'", "'blue'", "'B'")
     """
-    args = [expr if isinstance(expr, bases.BaseExpression) else core.Literal(dialect, expr)]
+    args = [expr if isinstance(expr, bases.BaseExpression) else core.Parameter(dialect, expr)]
     for m in matches:
-        args.append(m if isinstance(m, bases.BaseExpression) else core.Literal(dialect, m))
+        args.append(m if isinstance(m, bases.BaseExpression) else core.Parameter(dialect, m))
     if default is not None:
-        args.append(default if isinstance(default, bases.BaseExpression) else core.Literal(dialect, default))
+        args.append(default if isinstance(default, bases.BaseExpression) else core.Parameter(dialect, default))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("DECODE"),
@@ -299,9 +299,9 @@ def orafce_trunc(
         >>> trunc(dialect, 'created_at', "'MONTH'")
         >>> trunc(dialect, '123.456')
     """
-    args = [value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)]
+    args = [value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value)]
     if format is not None:
-        args.append(format if isinstance(format, bases.BaseExpression) else core.Literal(dialect, format))
+        args.append(format if isinstance(format, bases.BaseExpression) else core.Parameter(dialect, format))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("TRUNC"),
@@ -335,9 +335,9 @@ def orafce_round(
         >>> round(dialect, 'created_at', "'MONTH'")
         >>> round(dialect, '123.456')
     """
-    args = [value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value)]
+    args = [value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value)]
     if format is not None:
-        args.append(format if isinstance(format, bases.BaseExpression) else core.Literal(dialect, format))
+        args.append(format if isinstance(format, bases.BaseExpression) else core.Parameter(dialect, format))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("ROUND"),
@@ -377,10 +377,10 @@ def instr(
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("INSTR"),
-        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Literal(dialect, string_expr),
-        substring_expr if isinstance(substring_expr, bases.BaseExpression) else core.Literal(dialect, substring_expr),
-        position if isinstance(position, bases.BaseExpression) else core.Literal(dialect, position),
-        occurrence if isinstance(occurrence, bases.BaseExpression) else core.Literal(dialect, occurrence),
+        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Parameter(dialect, string_expr),
+        substring_expr if isinstance(substring_expr, bases.BaseExpression) else core.Parameter(dialect, substring_expr),
+        position if isinstance(position, bases.BaseExpression) else core.Parameter(dialect, position),
+        occurrence if isinstance(occurrence, bases.BaseExpression) else core.Parameter(dialect, occurrence),
     )
 
 
@@ -412,11 +412,11 @@ def substr(
         >>> substr(dialect, 'description', '10')
     """
     args = [
-        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Literal(dialect, string_expr),
-        position if isinstance(position, bases.BaseExpression) else core.Literal(dialect, position),
+        string_expr if isinstance(string_expr, bases.BaseExpression) else core.Parameter(dialect, string_expr),
+        position if isinstance(position, bases.BaseExpression) else core.Parameter(dialect, position),
     ]
     if length is not None:
-        args.append(length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length))
+        args.append(length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length))
     return core.FunctionCall(
         dialect,
         dialect.orafce_function_name("SUBSTR"),

@@ -66,11 +66,11 @@ def parse_address(
 
     Example:
         >>> parse_address(dialect, '123 Main St, Springfield, IL 62701')
-        >>> parse_address(dialect, Literal(dialect, '456 Oak Avenue'))
+        >>> parse_address(dialect, Parameter(dialect, '456 Oak Avenue'))
     """
     return core.FunctionCall(
         dialect, "parse_address",
-        address if isinstance(address, bases.BaseExpression) else core.Literal(dialect, address),
+        address if isinstance(address, bases.BaseExpression) else core.Parameter(dialect, address),
     )
 
 
@@ -111,10 +111,10 @@ def standardize_address(
     """
     return core.FunctionCall(
         dialect, "standardize_address",
-        lextab if isinstance(lextab, bases.BaseExpression) else core.Literal(dialect, lextab),
-        gaztab if isinstance(gaztab, bases.BaseExpression) else core.Literal(dialect, gaztab),
-        rultab if isinstance(rultab, bases.BaseExpression) else core.Literal(dialect, rultab),
-        address if isinstance(address, bases.BaseExpression) else core.Literal(dialect, address),
+        lextab if isinstance(lextab, bases.BaseExpression) else core.Parameter(dialect, lextab),
+        gaztab if isinstance(gaztab, bases.BaseExpression) else core.Parameter(dialect, gaztab),
+        rultab if isinstance(rultab, bases.BaseExpression) else core.Parameter(dialect, rultab),
+        address if isinstance(address, bases.BaseExpression) else core.Parameter(dialect, address),
     )
 
 

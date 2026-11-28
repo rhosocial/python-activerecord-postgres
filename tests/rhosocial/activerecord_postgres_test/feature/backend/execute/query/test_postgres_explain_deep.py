@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    Literal,
+    Parameter,
     LogicalPredicate,
     QueryStatement,
     TableConstraint,
@@ -94,7 +94,7 @@ def _category_query(dialect: PostgresDialect) -> QueryStatement:
         where=WhereClause(
             dialect,
             condition=ComparisonPredicate(
-                dialect, "=", Column(dialect, "category"), Literal(dialect, "alpha")
+                dialect, "=", Column(dialect, "category"), Parameter(dialect, "alpha")
             ),
         ),
     )
@@ -266,7 +266,7 @@ def _seed_events(dialect) -> InsertStatement:
         dialect=dialect,
         into=Table(dialect, _EVENTS_TABLE),
         columns=["id", "category"],
-        source=ValuesSource(dialect, [[Literal(dialect, value) for value in row] for row in rows]),
+        source=ValuesSource(dialect, [[Parameter(dialect, value) for value in row] for row in rows]),
     )
 
 
@@ -544,7 +544,7 @@ def _seed_partition_rows(dialect) -> InsertStatement:
         dialect=dialect,
         into=Table(dialect, _PART_TABLE),
         columns=["id", "created_at", "tenant_id", "payload"],
-        source=ValuesSource(dialect, [[Literal(dialect, value) for value in row] for row in rows]),
+        source=ValuesSource(dialect, [[Parameter(dialect, value) for value in row] for row in rows]),
     )
 
 
@@ -552,8 +552,8 @@ def _partition_range_query(dialect, start: datetime, end: datetime) -> QueryStat
     condition = LogicalPredicate(
         dialect,
         "AND",
-        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, start)),
-        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, end)),
+        ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, start)),
+        ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Parameter(dialect, end)),
     )
     return QueryStatement(
         dialect,

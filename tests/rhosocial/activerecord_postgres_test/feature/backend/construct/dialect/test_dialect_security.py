@@ -55,7 +55,7 @@ def test_postgresa_type_position_refuses_a_payload(dialect):
     position is guarded by the grammar, which is the framework's rule for
     what a name may be, and the server decides whether the type exists.
     """
-    from rhosocial.activerecord.backend.expression import Literal
+    from rhosocial.activerecord.backend.expression import Parameter
     from rhosocial.activerecord.backend.expression.statements import (
         AlterColumnAction,
     )
@@ -67,14 +67,14 @@ def test_postgresa_type_position_refuses_a_payload(dialect):
     )
 
     # A name is a name: the position takes it.
-    XMLSerializeExpression(dialect, Literal(dialect, "x"), "TEXT")
+    XMLSerializeExpression(dialect, Parameter(dialect, "x"), "TEXT")
     AlterColumnAction(dialect, "c", "SET DATA TYPE", new_value="TEXT")
 
     # A value that is not a name is refused, and refused before the
     # statement is ever rendered.
     with pytest.raises(InvalidTypeNameError):
         XMLSerializeExpression(
-            dialect, Literal(dialect, "x"), "TEXT; DROP TABLE users--"
+            dialect, Parameter(dialect, "x"), "TEXT; DROP TABLE users--"
         )
     with pytest.raises(InvalidTypeNameError):
         AlterColumnAction(
@@ -239,11 +239,11 @@ def test_exclude_constraint_rejects_empty_elements(dialect):
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
     from rhosocial.activerecord.backend.expression import Column
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     where = ComparisonPredicate(
-        dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline=True)
+        dialect, "=", Column(dialect, "active"), Parameter(dialect, True, inline=True)
     )
     constraint = PostgresExcludeConstraint(
         dialect,
@@ -600,13 +600,13 @@ def test_format_identifier_empty_string(dialect):
 def test_format_binary_operator_percent_escaped():
     """format_binary_expression escapes % to %% for psycopg compatibility."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     d = PostgresDialect((16, 0, 0))
 
     def binop(op, left_sql, right_sql, right_params=()):
         left = RawSQL(d, left_sql)
         if right_params:
-            right = Literal(d, right_params[0])
+            right = Parameter(d, right_params[0])
         else:
             right = RawSQL(d, right_sql)
         return BinaryExpression(d, op, left, right).to_sql()

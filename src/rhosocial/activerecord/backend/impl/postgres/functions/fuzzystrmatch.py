@@ -60,8 +60,8 @@ def levenshtein(
     """
     return core.FunctionCall(
         dialect, "levenshtein",
-        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
     )
 
 
@@ -92,10 +92,10 @@ def levenshtein_less_equal(
     """
     return core.FunctionCall(
         dialect, "levenshtein_less_equal",
-        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
         threshold if isinstance(threshold, bases.BaseExpression)
-        else core.Literal(dialect, threshold),
+        else core.Parameter(dialect, threshold),
     )
 
 
@@ -122,7 +122,7 @@ def soundex(
     """
     return core.FunctionCall(
         dialect, "soundex",
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
     )
 
 
@@ -150,8 +150,8 @@ def difference(
     """
     return core.FunctionCall(
         dialect, "difference",
-        source if isinstance(source, bases.BaseExpression) else core.Literal(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
+        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
     )
 
 
@@ -181,9 +181,9 @@ def metaphone(
     """
     return core.FunctionCall(
         dialect, "metaphone",
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
         max_length if isinstance(max_length, bases.BaseExpression)
-        else core.Literal(dialect, max_length),
+        else core.Parameter(dialect, max_length),
     )
 
 
@@ -209,7 +209,7 @@ def dmetaphone(
     """
     return core.FunctionCall(
         dialect, "dmetaphone",
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
     )
 
 
@@ -236,7 +236,7 @@ def dmetaphone_alt(
     """
     return core.FunctionCall(
         dialect, "dmetaphone_alt",
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
     )
 
 

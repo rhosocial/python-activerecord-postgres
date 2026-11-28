@@ -64,7 +64,7 @@ if __name__ == "__main__":
     from rhosocial.activerecord.backend.expression.statements import (
         ValuesSource,
     )
-    from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
+    from rhosocial.activerecord.backend.expression.core import CastExpression, Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions import (
@@ -130,7 +130,7 @@ if __name__ == "__main__":
         backend.execute(sql, params)
 
         # Example 2: Insert vector data
-        # Use CastExpression over a Literal for type-safe vector insertion.
+        # Use CastExpression over a Parameter for type-safe vector insertion.
         insert_expr = InsertStatement(
             dialect=dialect,
             into=Table(dialect, 'documents'),
@@ -139,30 +139,30 @@ if __name__ == "__main__":
                 dialect,
                 [
                     [
-                        Literal(dialect, "cat"),
+                        Parameter(dialect, "cat"),
                         CastExpression(
-                            dialect, Literal(dialect, "[1.0, 0.5, 0.2]"),
+                            dialect, Parameter(dialect, "[1.0, 0.5, 0.2]"),
                             PostgresVectorType(dialect),
                         ),
                     ],
                     [
-                        Literal(dialect, "dog"),
+                        Parameter(dialect, "dog"),
                         CastExpression(
-                            dialect, Literal(dialect, "[0.9, 0.6, 0.3]"),
+                            dialect, Parameter(dialect, "[0.9, 0.6, 0.3]"),
                             PostgresVectorType(dialect),
                         ),
                     ],
                     [
-                        Literal(dialect, "car"),
+                        Parameter(dialect, "car"),
                         CastExpression(
-                            dialect, Literal(dialect, "[0.1, 0.2, 0.9]"),
+                            dialect, Parameter(dialect, "[0.1, 0.2, 0.9]"),
                             PostgresVectorType(dialect),
                         ),
                     ],
                     [
-                        Literal(dialect, "bicycle"),
+                        Parameter(dialect, "bicycle"),
                         CastExpression(
-                            dialect, Literal(dialect, "[0.15, 0.25, 0.85]"),
+                            dialect, Parameter(dialect, "[0.15, 0.25, 0.85]"),
                             PostgresVectorType(dialect),
                         ),
                     ],

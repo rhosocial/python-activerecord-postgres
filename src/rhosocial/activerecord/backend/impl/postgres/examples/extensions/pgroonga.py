@@ -41,7 +41,7 @@ if __name__ == "__main__":
         InsertStatement,
         QueryStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal  # noqa: E402
+    from rhosocial.activerecord.backend.expression.core import Parameter  # noqa: E402
     from rhosocial.activerecord.backend.expression.objects import Table  # noqa: E402
     from rhosocial.activerecord.backend.expression.statements import ValuesSource  # noqa: E402
     from rhosocial.activerecord.backend.expression.types import TextType  # noqa: E402
@@ -101,8 +101,8 @@ if __name__ == "__main__":
     )
 
     rows = [
-        [Literal(dialect, "Groonga is a fast full text search engine.")],
-        [Literal(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
+        [Parameter(dialect, "Groonga is a fast full text search engine.")],
+        [Parameter(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
     ]
     backend.execute(
         *InsertStatement(

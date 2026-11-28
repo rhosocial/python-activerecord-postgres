@@ -50,7 +50,7 @@ if __name__ == "__main__":
         ColumnConstraint,
         ColumnPrimaryKeyConstraint,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.statements.dml import (
         InsertStatement,
     )
@@ -128,22 +128,22 @@ if __name__ == "__main__":
                 dialect,
                 [
                     [
-                        Literal(dialect, "Alice"),
-                        Literal(dialect, "2024-01-15"),
-                        Literal(dialect, 5000.00),
-                        Literal(dialect, "senior engineer"),
+                        Parameter(dialect, "Alice"),
+                        Parameter(dialect, "2024-01-15"),
+                        Parameter(dialect, 5000.00),
+                        Parameter(dialect, "senior engineer"),
                     ],
                     [
-                        Literal(dialect, "Bob"),
-                        Literal(dialect, "2024-06-30"),
-                        Literal(dialect, None),
-                        Literal(dialect, "junior developer"),
+                        Parameter(dialect, "Bob"),
+                        Parameter(dialect, "2024-06-30"),
+                        Parameter(dialect, None),
+                        Parameter(dialect, "junior developer"),
                     ],
                     [
-                        Literal(dialect, "Charlie"),
-                        Literal(dialect, "2024-12-25"),
-                        Literal(dialect, 3000.00),
-                        Literal(dialect, None),
+                        Parameter(dialect, "Charlie"),
+                        Parameter(dialect, "2024-12-25"),
+                        Parameter(dialect, 3000.00),
+                        Parameter(dialect, None),
                     ],
                 ],
             ),
@@ -160,7 +160,7 @@ if __name__ == "__main__":
         add_months_expr = add_months(
             dialect,
             Column(dialect, "hire_date"),
-            Literal(dialect, 6),
+            Parameter(dialect, 6),
         ).as_("review_date")
 
         query = QueryStatement(
@@ -197,7 +197,7 @@ if __name__ == "__main__":
         nvl_expr = nvl(
             dialect,
             Column(dialect, "bonus"),
-            Literal(dialect, 0.0),
+            Parameter(dialect, 0.0),
         ).as_("safe_bonus")
 
         query = QueryStatement(
@@ -216,11 +216,11 @@ if __name__ == "__main__":
         decode_expr = decode(
             dialect,
             Column(dialect, "name"),
-            Literal(dialect, "Alice"),
-            Literal(dialect, "Senior"),
-            Literal(dialect, "Bob"),
-            Literal(dialect, "Junior"),
-            default=Literal(dialect, "Other"),
+            Parameter(dialect, "Alice"),
+            Parameter(dialect, "Senior"),
+            Parameter(dialect, "Bob"),
+            Parameter(dialect, "Junior"),
+            default=Parameter(dialect, "Other"),
         ).as_("category")
 
         query = QueryStatement(
@@ -239,7 +239,7 @@ if __name__ == "__main__":
         instr_expr = instr(
             dialect,
             Column(dialect, "description"),
-            Literal(dialect, "engineer"),
+            Parameter(dialect, "engineer"),
         ).as_("pos")
 
         query = QueryStatement(

@@ -14,7 +14,7 @@ import pytest  # noqa: F401
 from unittest.mock import MagicMock  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core, operators, Literal
+from rhosocial.activerecord.backend.expression import core, operators, Parameter
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
     ltree_literal,
@@ -74,7 +74,7 @@ class TestLtreeFunctions:
         """Test ltree literal function."""
         dialect = PostgresDialect((14, 0, 0))
         result = ltree_literal(dialect, 'Top.Science.Astronomy')
-        assert isinstance(result, core.Literal)
+        assert isinstance(result, core.Parameter)
         sql, params = result.to_sql()
         assert 'Top.Science.Astronomy' in params
 
@@ -271,7 +271,7 @@ class TestPostGISFunctions:
     def test_st_geom_from_text(self):
         """Test geometry from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = st_geom_from_text(dialect, Literal(dialect, 'POINT(0 0)'), Literal(dialect, 4326))
+        result = st_geom_from_text(dialect, Parameter(dialect, 'POINT(0 0)'), Parameter(dialect, 4326))
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
         assert "st_geomfromtext" in sql.lower()
@@ -279,7 +279,7 @@ class TestPostGISFunctions:
     def test_st_geog_from_text(self):
         """Test geography from text."""
         dialect = PostgresDialect((14, 0, 0))
-        result = st_geog_from_text(dialect, Literal(dialect, 'POINT(0 0)'))
+        result = st_geog_from_text(dialect, Parameter(dialect, 'POINT(0 0)'))
         assert isinstance(result, core.FunctionCall)
         sql, params = result.to_sql()
         assert "st_geogfromtext" in sql.lower()

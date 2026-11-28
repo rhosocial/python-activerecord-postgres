@@ -29,7 +29,7 @@ def _namespaces_to_expression(
     namespaces: Dict[str, str],
 ) -> bases.BaseExpression:
     namespace_pairs = [[prefix, uri] for prefix, uri in namespaces.items()]
-    return core.Literal(dialect, namespace_pairs)
+    return core.Parameter(dialect, namespace_pairs)
 
 
 def xpath_query(
@@ -41,13 +41,13 @@ def xpath_query(
     """Generate PostgreSQL xpath expression."""
     xpath_expr = (
         xpath if isinstance(xpath, bases.BaseExpression)
-        else core.Literal(dialect, xpath.content) if isinstance(xpath, PostgresXML)
-        else core.Literal(dialect, xpath)
+        else core.Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else core.Parameter(dialect, xpath)
     )
     xml_expr = (
         xml_value if isinstance(xml_value, bases.BaseExpression)
-        else core.Literal(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
-        else core.Literal(dialect, xml_value)
+        else core.Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else core.Parameter(dialect, xml_value)
     )
 
     args = [xpath_expr, xml_expr]
@@ -66,13 +66,13 @@ def xpath_exists(
     """Generate PostgreSQL xpath_exists expression."""
     xpath_expr = (
         xpath if isinstance(xpath, bases.BaseExpression)
-        else core.Literal(dialect, xpath.content) if isinstance(xpath, PostgresXML)
-        else core.Literal(dialect, xpath)
+        else core.Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else core.Parameter(dialect, xpath)
     )
     xml_expr = (
         xml_value if isinstance(xml_value, bases.BaseExpression)
-        else core.Literal(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
-        else core.Literal(dialect, xml_value)
+        else core.Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else core.Parameter(dialect, xml_value)
     )
 
     args = [xpath_expr, xml_expr]
@@ -89,8 +89,8 @@ def xml_is_well_formed(
     """Generate PostgreSQL xml_is_well_formed expression."""
     content_expr = (
         content if isinstance(content, bases.BaseExpression)
-        else core.Literal(dialect, content.content) if isinstance(content, PostgresXML)
-        else core.Literal(dialect, content)
+        else core.Parameter(dialect, content.content) if isinstance(content, PostgresXML)
+        else core.Parameter(dialect, content)
     )
     return core.FunctionCall(dialect, "xml_is_well_formed", content_expr)
 

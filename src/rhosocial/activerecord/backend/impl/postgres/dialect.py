@@ -562,19 +562,6 @@ class PostgresDialect(
             raise TypeError("Graph feature override values must be booleans")
         self._graph_feature_overrides = overrides
 
-    def artifact_registry(self):
-        """The kinds this backend can read: core's kinds plus PostgreSQL's own.
-
-        PostgreSQL owns its expression package, so the composition lives here
-        rather than in core: ``backend_registry()`` is
-        ``registry_for_packages("...impl.postgres.expression", base=core_registry())``,
-        frozen and cached. It carries no other backend's kinds, and the async
-        backend uses this same dialect class, so there is one table either way.
-        """
-        from .registry import backend_registry
-
-        return backend_registry()
-
     def get_parameter_placeholder(self, position: int = 0) -> str:
         """psycopg uses '%s' for placeholders."""
         return "%s"

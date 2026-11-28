@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnUniqueConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.core import Parameter, Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
@@ -93,7 +93,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['username', 'email', 'login_count'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
+            [Parameter(dialect, 'alice'), Parameter(dialect, 'alice@example.com'), Parameter(dialect, 1)],
         ]),
         on_conflict=OnConflictClause(
             dialect,
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['username', 'email', 'login_count'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
+            [Parameter(dialect, 'alice'), Parameter(dialect, 'different@example.com'), Parameter(dialect, 2)],
         ]),
         on_conflict=OnConflictClause(
             dialect,
@@ -126,7 +126,7 @@ if __name__ == "__main__":
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
         from_=Table(dialect, 'users'),
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'alice')),
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Parameter(dialect, 'alice')),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=dql_options)
@@ -142,7 +142,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['username', 'email', 'login_count'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
+            [Parameter(dialect, 'bob'), Parameter(dialect, 'bob@example.com'), Parameter(dialect, 1)],
         ]),
         on_conflict=OnConflictClause(
             dialect,
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['username', 'email', 'login_count'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],
+            [Parameter(dialect, 'bob'), Parameter(dialect, 'bob_new@example.com'), Parameter(dialect, 2)],
         ]),
         on_conflict=OnConflictClause(
             dialect,
@@ -184,7 +184,7 @@ if __name__ == "__main__":
             Column(dialect, 'email'), Column(dialect, 'login_count'),
         ],
         from_=Table(dialect, 'users'),
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Parameter(dialect, 'bob')),
     )
     sql, params = query.to_sql()
     result = backend.execute(sql, params, options=dql_options)

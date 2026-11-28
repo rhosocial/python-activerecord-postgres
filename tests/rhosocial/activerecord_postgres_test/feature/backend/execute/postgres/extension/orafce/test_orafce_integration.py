@@ -30,7 +30,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.options import ExecutionOptions
@@ -93,25 +93,25 @@ def orafce_backend(postgres_backend_single):
             dialect,
             [
                 [
-                    Literal(dialect, "2024-01-15"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "A"),
-                    Literal(dialect, 0.10),
-                    Literal(dialect, "test description one"),
+                    Parameter(dialect, "2024-01-15"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "A"),
+                    Parameter(dialect, 0.10),
+                    Parameter(dialect, "test description one"),
                 ],
                 [
-                    Literal(dialect, "2024-06-30"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "B"),
-                    Literal(dialect, None),
-                    Literal(dialect, "another test example"),
+                    Parameter(dialect, "2024-06-30"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "B"),
+                    Parameter(dialect, None),
+                    Parameter(dialect, "another test example"),
                 ],
                 [
-                    Literal(dialect, "2024-12-25"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "C"),
-                    Literal(dialect, 0.25),
-                    Literal(dialect, None),
+                    Parameter(dialect, "2024-12-25"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "C"),
+                    Parameter(dialect, 0.25),
+                    Parameter(dialect, None),
                 ],
             ],
         ),
@@ -143,7 +143,7 @@ class TestOrafceIntegration:
         func = add_months(
             dialect,
             Column(dialect, "dt"),
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         ).as_("result_dt")
 
         query = QueryStatement(
@@ -197,7 +197,7 @@ class TestOrafceIntegration:
         dialect = backend.dialect
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Use ref_dt (DATE column) instead of Literal string for type safety
+        # Use ref_dt (DATE column) instead of Parameter string for type safety
         func = months_between(
             dialect,
             Column(dialect, "ref_dt"),
@@ -231,7 +231,7 @@ class TestOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            cast(dialect, Literal(dialect, 0.0), DecimalType(dialect)),
+            cast(dialect, Parameter(dialect, 0.0), DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryStatement(
@@ -260,9 +260,9 @@ class TestOrafceIntegration:
         func = decode(
             dialect,
             Column(dialect, "name"),
-            Literal(dialect, "A"),
-            Literal(dialect, "Alpha"),
-            default=Literal(dialect, "Other"),
+            Parameter(dialect, "A"),
+            Parameter(dialect, "Alpha"),
+            default=Parameter(dialect, "Other"),
         ).as_("decoded_name")
 
         query = QueryStatement(
@@ -291,7 +291,7 @@ class TestOrafceIntegration:
         func = instr(
             dialect,
             Column(dialect, "description"),
-            Literal(dialect, "test"),
+            Parameter(dialect, "test"),
         ).as_("pos")
 
         query = QueryStatement(
@@ -354,25 +354,25 @@ async def async_orafce_backend(async_postgres_backend_single):
             dialect,
             [
                 [
-                    Literal(dialect, "2024-01-15"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "A"),
-                    Literal(dialect, 0.10),
-                    Literal(dialect, "test description one"),
+                    Parameter(dialect, "2024-01-15"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "A"),
+                    Parameter(dialect, 0.10),
+                    Parameter(dialect, "test description one"),
                 ],
                 [
-                    Literal(dialect, "2024-06-30"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "B"),
-                    Literal(dialect, None),
-                    Literal(dialect, "another test example"),
+                    Parameter(dialect, "2024-06-30"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "B"),
+                    Parameter(dialect, None),
+                    Parameter(dialect, "another test example"),
                 ],
                 [
-                    Literal(dialect, "2024-12-25"),
-                    Literal(dialect, "2024-06-15"),
-                    Literal(dialect, "C"),
-                    Literal(dialect, 0.25),
-                    Literal(dialect, None),
+                    Parameter(dialect, "2024-12-25"),
+                    Parameter(dialect, "2024-06-15"),
+                    Parameter(dialect, "C"),
+                    Parameter(dialect, 0.25),
+                    Parameter(dialect, None),
                 ],
             ],
         ),
@@ -405,7 +405,7 @@ class TestAsyncOrafceIntegration:
         func = add_months(
             dialect,
             Column(dialect, "dt"),
-            Literal(dialect, 3),
+            Parameter(dialect, 3),
         ).as_("result_dt")
 
         query = QueryStatement(
@@ -461,7 +461,7 @@ class TestAsyncOrafceIntegration:
         dialect = backend.dialect
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
-        # Use ref_dt (DATE column) instead of Literal string for type safety
+        # Use ref_dt (DATE column) instead of Parameter string for type safety
         func = months_between(
             dialect,
             Column(dialect, "ref_dt"),
@@ -496,7 +496,7 @@ class TestAsyncOrafceIntegration:
         func = nvl(
             dialect,
             Column(dialect, "discount"),
-            cast(dialect, Literal(dialect, 0.0), DecimalType(dialect)),
+            cast(dialect, Parameter(dialect, 0.0), DecimalType(dialect)),
         ).as_("safe_discount")
 
         query = QueryStatement(
@@ -526,9 +526,9 @@ class TestAsyncOrafceIntegration:
         func = decode(
             dialect,
             Column(dialect, "name"),
-            Literal(dialect, "A"),
-            Literal(dialect, "Alpha"),
-            default=Literal(dialect, "Other"),
+            Parameter(dialect, "A"),
+            Parameter(dialect, "Alpha"),
+            default=Parameter(dialect, "Other"),
         ).as_("decoded_name")
 
         query = QueryStatement(
@@ -558,7 +558,7 @@ class TestAsyncOrafceIntegration:
         func = instr(
             dialect,
             Column(dialect, "description"),
-            Literal(dialect, "test"),
+            Parameter(dialect, "test"),
         ).as_("pos")
 
         query = QueryStatement(

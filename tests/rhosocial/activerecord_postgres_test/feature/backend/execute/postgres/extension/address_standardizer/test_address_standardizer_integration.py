@@ -19,7 +19,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.address_standardizer import (
     parse_address,
     standardize_address,
@@ -55,7 +55,7 @@ class TestAddressStandardizerIntegration:
 
         parse_func = parse_address(
             dialect,
-            Literal(dialect, "123 Main St, Springfield, IL 62701"),
+            Parameter(dialect, "123 Main St, Springfield, IL 62701"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -84,7 +84,7 @@ class TestAddressStandardizerIntegration:
                 "pagc_lex",
                 "pagc_gaz",
                 "pagc_rules",
-                Literal(dialect, "123 Main St, Springfield, IL 62701"),
+                Parameter(dialect, "123 Main St, Springfield, IL 62701"),
             )
             query = QueryStatement(
                 dialect=dialect,
@@ -131,7 +131,7 @@ class TestAsyncAddressStandardizerIntegration:
 
         parse_func = parse_address(
             dialect,
-            Literal(dialect, "123 Main St, Springfield, IL 62701"),
+            Parameter(dialect, "123 Main St, Springfield, IL 62701"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -161,7 +161,7 @@ class TestAsyncAddressStandardizerIntegration:
                 "pagc_lex",
                 "pagc_gaz",
                 "pagc_rules",
-                Literal(dialect, "123 Main St, Springfield, IL 62701"),
+                Parameter(dialect, "123 Main St, Springfield, IL 62701"),
             )
             query = QueryStatement(
                 dialect=dialect,

@@ -87,14 +87,14 @@ if __name__ == "__main__":
     # Verify index creation
     from rhosocial.activerecord.backend.expression import QueryStatement
     from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.expression.core import Column, Literal
+    from rhosocial.activerecord.backend.expression.core import Column, Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     verify_expr = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'indexname')],
         from_=Table(dialect, 'pg_indexes'),
-        where=ComparisonPredicate(dialect, "=", Column(dialect, 'indexname'), Literal(dialect, 'idx_category_price')),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, 'indexname'), Parameter(dialect, 'idx_category_price')),
     )
     options = ExecutionOptions(stmt_type=StatementType.DQL)
     verify_result = backend.execute(*verify_expr.to_sql(), options=options)

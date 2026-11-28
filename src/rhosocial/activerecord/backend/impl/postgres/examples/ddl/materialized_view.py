@@ -47,7 +47,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, MaterializedView, Table
 from rhosocial.activerecord.backend.expression.core import (
-    Literal,
+    Parameter,
     Column,
     AllColumnsWildcard,
     RowCountWildcard,
@@ -143,11 +143,11 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, '1'), Literal(dialect, '100.00'), Literal(dialect, "'2024-01-01'")],
-                [Literal(dialect, '1'), Literal(dialect, '150.00'), Literal(dialect, "'2024-01-02'")],
-                [Literal(dialect, '2'), Literal(dialect, '200.00'), Literal(dialect, "'2024-01-01'")],
-                [Literal(dialect, '2'), Literal(dialect, '250.00'), Literal(dialect, "'2024-01-03'")],
-                [Literal(dialect, '1'), Literal(dialect, '180.00'), Literal(dialect, "'2024-01-04'")],
+                [Parameter(dialect, '1'), Parameter(dialect, '100.00'), Parameter(dialect, "'2024-01-01'")],
+                [Parameter(dialect, '1'), Parameter(dialect, '150.00'), Parameter(dialect, "'2024-01-02'")],
+                [Parameter(dialect, '2'), Parameter(dialect, '200.00'), Parameter(dialect, "'2024-01-01'")],
+                [Parameter(dialect, '2'), Parameter(dialect, '250.00'), Parameter(dialect, "'2024-01-03'")],
+                [Parameter(dialect, '1'), Parameter(dialect, '180.00'), Parameter(dialect, "'2024-01-04'")],
             ],
         ),
     )
@@ -287,7 +287,7 @@ if __name__ == "__main__":
         columns=['product_id', 'amount', 'sale_date'],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, '1'), Literal(dialect, '300.00'), Literal(dialect, "'2024-01-05'")]],
+            [[Parameter(dialect, '1'), Parameter(dialect, '300.00'), Parameter(dialect, "'2024-01-05'")]],
         ),
     )
     sql, params = insert_new.to_sql()
@@ -332,7 +332,7 @@ if __name__ == "__main__":
         columns=['product_id', 'amount', 'sale_date'],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, '2'), Literal(dialect, '400.00'), Literal(dialect, "'2024-01-06'")]],
+            [[Parameter(dialect, '2'), Parameter(dialect, '400.00'), Parameter(dialect, "'2024-01-06'")]],
         ),
     )
     sql, params = insert_more.to_sql()

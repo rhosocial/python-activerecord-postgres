@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Column
+from rhosocial.activerecord.backend.expression.core import Parameter, Column
 from rhosocial.activerecord.backend.expression.predicates import (
     LikeOperator,
     LikePredicate,
@@ -96,40 +96,40 @@ if __name__ == "__main__":
             dialect,
             [
                 [
-                    Literal(dialect, 'Alice Smith'),
-                    Literal(dialect, 'Engineering'),
-                    Literal(dialect, 95000.00),
-                    Literal(dialect, None),
+                    Parameter(dialect, 'Alice Smith'),
+                    Parameter(dialect, 'Engineering'),
+                    Parameter(dialect, 95000.00),
+                    Parameter(dialect, None),
                 ],
                 [
-                    Literal(dialect, 'Bob Johnson'),
-                    Literal(dialect, 'Engineering'),
-                    Literal(dialect, 85000.00),
-                    Literal(dialect, 1),
+                    Parameter(dialect, 'Bob Johnson'),
+                    Parameter(dialect, 'Engineering'),
+                    Parameter(dialect, 85000.00),
+                    Parameter(dialect, 1),
                 ],
                 [
-                    Literal(dialect, 'Charlie Brown'),
-                    Literal(dialect, 'Sales'),
-                    Literal(dialect, 72000.00),
-                    Literal(dialect, None),
+                    Parameter(dialect, 'Charlie Brown'),
+                    Parameter(dialect, 'Sales'),
+                    Parameter(dialect, 72000.00),
+                    Parameter(dialect, None),
                 ],
                 [
-                    Literal(dialect, 'Diana Prince'),
-                    Literal(dialect, 'Marketing'),
-                    Literal(dialect, 88000.00),
-                    Literal(dialect, None),
+                    Parameter(dialect, 'Diana Prince'),
+                    Parameter(dialect, 'Marketing'),
+                    Parameter(dialect, 88000.00),
+                    Parameter(dialect, None),
                 ],
                 [
-                    Literal(dialect, 'Eve Williams'),
-                    Literal(dialect, 'Sales'),
-                    Literal(dialect, 68000.00),
-                    Literal(dialect, 3),
+                    Parameter(dialect, 'Eve Williams'),
+                    Parameter(dialect, 'Sales'),
+                    Parameter(dialect, 68000.00),
+                    Parameter(dialect, 3),
                 ],
                 [
-                    Literal(dialect, 'Frank Miller'),
-                    Literal(dialect, 'Engineering'),
-                    Literal(dialect, 105000.00),
-                    Literal(dialect, 1),
+                    Parameter(dialect, 'Frank Miller'),
+                    Parameter(dialect, 'Engineering'),
+                    Parameter(dialect, 105000.00),
+                    Parameter(dialect, 1),
                 ],
             ],
         ),
@@ -156,7 +156,7 @@ if __name__ == "__main__":
                 dialect,
                 LikeOperator.LIKE,
                 Column(dialect, 'name'),
-                Literal(dialect, 'A%'),
+                Parameter(dialect, 'A%'),
             ),
         ),
     )
@@ -178,7 +178,7 @@ if __name__ == "__main__":
             condition=InPredicate(
                 dialect,
                 Column(dialect, 'department'),
-                Literal(dialect, ['Engineering', 'Sales']),
+                Parameter(dialect, ['Engineering', 'Sales']),
             ),
         ),
     )
@@ -200,8 +200,8 @@ if __name__ == "__main__":
             condition=BetweenPredicate(
                 dialect,
                 Column(dialect, 'salary'),
-                Literal(dialect, 70000.00),
-                Literal(dialect, 90000.00),
+                Parameter(dialect, 70000.00),
+                Parameter(dialect, 90000.00),
             ),
         ),
     )
@@ -271,13 +271,13 @@ if __name__ == "__main__":
                     dialect,
                     LikeOperator.LIKE,
                     Column(dialect, 'name'),
-                    Literal(dialect, '%e%'),
+                    Parameter(dialect, '%e%'),
                 ),
                 BetweenPredicate(
                     dialect,
                     Column(dialect, 'salary'),
-                    Literal(dialect, 70000.00),
-                    Literal(dialect, 100000.00),
+                    Parameter(dialect, 70000.00),
+                    Parameter(dialect, 100000.00),
                 ),
             ),
         ),

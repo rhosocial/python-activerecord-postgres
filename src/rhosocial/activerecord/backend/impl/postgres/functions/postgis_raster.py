@@ -75,12 +75,12 @@ def st_rast_from_hexwkb(
     """
     inner = core.FunctionCall(
         dialect, "ST_RastFromHexWKB",
-        raster_data if isinstance(raster_data, bases.BaseExpression) else core.Literal(dialect, raster_data),
+        raster_data if isinstance(raster_data, bases.BaseExpression) else core.Parameter(dialect, raster_data),
     )
     return core.FunctionCall(
         dialect, "ST_SetSRID",
         inner,
-        srid if isinstance(srid, bases.BaseExpression) else core.Literal(dialect, srid),
+        srid if isinstance(srid, bases.BaseExpression) else core.Parameter(dialect, srid),
     )
 
 
@@ -113,9 +113,9 @@ def st_value(
     """
     return core.FunctionCall(
         dialect, "ST_Value",
-        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Literal(dialect, raster_expr),
-        x if isinstance(x, bases.BaseExpression) else core.Literal(dialect, x),
-        y if isinstance(y, bases.BaseExpression) else core.Literal(dialect, y),
+        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Parameter(dialect, raster_expr),
+        x if isinstance(x, bases.BaseExpression) else core.Parameter(dialect, x),
+        y if isinstance(y, bases.BaseExpression) else core.Parameter(dialect, y),
     )
 
 
@@ -144,7 +144,7 @@ def st_summary(
     """
     return core.FunctionCall(
         dialect, "ST_Summary",
-        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Literal(dialect, raster_expr),
+        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Parameter(dialect, raster_expr),
     )
 
 

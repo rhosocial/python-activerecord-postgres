@@ -16,7 +16,7 @@ def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
     if isinstance(value, bases.BaseExpression):
         return value
-    return core.Literal(dialect, value)
+    return core.Parameter(dialect, value)
 
 
 def pgstattuple(dialect: "SQLDialectBase", relation) -> core.FunctionCall:

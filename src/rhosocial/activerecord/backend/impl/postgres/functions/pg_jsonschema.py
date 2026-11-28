@@ -1,7 +1,7 @@
 # src/rhosocial/activerecord/backend/impl/postgres/functions/pg_jsonschema.py
 """pg_jsonschema validation function factories.
 
-Every factory takes the dialect first and returns an Expression node. Literal
+Every factory takes the dialect first and returns an Expression node. Parameter
 schemas and instances are cast to ``json`` / ``jsonb`` so PostgreSQL resolves
 the extension's function signatures without ambiguity.
 """
@@ -19,7 +19,7 @@ def _typed(dialect: "SQLDialectBase", value, data_type):
     """Expressions pass through; other values become typed literals."""
     if isinstance(value, bases.BaseExpression):
         return value
-    return core.CastExpression(dialect, core.Literal(dialect, value), data_type(dialect))
+    return core.CastExpression(dialect, core.Parameter(dialect, value), data_type(dialect))
 
 
 def json_matches_schema(dialect: "SQLDialectBase", schema, instance) -> core.FunctionCall:

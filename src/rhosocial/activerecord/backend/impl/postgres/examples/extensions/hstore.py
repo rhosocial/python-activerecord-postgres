@@ -58,7 +58,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression import (
-        Column, Literal, FunctionCall, Subquery,
+        Column, Parameter, FunctionCall, Subquery,
     )
     from rhosocial.activerecord.backend.expression.core import CastExpression
     from rhosocial.activerecord.backend.expression.objects import Table
@@ -124,7 +124,7 @@ if __name__ == "__main__":
         backend.execute(sql, params)
 
         # Example 2: Insert hstore data using InsertStatement + ValuesSource
-        # Use CastExpression over a Literal for type-safe hstore insertion
+        # Use CastExpression over a Parameter for type-safe hstore insertion
         insert_expr = InsertStatement(
             dialect=dialect,
             into=Table(dialect, 'products'),
@@ -133,23 +133,23 @@ if __name__ == "__main__":
                 dialect,
                 [
                     [
-                        Literal(dialect, "Laptop"),
+                        Parameter(dialect, "Laptop"),
                         CastExpression(
-                            dialect, Literal(dialect, "color=>silver, weight=>2.5"),
+                            dialect, Parameter(dialect, "color=>silver, weight=>2.5"),
                             PostgresHstoreType(dialect),
                         ),
                     ],
                     [
-                        Literal(dialect, "Phone"),
+                        Parameter(dialect, "Phone"),
                         CastExpression(
-                            dialect, Literal(dialect, "color=>black, weight=>0.2"),
+                            dialect, Parameter(dialect, "color=>black, weight=>0.2"),
                             PostgresHstoreType(dialect),
                         ),
                     ],
                     [
-                        Literal(dialect, "Tablet"),
+                        Parameter(dialect, "Tablet"),
                         CastExpression(
-                            dialect, Literal(dialect, "color=>silver, weight=>0.5, brand=>Acme"),
+                            dialect, Parameter(dialect, "color=>silver, weight=>0.5, brand=>Acme"),
                             PostgresHstoreType(dialect),
                         ),
                     ],
@@ -173,7 +173,7 @@ if __name__ == "__main__":
                 Subquery(dialect, BinaryExpression(
                     dialect, "->",
                     Column(dialect, "attributes"),
-                    Literal(dialect, "color"),
+                    Parameter(dialect, "color"),
                 )).as_("color"),
             ],
             from_=Table(dialect, "products"),
@@ -194,7 +194,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "?",
                 Column(dialect, "attributes"),
-                Literal(dialect, "weight"),
+                Parameter(dialect, "weight"),
             ),
         )
         sql, params = query.to_sql()
@@ -213,7 +213,7 @@ if __name__ == "__main__":
             where=BinaryExpression(
                 dialect, "@>",
                 Column(dialect, "attributes"),
-                CastExpression(dialect, Literal(dialect, "color=>silver"), PostgresHstoreType(dialect)),
+                CastExpression(dialect, Parameter(dialect, "color=>silver"), PostgresHstoreType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -232,7 +232,7 @@ if __name__ == "__main__":
                     dialect, "||",
                     Column(dialect, "attributes"),
                     CastExpression(
-                        dialect, Literal(dialect, "brand=>Acme"),
+                        dialect, Parameter(dialect, "brand=>Acme"),
                         PostgresHstoreType(dialect),
                     ),
                 )).as_("with_brand"),
@@ -311,7 +311,7 @@ if __name__ == "__main__":
                 FunctionCall(
                     dialect, "delete",
                     Column(dialect, "attributes"),
-                    Literal(dialect, "weight"),
+                    Parameter(dialect, "weight"),
                 ).as_("without_weight"),
             ],
             from_=Table(dialect, "products"),
@@ -334,7 +334,7 @@ if __name__ == "__main__":
                     dialect, "||",
                     Column(dialect, "attributes"),
                     CastExpression(
-                        dialect, Literal(dialect, "discount=>true"),
+                        dialect, Parameter(dialect, "discount=>true"),
                         PostgresHstoreType(dialect),
                     ),
                 ),
@@ -344,9 +344,9 @@ if __name__ == "__main__":
                 BinaryExpression(
                     dialect, "->",
                     Column(dialect, "attributes"),
-                    Literal(dialect, "color"),
+                    Parameter(dialect, "color"),
                 ),
-                Literal(dialect, "silver"),
+                Parameter(dialect, "silver"),
             ),
         )
         sql, params = update_expr.to_sql()
@@ -364,7 +364,7 @@ if __name__ == "__main__":
                 Subquery(dialect, BinaryExpression(
                     dialect, "->",
                     Column(dialect, "attributes"),
-                    Literal(dialect, "discount"),
+                    Parameter(dialect, "discount"),
                 )).as_("discount"),
             ],
             from_=Table(dialect, "products"),
@@ -373,9 +373,9 @@ if __name__ == "__main__":
                 BinaryExpression(
                     dialect, "->",
                     Column(dialect, "attributes"),
-                    Literal(dialect, "color"),
+                    Parameter(dialect, "color"),
                 ),
-                Literal(dialect, "silver"),
+                Parameter(dialect, "silver"),
             ),
         )
         sql, params = query.to_sql()

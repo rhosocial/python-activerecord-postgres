@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.dialect import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import (
     Column,
     InsertStatement,
-    Literal,
+    Parameter,
     OnConflictClause,
     ValuesSource,
 )
@@ -50,7 +50,7 @@ class TestOnConflictCapabilities:
 
     def test_multiple_on_conflict_clauses_rejected(self, dialect):
         """PostgreSQL grammar allows only one ON CONFLICT clause per INSERT."""
-        source = ValuesSource(dialect, values_list=[[Literal(dialect, 1)]])
+        source = ValuesSource(dialect, values_list=[[Parameter(dialect, 1)]])
         clause1 = OnConflictClause(dialect, conflict_target=["col_a"], do_nothing=True)
         clause2 = OnConflictClause(dialect, conflict_target=["col_b"], do_nothing=True)
         expr = InsertStatement(dialect, into=Table(dialect, 't'), source=source, on_conflict=[clause1, clause2])
@@ -63,7 +63,7 @@ class TestOnConflictRendering:
     """SQL rendering tests for a single ON CONFLICT clause."""
 
     def test_do_nothing(self, dialect):
-        source = ValuesSource(dialect, values_list=[[Literal(dialect, 1)]])
+        source = ValuesSource(dialect, values_list=[[Parameter(dialect, 1)]])
         clause = OnConflictClause(dialect, conflict_target=["id"], do_nothing=True)
         expr = InsertStatement(dialect, into=Table(dialect, 'users'), columns=["id"], source=source, on_conflict=clause)
         sql, params = expr.to_sql()
@@ -73,7 +73,7 @@ class TestOnConflictRendering:
     def test_do_update_with_excluded(self, dialect):
         """EXCLUDED pseudo-table must not be double-quoted in PostgreSQL."""
         source = ValuesSource(
-            dialect, values_list=[[Literal(dialect, 1), Literal(dialect, "new_name")]]
+            dialect, values_list=[[Parameter(dialect, 1), Parameter(dialect, "new_name")]]
         )
         clause = OnConflictClause(
             dialect,
@@ -92,7 +92,7 @@ class TestOnConflictRendering:
 
     def test_do_update_with_where(self, dialect):
         source = ValuesSource(
-            dialect, values_list=[[Literal(dialect, 1), Literal(dialect, 10)]]
+            dialect, values_list=[[Parameter(dialect, 1), Parameter(dialect, 10)]]
         )
         clause = OnConflictClause(
             dialect,

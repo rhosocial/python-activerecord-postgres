@@ -94,7 +94,7 @@ CreateIndexStatement(..., index_type=PostgresIndexType.BRIN)    # huge ordered t
 ## Partial and unique indexes
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 CreateIndexStatement(
@@ -103,7 +103,7 @@ CreateIndexStatement(
     table=Table(dialect, "orders"),
     columns=["customer_id"],
     where=ComparisonPredicate(
-        dialect, "=", Column(dialect, "status"), Literal(dialect, "unpaid", inline=True)
+        dialect, "=", Column(dialect, "status"), Parameter(dialect, "unpaid", inline=True)
     ),
 )
 ```

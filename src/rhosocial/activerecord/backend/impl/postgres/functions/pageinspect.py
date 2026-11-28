@@ -16,7 +16,7 @@ def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
     if isinstance(value, bases.BaseExpression):
         return value
-    return core.Literal(dialect, value)
+    return core.Parameter(dialect, value)
 
 
 def get_raw_page(
@@ -27,7 +27,7 @@ def get_raw_page(
         raise ValueError("block_number must be a non-negative integer")
     return core.FunctionCall(
         dialect, "get_raw_page",
-        _expr(dialect, relation), core.Literal(dialect, fork), core.Literal(dialect, block_number),
+        _expr(dialect, relation), core.Parameter(dialect, fork), core.Parameter(dialect, block_number),
     )
 
 
@@ -43,7 +43,7 @@ def bt_page_stats(
     if not isinstance(block_number, int) or isinstance(block_number, bool) or block_number < 0:
         raise ValueError("block_number must be a non-negative integer")
     return core.FunctionCall(
-        dialect, "bt_page_stats", _expr(dialect, relation), core.Literal(dialect, block_number)
+        dialect, "bt_page_stats", _expr(dialect, relation), core.Parameter(dialect, block_number)
     )
 
 

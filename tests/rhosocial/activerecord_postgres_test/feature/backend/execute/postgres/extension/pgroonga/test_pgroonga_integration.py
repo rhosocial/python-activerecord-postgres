@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     Column,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.types import TextType
@@ -66,9 +66,9 @@ def _create_and_fill(backend, dialect, table, suffix=""):
         options=DDL,
     )
     rows = [
-        [Literal(dialect, "Groonga is a fast full text search engine.")],
-        [Literal(dialect, "PostgreSQL is a relational database.")],
-        [Literal(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
+        [Parameter(dialect, "Groonga is a fast full text search engine.")],
+        [Parameter(dialect, "PostgreSQL is a relational database.")],
+        [Parameter(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
     ]
     backend.execute(
         *InsertStatement(
@@ -136,9 +136,9 @@ async def async_pgroonga_env(async_postgres_backend_single):
         options=DDL,
     )
     rows = [
-        [Literal(dialect, "Groonga is a fast full text search engine.")],
-        [Literal(dialect, "PostgreSQL is a relational database.")],
-        [Literal(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
+        [Parameter(dialect, "Groonga is a fast full text search engine.")],
+        [Parameter(dialect, "PostgreSQL is a relational database.")],
+        [Parameter(dialect, "中文全文检索：PostgreSQL 与 Groonga 的组合。")],
     ]
     await backend.execute(
         *InsertStatement(

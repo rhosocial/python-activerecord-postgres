@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression import (
     ArithmeticOperation,
     Column,
     ComparisonPredicate,
-    Literal,
+    Parameter,
 )
 from rhosocial.activerecord.backend.expression.statements import (
     AddColumnAction,
@@ -211,7 +211,7 @@ class TestAlterColumnUsingExpression:
             "price",
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
-            using=ArithmeticOperation(dialect, "add", Column(dialect, "price"), Literal(dialect, 1)),
+            using=ArithmeticOperation(dialect, "add", Column(dialect, "price"), Parameter(dialect, 1)),
         )
         sql, serialized = action.to_sql()
         assert 'ALTER COLUMN "price" SET DATA TYPE NUMERIC(10,2)' in sql
@@ -371,7 +371,7 @@ class TestConstraintDeferral:
         from rhosocial.activerecord.backend.expression import (
             Column,
             ComparisonPredicate,
-            Literal,
+            Parameter,
             TableCheckConstraint,
             TableConstraint,
             TableForeignKeyConstraint,
@@ -385,7 +385,7 @@ class TestConstraintDeferral:
 
         dialect = PostgresDialect((19, 0, 0))
         condition = ComparisonPredicate(
-            dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
+            dialect, ">", Column(dialect, "id"), Parameter(dialect, 0, inline=True)
         )
         check = TableConstraint(dialect, branch=TableCheckConstraint(dialect, condition), not_enforced=True)
         fk = TableConstraint(
@@ -504,7 +504,7 @@ class TestConstraintEnforcement:
             ColumnDefinition,
             ComparisonPredicate,
             ForeignKeyConstraint,
-            Literal,
+            Parameter,
             TableCheckConstraint,
             TableConstraint,
         )
@@ -512,7 +512,7 @@ class TestConstraintEnforcement:
 
         dialect = PostgresDialect((18, 0, 0))
         condition = ComparisonPredicate(
-            dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
+            dialect, ">", Column(dialect, "age"), Parameter(dialect, 0, inline=True)
         )
         check = TableConstraint(
             dialect,
@@ -571,7 +571,7 @@ class TestConstraintEnforcement:
                 dialect,
                 " check ",
                 check_condition=ComparisonPredicate(
-                    dialect, ">", Column(dialect, "age"), Literal(dialect, 0, inline=True)
+                    dialect, ">", Column(dialect, "age"), Parameter(dialect, 0, inline=True)
                 ),
                 validation=" not valid ",
             )
@@ -586,7 +586,7 @@ class TestConstraintEnforcement:
                             dialect,
                             ">",
                             Column(dialect, "age"),
-                            Literal(dialect, 0, inline=True),
+                            Parameter(dialect, 0, inline=True),
                         ),
                     ),
                     validation=" not valid ",
@@ -698,7 +698,7 @@ class TestConstraintEnforcement:
             branch=TableCheckConstraint(
                 dialect,
                 ComparisonPredicate(
-                    dialect, ">", Column(dialect, "id"), Literal(dialect, 0, inline=True)
+                    dialect, ">", Column(dialect, "id"), Parameter(dialect, 0, inline=True)
                 ),
             ),
             validation=ConstraintValidation.NOVALIDATE,
@@ -717,7 +717,7 @@ class TestConstraintEnforcement:
             Column,
             ComparisonPredicate,
             FunctionCall,
-            Literal,
+            Parameter,
             RawSQL,
             RawSQLPredicate,
         )
@@ -734,7 +734,7 @@ class TestConstraintEnforcement:
                 )
             ],
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "active"), Literal(dialect, True, inline=True)
+                dialect, "=", Column(dialect, "active"), Parameter(dialect, True, inline=True)
             ),
         )
 

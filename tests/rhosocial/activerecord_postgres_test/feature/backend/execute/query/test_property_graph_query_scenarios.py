@@ -12,6 +12,7 @@ The synchronous and asynchronous database tests skip unless the backend
 explicitly reports GRAPH_TABLE support. All SQL is constructed through
 expression classes.
 """
+
 import pytest
 import pytest_asyncio
 
@@ -34,7 +35,7 @@ from rhosocial.activerecord.backend.expression import (
     GraphTableExpression,
     GraphVertex,
     InsertStatement,
-    Literal,
+    Parameter,
     MatchClause,
     QueryStatement,
     TablePropertiesClause,
@@ -49,15 +50,18 @@ from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.expression.objects import EdgeTable as EdgeTableObject
 from rhosocial.activerecord.backend.expression.objects import NodeTable, Table
 from rhosocial.activerecord.backend.expression.query_parts import (
-    WhereClause, OrderByClause, GroupByHavingClause, LimitOffsetClause,
+    WhereClause,
+    OrderByClause,
+    GroupByHavingClause,
+    LimitOffsetClause,
 )
 from rhosocial.activerecord.backend.expression.core import Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.types import (
-    IntegerType, TextType,
+    IntegerType,
+    TextType,
 )
-
 
 GRAPH_NAME = "social_graph"
 
@@ -73,130 +77,232 @@ def social_data(postgres_backend):
         backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
 
     people_cols = [
-        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
+        ColumnDefinition(
+            dialect,
+            "id",
+            IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+        ),
         ColumnDefinition(dialect, "name", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'people'), people_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, "people"), people_cols).to_sql())
 
     follows_cols = [
-        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
-        ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
-        ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
+        ColumnDefinition(
+            dialect,
+            "id",
+            IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+        ),
+        ColumnDefinition(
+            dialect,
+            "follower_id",
+            IntegerType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(
+                    dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                )
+            ],
+        ),
+        ColumnDefinition(
+            dialect,
+            "followed_id",
+            IntegerType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(
+                    dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                )
+            ],
+        ),
         ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, "follows"), follows_cols).to_sql())
 
     posts_cols = [
-        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
-        ColumnDefinition(dialect, "author_id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
+        ColumnDefinition(
+            dialect,
+            "id",
+            IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+        ),
+        ColumnDefinition(
+            dialect,
+            "author_id",
+            IntegerType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(
+                    dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                )
+            ],
+        ),
         ColumnDefinition(dialect, "content", TextType(dialect=dialect)),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'posts'), posts_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, "posts"), posts_cols).to_sql())
 
     likes_cols = [
-        ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
-        ColumnDefinition(dialect, "user_id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
-        ColumnDefinition(dialect, "post_id", IntegerType(dialect=dialect),
-            constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "posts"), ["id"])))]),
+        ColumnDefinition(
+            dialect,
+            "id",
+            IntegerType(dialect=dialect),
+            constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+        ),
+        ColumnDefinition(
+            dialect,
+            "user_id",
+            IntegerType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(
+                    dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                )
+            ],
+        ),
+        ColumnDefinition(
+            dialect,
+            "post_id",
+            IntegerType(dialect=dialect),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "posts"), ["id"])))
+            ],
+        ),
         ColumnDefinition(dialect, "created_at", TextType(dialect=dialect)),
     ]
-    backend.execute(*CreateTableStatement(dialect, Table(dialect, 'likes'), likes_cols).to_sql())
+    backend.execute(*CreateTableStatement(dialect, Table(dialect, "likes"), likes_cols).to_sql())
 
-    people_data = ValuesSource(dialect, [
+    people_data = ValuesSource(
+        dialect,
         [
-            Literal(dialect, 1),
-            Literal(dialect, "Alice"),
-            Literal(dialect, "alice@example.com"),
-            Literal(dialect, "NYC"),
+            [
+                Parameter(dialect, 1),
+                Parameter(dialect, "Alice"),
+                Parameter(dialect, "alice@example.com"),
+                Parameter(dialect, "NYC"),
+            ],
+            [
+                Parameter(dialect, 2),
+                Parameter(dialect, "Bob"),
+                Parameter(dialect, "bob@example.com"),
+                Parameter(dialect, "NYC"),
+            ],
+            [
+                Parameter(dialect, 3),
+                Parameter(dialect, "Charlie"),
+                Parameter(dialect, "charlie@example.com"),
+                Parameter(dialect, "LA"),
+            ],
+            [
+                Parameter(dialect, 4),
+                Parameter(dialect, "Diana"),
+                Parameter(dialect, "diana@example.com"),
+                Parameter(dialect, "NYC"),
+            ],
+            [
+                Parameter(dialect, 5),
+                Parameter(dialect, "Eve"),
+                Parameter(dialect, "eve@example.com"),
+                Parameter(dialect, "LA"),
+            ],
         ],
-        [
-            Literal(dialect, 2),
-            Literal(dialect, "Bob"),
-            Literal(dialect, "bob@example.com"),
-            Literal(dialect, "NYC"),
-        ],
-        [
-            Literal(dialect, 3),
-            Literal(dialect, "Charlie"),
-            Literal(dialect, "charlie@example.com"),
-            Literal(dialect, "LA"),
-        ],
-        [
-            Literal(dialect, 4),
-            Literal(dialect, "Diana"),
-            Literal(dialect, "diana@example.com"),
-            Literal(dialect, "NYC"),
-        ],
-        [
-            Literal(dialect, 5),
-            Literal(dialect, "Eve"),
-            Literal(dialect, "eve@example.com"),
-            Literal(dialect, "LA"),
-        ],
-    ])
+    )
     backend.execute(*InsertStatement(dialect, Table(dialect, "people"), source=people_data).to_sql())
 
-    follows_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "2024-01-01")],
-        [Literal(dialect, 2), Literal(dialect, 2), Literal(dialect, 3), Literal(dialect, "2024-02-01")],
-        [Literal(dialect, 3), Literal(dialect, 1), Literal(dialect, 3), Literal(dialect, "2024-03-01")],
-        [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 1), Literal(dialect, "2024-04-01")],
-        [Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 5), Literal(dialect, "2024-05-01")],
-    ])
+    follows_data = ValuesSource(
+        dialect,
+        [
+            [Parameter(dialect, 1), Parameter(dialect, 1), Parameter(dialect, 2), Parameter(dialect, "2024-01-01")],
+            [Parameter(dialect, 2), Parameter(dialect, 2), Parameter(dialect, 3), Parameter(dialect, "2024-02-01")],
+            [Parameter(dialect, 3), Parameter(dialect, 1), Parameter(dialect, 3), Parameter(dialect, "2024-03-01")],
+            [Parameter(dialect, 4), Parameter(dialect, 4), Parameter(dialect, 1), Parameter(dialect, "2024-04-01")],
+            [Parameter(dialect, 5), Parameter(dialect, 3), Parameter(dialect, 5), Parameter(dialect, "2024-05-01")],
+        ],
+    )
     backend.execute(*InsertStatement(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
 
-    posts_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "Hello world"), Literal(dialect, "2024-06-01")],
-        [Literal(dialect, 2), Literal(dialect, 2), Literal(dialect, "PGQ is cool"), Literal(dialect, "2024-06-02")],
-        [Literal(dialect, 3), Literal(dialect, 3), Literal(dialect, "Graph databases"), Literal(dialect, "2024-06-03")],
-        [Literal(dialect, 4), Literal(dialect, 1), Literal(dialect, "My first post"), Literal(dialect, "2024-06-04")],
-    ])
+    posts_data = ValuesSource(
+        dialect,
+        [
+            [
+                Parameter(dialect, 1),
+                Parameter(dialect, 2),
+                Parameter(dialect, "Hello world"),
+                Parameter(dialect, "2024-06-01"),
+            ],
+            [
+                Parameter(dialect, 2),
+                Parameter(dialect, 2),
+                Parameter(dialect, "PGQ is cool"),
+                Parameter(dialect, "2024-06-02"),
+            ],
+            [
+                Parameter(dialect, 3),
+                Parameter(dialect, 3),
+                Parameter(dialect, "Graph databases"),
+                Parameter(dialect, "2024-06-03"),
+            ],
+            [
+                Parameter(dialect, 4),
+                Parameter(dialect, 1),
+                Parameter(dialect, "My first post"),
+                Parameter(dialect, "2024-06-04"),
+            ],
+        ],
+    )
     backend.execute(*InsertStatement(dialect, Table(dialect, "posts"), source=posts_data).to_sql())
 
-    likes_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, "2024-06-02")],
-        [Literal(dialect, 2), Literal(dialect, 3), Literal(dialect, 1), Literal(dialect, "2024-06-02")],
-        [Literal(dialect, 3), Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "2024-06-03")],
-        [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, "2024-06-05")],
-        [Literal(dialect, 5), Literal(dialect, 5), Literal(dialect, 1), Literal(dialect, "2024-06-06")],
-    ])
+    likes_data = ValuesSource(
+        dialect,
+        [
+            [Parameter(dialect, 1), Parameter(dialect, 1), Parameter(dialect, 1), Parameter(dialect, "2024-06-02")],
+            [Parameter(dialect, 2), Parameter(dialect, 3), Parameter(dialect, 1), Parameter(dialect, "2024-06-02")],
+            [Parameter(dialect, 3), Parameter(dialect, 1), Parameter(dialect, 2), Parameter(dialect, "2024-06-03")],
+            [Parameter(dialect, 4), Parameter(dialect, 4), Parameter(dialect, 4), Parameter(dialect, "2024-06-05")],
+            [Parameter(dialect, 5), Parameter(dialect, 5), Parameter(dialect, 1), Parameter(dialect, "2024-06-06")],
+        ],
+    )
     backend.execute(*InsertStatement(dialect, Table(dialect, "likes"), source=likes_data).to_sql())
 
-    vt_people = VertexTable(dialect, NodeTable(dialect, 'people'),
-                            labels=["person"],
-                            properties=TablePropertiesClause(dialect, columns=["id", "name", "city"]))
-    vt_posts = VertexTable(dialect, NodeTable(dialect, 'posts'),
-                           labels=["post"],
-                           properties=TablePropertiesClause(dialect, columns=["id", "content"]))
-    et_follows = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
-                           references_source=("people", ["id"]),
-                           references_destination=("people", ["id"]),
-                           labels=["follows"])
-    et_posts = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'posts'), ["author_id"], ["id"],
-                         references_source=("people", ["id"]),
-                         references_destination=("posts", ["id"]),
-                         labels=["authored"],
-                         alias="authored")
-    et_likes = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'likes'), ["user_id"], ["post_id"],
-                         references_source=("people", ["id"]),
-                         references_destination=("posts", ["id"]),
-                         labels=["likes"])
+    vt_people = VertexTable(
+        dialect,
+        NodeTable(dialect, "people"),
+        labels=["person"],
+        properties=TablePropertiesClause(dialect, columns=["id", "name", "city"]),
+    )
+    vt_posts = VertexTable(
+        dialect,
+        NodeTable(dialect, "posts"),
+        labels=["post"],
+        properties=TablePropertiesClause(dialect, columns=["id", "content"]),
+    )
+    et_follows = EdgeTableDefinition(
+        dialect,
+        EdgeTableObject(dialect, "follows"),
+        ["follower_id"],
+        ["followed_id"],
+        references_source=("people", ["id"]),
+        references_destination=("people", ["id"]),
+        labels=["follows"],
+    )
+    et_posts = EdgeTableDefinition(
+        dialect,
+        EdgeTableObject(dialect, "posts"),
+        ["author_id"],
+        ["id"],
+        references_source=("people", ["id"]),
+        references_destination=("posts", ["id"]),
+        labels=["authored"],
+        alias="authored",
+    )
+    et_likes = EdgeTableDefinition(
+        dialect,
+        EdgeTableObject(dialect, "likes"),
+        ["user_id"],
+        ["post_id"],
+        references_source=("people", ["id"]),
+        references_destination=("posts", ["id"]),
+        labels=["likes"],
+    )
     create_expr = CreatePropertyGraphStatement(
         dialect, GRAPH_NAME, [vt_people, vt_posts], [et_follows, et_posts, et_likes]
     )
@@ -224,24 +330,26 @@ class TestSocialGraph:
         a = GraphVertex(
             dialect,
             "a",
-            NodeTable(dialect, 'person'),
+            NodeTable(dialect, "person"),
             where=WhereClause(
                 dialect,
                 condition=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                    dialect, "=", Column(dialect, "name", table="a"), Parameter(dialect, "Alice")
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[Column(dialect, "b_name")],
             from_=gt,
-            order_by=OrderByClause(dialect, [Column(dialect, "b_name")]))
+            order_by=OrderByClause(dialect, [Column(dialect, "b_name")]),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         names = [r["b_name"] for r in rows]
@@ -254,32 +362,32 @@ class TestSocialGraph:
         a = GraphVertex(
             dialect,
             "a",
-            NodeTable(dialect, 'person'),
+            NodeTable(dialect, "person"),
             where=WhereClause(
                 dialect,
                 condition=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                    dialect, "=", Column(dialect, "name", table="a"), Parameter(dialect, "Alice")
                 ),
             ),
         )
-        f1 = GraphEdge(dialect, "f1", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
-        f2 = GraphEdge(dialect, "f2", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        c = GraphVertex(dialect, "c", NodeTable(dialect, 'person'))
+        f1 = GraphEdge(dialect, "f1", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
+        f2 = GraphEdge(dialect, "f2", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        c = GraphVertex(dialect, "c", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f1, b, f2, c)
         cols = ColumnsClause(dialect, GraphColumn("c", "name", "c_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[Column(dialect, "c_name")],
             from_=gt,
             where=WhereClause(
                 dialect,
-                condition=ComparisonPredicate(
-                    dialect, "!=", Column(dialect, "c_name"), Literal(dialect, "Alice")
-                ),
+                condition=ComparisonPredicate(dialect, "!=", Column(dialect, "c_name"), Parameter(dialect, "Alice")),
             ),
-            order_by=OrderByClause(dialect, [Column(dialect, "c_name")]))
+            order_by=OrderByClause(dialect, [Column(dialect, "c_name")]),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         assert len(rows) >= 1
@@ -291,26 +399,28 @@ class TestSocialGraph:
         a = GraphVertex(
             dialect,
             "a",
-            NodeTable(dialect, 'person'),
+            NodeTable(dialect, "person"),
             where=WhereClause(
                 dialect,
                 condition=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                    dialect, "=", Column(dialect, "name", table="a"), Parameter(dialect, "Alice")
                 ),
             ),
         )
-        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, 'authored'), GraphEdgeDirection.RIGHT)
-        post = GraphVertex(dialect, "post", NodeTable(dialect, 'post'))
-        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, 'likes'), GraphEdgeDirection.LEFT)
-        liker = GraphVertex(dialect, "liker", NodeTable(dialect, 'person'))
+        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, "authored"), GraphEdgeDirection.RIGHT)
+        post = GraphVertex(dialect, "post", NodeTable(dialect, "post"))
+        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, "likes"), GraphEdgeDirection.LEFT)
+        liker = GraphVertex(dialect, "liker", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, p, post, like_edge, liker)
         cols = ColumnsClause(dialect, GraphColumn("liker", "name", "liker_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[Column(dialect, "liker_name")],
             from_=gt,
-            order_by=OrderByClause(dialect, [Column(dialect, "liker_name")]))
+            order_by=OrderByClause(dialect, [Column(dialect, "liker_name")]),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         assert len(rows) >= 1
@@ -319,25 +429,25 @@ class TestSocialGraph:
     def test_graph_table_with_group_by(self, postgres_backend, social_data):
         """GRAPH_TABLE + GROUP BY."""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, 'authored'), GraphEdgeDirection.RIGHT)
-        post = GraphVertex(dialect, "post", NodeTable(dialect, 'post'))
-        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, 'likes'), GraphEdgeDirection.LEFT)
-        liker = GraphVertex(dialect, "liker", NodeTable(dialect, 'person'))
+        a = GraphVertex(dialect, "a", NodeTable(dialect, "person"))
+        p = GraphEdge(dialect, "p", EdgeTableObject(dialect, "authored"), GraphEdgeDirection.RIGHT)
+        post = GraphVertex(dialect, "post", NodeTable(dialect, "post"))
+        like_edge = GraphEdge(dialect, "l", EdgeTableObject(dialect, "likes"), GraphEdgeDirection.LEFT)
+        liker = GraphVertex(dialect, "liker", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, p, post, like_edge, liker)
-        cols = ColumnsClause(dialect,
-                             GraphColumn("a", "name", "author"),
-                             GraphColumn("liker", "name", "liker_name"))
+        cols = ColumnsClause(dialect, GraphColumn("a", "name", "author"), GraphColumn("liker", "name", "liker_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[
                 Column(dialect, "author"),
                 FunctionCall(dialect, "COUNT", Column(dialect, "liker_name"), alias="like_count"),
             ],
             from_=gt,
             group_by_having=GroupByHavingClause(dialect, group_by=[Column(dialect, "author")]),
-            order_by=OrderByClause(dialect, [(Column(dialect, "like_count"), "DESC")]))
+            order_by=OrderByClause(dialect, [(Column(dialect, "like_count"), "DESC")]),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         assert len(rows) >= 1
@@ -351,29 +461,33 @@ class TestCommerceGraph:
     def test_graph_table_combined_with_regular_sql(self, postgres_backend, social_data):
         """Composite: GRAPH_TABLE + JOIN + ORDER BY."""
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
+        a = GraphVertex(dialect, "a", NodeTable(dialect, "person"))
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f, b)
-        cols = ColumnsClause(dialect,
-                             GraphColumn("a", "name", "follower"),
-                             GraphColumn("b", "name", "followed"),
-                             GraphColumn("f", "since", "since"))
+        cols = ColumnsClause(
+            dialect,
+            GraphColumn("a", "name", "follower"),
+            GraphColumn("b", "name", "followed"),
+            GraphColumn("f", "since", "since"),
+        )
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        join = JoinClause(dialect,
+        join = JoinClause(
+            dialect,
             left_table=gt,
             right_table=NamedRelationRef(dialect, Table(dialect, "people"), alias="p"),
             join_type="INNER JOIN",
-            condition=ComparisonPredicate(
-                dialect, "=", Column(dialect, "follower", "g"), Column(dialect, "name", "p")
-            ))
+            condition=ComparisonPredicate(dialect, "=", Column(dialect, "follower", "g"), Column(dialect, "name", "p")),
+        )
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[AllColumnsWildcard(dialect)],
             from_=join,
             order_by=OrderByClause(dialect, [Column(dialect, "follower", "g")]),
-            limit_offset=LimitOffsetClause(dialect, limit=10))
+            limit_offset=LimitOffsetClause(dialect, limit=10),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         assert len(rows) >= 1
@@ -385,24 +499,26 @@ class TestCommerceGraph:
         a = GraphVertex(
             dialect,
             "a",
-            NodeTable(dialect, 'person'),
+            NodeTable(dialect, "person"),
             where=WhereClause(
                 dialect,
                 condition=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                    dialect, "=", Column(dialect, "name", table="a"), Parameter(dialect, "Alice")
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
+        query = QueryStatement(
+            dialect,
             select=[Column(dialect, "b_name")],
             from_=gt,
-            order_by=OrderByClause(dialect, [Column(dialect, "b_name")]))
+            order_by=OrderByClause(dialect, [Column(dialect, "b_name")]),
+        )
         sql, params = query.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         names = [r["b_name"] for r in rows]
@@ -420,52 +536,99 @@ class TestAsyncSocialGraph:
             pytest.skip("PGQ not supported")
 
         for t in ("likes", "posts", "follows", "people"):
-            await backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+            await backend.execute(
+                *DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql()
+            )
 
         people_cols = [
-            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+            ),
             ColumnDefinition(dialect, "name", TextType(dialect=dialect)),
             ColumnDefinition(dialect, "email", TextType(dialect=dialect)),
             ColumnDefinition(dialect, "city", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'people'), people_cols).to_sql())
+        await backend.execute(*CreateTableStatement(dialect, Table(dialect, "people"), people_cols).to_sql())
 
         follows_cols = [
-            ColumnDefinition(dialect, "id", IntegerType(dialect=dialect),
-                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))]),
-            ColumnDefinition(dialect, "follower_id", IntegerType(dialect=dialect),
-                constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
-            ColumnDefinition(dialect, "followed_id", IntegerType(dialect=dialect),
-                constraints=[ColumnConstraint(dialect,
-                branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"])))]),
+            ColumnDefinition(
+                dialect,
+                "id",
+                IntegerType(dialect=dialect),
+                constraints=[ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect))],
+            ),
+            ColumnDefinition(
+                dialect,
+                "follower_id",
+                IntegerType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(
+                        dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                    )
+                ],
+            ),
+            ColumnDefinition(
+                dialect,
+                "followed_id",
+                IntegerType(dialect=dialect),
+                constraints=[
+                    ColumnConstraint(
+                        dialect, branch=ColumnForeignKeyConstraint(dialect, (Table(dialect, "people"), ["id"]))
+                    )
+                ],
+            ),
             ColumnDefinition(dialect, "since", TextType(dialect=dialect)),
         ]
-        await backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols).to_sql())
+        await backend.execute(*CreateTableStatement(dialect, Table(dialect, "follows"), follows_cols).to_sql())
 
-        people_data = ValuesSource(dialect, [
-            [Literal(dialect, 1), Literal(dialect, "Alice"), Literal(dialect, "a@x.com"), Literal(dialect, "NYC")],
-            [Literal(dialect, 2), Literal(dialect, "Bob"), Literal(dialect, "b@x.com"), Literal(dialect, "NYC")],
-        ])
+        people_data = ValuesSource(
+            dialect,
+            [
+                [
+                    Parameter(dialect, 1),
+                    Parameter(dialect, "Alice"),
+                    Parameter(dialect, "a@x.com"),
+                    Parameter(dialect, "NYC"),
+                ],
+                [
+                    Parameter(dialect, 2),
+                    Parameter(dialect, "Bob"),
+                    Parameter(dialect, "b@x.com"),
+                    Parameter(dialect, "NYC"),
+                ],
+            ],
+        )
         await backend.execute(*InsertStatement(dialect, Table(dialect, "people"), source=people_data).to_sql())
 
-        follows_data = ValuesSource(dialect, [
-            [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2), Literal(dialect, "2024-01-01")],
-        ])
+        follows_data = ValuesSource(
+            dialect,
+            [
+                [Parameter(dialect, 1), Parameter(dialect, 1), Parameter(dialect, 2), Parameter(dialect, "2024-01-01")],
+            ],
+        )
         await backend.execute(*InsertStatement(dialect, Table(dialect, "follows"), source=follows_data).to_sql())
 
-        vt = VertexTable(dialect, NodeTable(dialect, 'people'), labels=["person"])
-        et = EdgeTableDefinition(dialect, EdgeTableObject(dialect, 'follows'), ["follower_id"], ["followed_id"],
-                       references_source=("people", ["id"]),
-                       references_destination=("people", ["id"]),
-                       labels=["follows"])
+        vt = VertexTable(dialect, NodeTable(dialect, "people"), labels=["person"])
+        et = EdgeTableDefinition(
+            dialect,
+            EdgeTableObject(dialect, "follows"),
+            ["follower_id"],
+            ["followed_id"],
+            references_source=("people", ["id"]),
+            references_destination=("people", ["id"]),
+            labels=["follows"],
+        )
         create_expr = CreatePropertyGraphStatement(dialect, GRAPH_NAME, [vt], [et])
         await backend.execute(*create_expr.to_sql())
         yield GRAPH_NAME
         await backend.execute(*DropPropertyGraphStatement(dialect, GRAPH_NAME, if_exists=True).to_sql())
         for t in ("follows", "people"):
-            await backend.execute(*DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql())
+            await backend.execute(
+                *DropTableStatement(dialect, Table(dialect, t), if_exists=True, cascade=True).to_sql()
+            )
 
     @pytest.mark.requires_protocol((GraphTableSupport, "supports_graph_table"))
     @pytest.mark.asyncio
@@ -474,23 +637,21 @@ class TestAsyncSocialGraph:
         a = GraphVertex(
             dialect,
             "a",
-            NodeTable(dialect, 'person'),
+            NodeTable(dialect, "person"),
             where=WhereClause(
                 dialect,
                 condition=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "name", table="a"), Literal(dialect, "Alice")
+                    dialect, "=", Column(dialect, "name", table="a"), Parameter(dialect, "Alice")
                 ),
             ),
         )
-        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
-            select=[Column(dialect, "b_name")],
-            from_=gt)
+        query = QueryStatement(dialect, select=[Column(dialect, "b_name")], from_=gt)
         sql, params = query.to_sql()
         rows = await async_postgres_backend.fetch_all(sql, params)
         assert len(rows) == 1
@@ -503,18 +664,15 @@ class TestPGQExplain:
     @pytest.mark.requires_protocol((GraphTableSupport, "supports_graph_table"))
     def test_explain_graph_table(self, postgres_backend, social_data):
         dialect = postgres_backend.dialect
-        a = GraphVertex(dialect, "a", NodeTable(dialect, 'person'))
-        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, 'follows'), GraphEdgeDirection.RIGHT)
-        b = GraphVertex(dialect, "b", NodeTable(dialect, 'person'))
+        a = GraphVertex(dialect, "a", NodeTable(dialect, "person"))
+        f = GraphEdge(dialect, "f", EdgeTableObject(dialect, "follows"), GraphEdgeDirection.RIGHT)
+        b = GraphVertex(dialect, "b", NodeTable(dialect, "person"))
         match = MatchClause(dialect, a, f, b)
         cols = ColumnsClause(dialect, GraphColumn("b", "name", "b_name"))
         gt = GraphTableExpression(dialect, GRAPH_NAME, match, cols, alias="g")
 
-        query = QueryStatement(dialect,
-            select=[Column(dialect, "b_name")],
-            from_=gt)
-        explain = ExplainStatement(dialect, statement=query,
-            options=ExplainOptions(costs=False))
+        query = QueryStatement(dialect, select=[Column(dialect, "b_name")], from_=gt)
+        explain = ExplainStatement(dialect, statement=query, options=ExplainOptions(costs=False))
         sql, params = explain.to_sql()
         rows = postgres_backend.fetch_all(sql, params)
         explain_text = " ".join(r["QUERY PLAN"] for r in rows)

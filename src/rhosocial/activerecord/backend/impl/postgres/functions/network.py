@@ -139,8 +139,8 @@ def inet_merge(
     """
     return core.FunctionCall(
         dialect, "inet_merge",
-        net1 if isinstance(net1, bases.BaseExpression) else core.Literal(dialect, net1),
-        net2 if isinstance(net2, bases.BaseExpression) else core.Literal(dialect, net2),
+        net1 if isinstance(net1, bases.BaseExpression) else core.Parameter(dialect, net1),
+        net2 if isinstance(net2, bases.BaseExpression) else core.Parameter(dialect, net2),
     )
 
 
@@ -169,8 +169,8 @@ def inet_and(
     """
     return BinaryExpression(
         dialect, "&",
-        addr1 if isinstance(addr1, bases.BaseExpression) else core.Literal(dialect, addr1),
-        addr2 if isinstance(addr2, bases.BaseExpression) else core.Literal(dialect, addr2),
+        addr1 if isinstance(addr1, bases.BaseExpression) else core.Parameter(dialect, addr1),
+        addr2 if isinstance(addr2, bases.BaseExpression) else core.Parameter(dialect, addr2),
     )
 
 
@@ -197,8 +197,8 @@ def inet_or(
     """
     return BinaryExpression(
         dialect, "|",
-        addr1 if isinstance(addr1, bases.BaseExpression) else core.Literal(dialect, addr1),
-        addr2 if isinstance(addr2, bases.BaseExpression) else core.Literal(dialect, addr2),
+        addr1 if isinstance(addr1, bases.BaseExpression) else core.Parameter(dialect, addr1),
+        addr2 if isinstance(addr2, bases.BaseExpression) else core.Parameter(dialect, addr2),
     )
 
 
@@ -223,7 +223,7 @@ def inetnot(
     """
     return UnaryExpression(
         dialect, "~",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
         pos="before",
     )
 
@@ -253,8 +253,8 @@ def inet_set_mask(
     """
     return core.FunctionCall(
         dialect, "set_masklen",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
-        mask_len if isinstance(mask_len, bases.BaseExpression) else core.Literal(dialect, mask_len),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
+        mask_len if isinstance(mask_len, bases.BaseExpression) else core.Parameter(dialect, mask_len),
     )
 
 
@@ -279,7 +279,7 @@ def inet_masklen(
     """
     return core.FunctionCall(
         dialect, "masklen",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -304,7 +304,7 @@ def inet_netmask(
     """
     return core.FunctionCall(
         dialect, "netmask",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -329,7 +329,7 @@ def inet_network(
     """
     return core.FunctionCall(
         dialect, "network",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -354,7 +354,7 @@ def inet_recv(
     """
     return core.FunctionCall(
         dialect, "recv",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -379,7 +379,7 @@ def inet_show(
     """
     return core.FunctionCall(
         dialect, "text",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -404,7 +404,7 @@ def cidr_netmask(
     """
     return core.FunctionCall(
         dialect, "broadcast",
-        addr if isinstance(addr, bases.BaseExpression) else core.Literal(dialect, addr),
+        addr if isinstance(addr, bases.BaseExpression) else core.Parameter(dialect, addr),
     )
 
 
@@ -429,7 +429,7 @@ def macaddr8_set7bit(
     """
     return core.FunctionCall(
         dialect, "macaddr8_set7bit",
-        mac if isinstance(mac, bases.BaseExpression) else core.Literal(dialect, mac),
+        mac if isinstance(mac, bases.BaseExpression) else core.Parameter(dialect, mac),
     )
 
 

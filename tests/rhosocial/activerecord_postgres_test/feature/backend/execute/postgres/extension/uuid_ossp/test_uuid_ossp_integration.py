@@ -32,7 +32,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.types import (
@@ -101,7 +101,7 @@ def uuid_ossp_env(postgres_backend_single):
         columns=["name"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "test item")]],
+            [[Parameter(dialect, "test item")]],
         ),
     )
     sql, params = insert_ossp.to_sql()
@@ -143,7 +143,7 @@ def uuid_ossp_env(postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, str(uuid_val)), UUIDType(dialect)), Literal(dialect, "explicit")]],
+            [[cast(dialect, Parameter(dialect, str(uuid_val)), UUIDType(dialect)), Parameter(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()
@@ -210,7 +210,7 @@ class TestUuidOsspIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
-                Literal(dialect, "test item"),
+                Parameter(dialect, "test item"),
             ),
         )
         sql, params = query.to_sql()
@@ -250,7 +250,7 @@ class TestUuidOsspIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "label"),
-                Literal(dialect, "explicit"),
+                Parameter(dialect, "explicit"),
             ),
         )
         sql, params = query.to_sql()
@@ -306,7 +306,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=["name"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "test item")]],
+            [[Parameter(dialect, "test item")]],
         ),
     )
     sql, params = insert_ossp.to_sql()
@@ -348,7 +348,7 @@ async def async_uuid_ossp_env(async_postgres_backend_single):
         columns=["id", "label"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, str(uuid_val)), UUIDType(dialect)), Literal(dialect, "explicit")]],
+            [[cast(dialect, Parameter(dialect, str(uuid_val)), UUIDType(dialect)), Parameter(dialect, "explicit")]],
         ),
     )
     sql, params = insert_explicit.to_sql()
@@ -418,7 +418,7 @@ class TestAsyncUuidOsspIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "name"),
-                Literal(dialect, "test item"),
+                Parameter(dialect, "test item"),
             ),
         )
         sql, params = query.to_sql()
@@ -460,7 +460,7 @@ class TestAsyncUuidOsspIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "label"),
-                Literal(dialect, "explicit"),
+                Parameter(dialect, "explicit"),
             ),
         )
         sql, params = query.to_sql()

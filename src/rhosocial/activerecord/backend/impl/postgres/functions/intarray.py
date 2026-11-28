@@ -70,8 +70,8 @@ def intarray_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Literal(dialect, values),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
     )
 
 
@@ -100,8 +100,8 @@ def intarray_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Literal(dialect, values),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
     )
 
 
@@ -130,8 +130,8 @@ def intarray_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Literal(dialect, values),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
     )
 
 
@@ -161,8 +161,8 @@ def intarray_idx(
     """
     return core.FunctionCall(
         dialect, "idx",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
     )
 
 
@@ -194,11 +194,11 @@ def intarray_subarray(
         # Generates SQL: subarray(tags, 2)
     """
     args = [
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        start if isinstance(start, bases.BaseExpression) else core.Literal(dialect, start),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        start if isinstance(start, bases.BaseExpression) else core.Parameter(dialect, start),
     ]
     if length is not None:
-        args.append(length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length))
+        args.append(length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length))
     return core.FunctionCall(dialect, "subarray", *args)
 
 
@@ -224,7 +224,7 @@ def intarray_uniq(
     """
     return core.FunctionCall(
         dialect, "uniq",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
     )
 
 
@@ -249,7 +249,7 @@ def intarray_sort(
     """
     return core.FunctionCall(
         dialect, "sort",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
     )
 
 
@@ -284,8 +284,8 @@ def intarray_operator(
     """
     return BinaryExpression(
         dialect, operator,
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
     )
 
 

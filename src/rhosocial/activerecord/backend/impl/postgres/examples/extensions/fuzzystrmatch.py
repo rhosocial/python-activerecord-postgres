@@ -44,7 +44,7 @@ if __name__ == "__main__":
     from rhosocial.activerecord.backend.expression import (
         QueryStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
+    from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
 
@@ -80,8 +80,8 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "levenshtein",
-                    Literal(dialect, "hello"),
-                    Literal(dialect, "hallo"),
+                    Parameter(dialect, "hello"),
+                    Parameter(dialect, "hallo"),
                 ).as_("distance"),
             ],
         )
@@ -98,13 +98,13 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "levenshtein",
-                    Literal(dialect, "kitten"),
-                    Literal(dialect, "sitting"),
+                    Parameter(dialect, "kitten"),
+                    Parameter(dialect, "sitting"),
                 ).as_("kitten_to_sitting"),
                 FunctionCall(
                     dialect, "levenshtein",
-                    Literal(dialect, "sunday"),
-                    Literal(dialect, "saturday"),
+                    Parameter(dialect, "sunday"),
+                    Parameter(dialect, "saturday"),
                 ).as_("sunday_to_saturday"),
             ],
         )
@@ -120,10 +120,10 @@ if __name__ == "__main__":
         soundex_query = QueryStatement(
             dialect=dialect,
             select=[
-                FunctionCall(dialect, "soundex", Literal(dialect, "Robert")).as_("soundex_robert"),
-                FunctionCall(dialect, "soundex", Literal(dialect, "Rupert")).as_("soundex_rupert"),
-                FunctionCall(dialect, "soundex", Literal(dialect, "Ashcraft")).as_("soundex_ashcraft"),
-                FunctionCall(dialect, "soundex", Literal(dialect, "Ashcroft")).as_("soundex_ashcroft"),
+                FunctionCall(dialect, "soundex", Parameter(dialect, "Robert")).as_("soundex_robert"),
+                FunctionCall(dialect, "soundex", Parameter(dialect, "Rupert")).as_("soundex_rupert"),
+                FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcraft")).as_("soundex_ashcraft"),
+                FunctionCall(dialect, "soundex", Parameter(dialect, "Ashcroft")).as_("soundex_ashcroft"),
             ],
         )
         sql, params = soundex_query.to_sql()
@@ -145,18 +145,18 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "difference",
-                    Literal(dialect, "hello"),
-                    Literal(dialect, "hallo"),
+                    Parameter(dialect, "hello"),
+                    Parameter(dialect, "hallo"),
                 ).as_("diff_hello_hallo"),
                 FunctionCall(
                     dialect, "difference",
-                    Literal(dialect, "Robert"),
-                    Literal(dialect, "Rupert"),
+                    Parameter(dialect, "Robert"),
+                    Parameter(dialect, "Rupert"),
                 ).as_("diff_robert_rupert"),
                 FunctionCall(
                     dialect, "difference",
-                    Literal(dialect, "hello"),
-                    Literal(dialect, "world"),
+                    Parameter(dialect, "hello"),
+                    Parameter(dialect, "world"),
                 ).as_("diff_hello_world"),
             ],
         )
@@ -177,18 +177,18 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "metaphone",
-                    Literal(dialect, "Robert"),
-                    Literal(dialect, 4),
+                    Parameter(dialect, "Robert"),
+                    Parameter(dialect, 4),
                 ).as_("meta_robert"),
                 FunctionCall(
                     dialect, "metaphone",
-                    Literal(dialect, "Rupert"),
-                    Literal(dialect, 4),
+                    Parameter(dialect, "Rupert"),
+                    Parameter(dialect, 4),
                 ).as_("meta_rupert"),
                 FunctionCall(
                     dialect, "metaphone",
-                    Literal(dialect, "telephone"),
-                    Literal(dialect, 6),
+                    Parameter(dialect, "telephone"),
+                    Parameter(dialect, 6),
                 ).as_("meta_telephone"),
             ],
         )
@@ -210,15 +210,15 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "dmetaphone",
-                    Literal(dialect, "Robert"),
+                    Parameter(dialect, "Robert"),
                 ).as_("dmeta_robert"),
                 FunctionCall(
                     dialect, "dmetaphone",
-                    Literal(dialect, "Smith"),
+                    Parameter(dialect, "Smith"),
                 ).as_("dmeta_smith"),
                 FunctionCall(
                     dialect, "dmetaphone",
-                    Literal(dialect, "Schmidt"),
+                    Parameter(dialect, "Schmidt"),
                 ).as_("dmeta_schmidt"),
             ],
         )
@@ -238,15 +238,15 @@ if __name__ == "__main__":
             select=[
                 FunctionCall(
                     dialect, "dmetaphone_alt",
-                    Literal(dialect, "Robert"),
+                    Parameter(dialect, "Robert"),
                 ).as_("dmeta_alt_robert"),
                 FunctionCall(
                     dialect, "dmetaphone_alt",
-                    Literal(dialect, "Smith"),
+                    Parameter(dialect, "Smith"),
                 ).as_("dmeta_alt_smith"),
                 FunctionCall(
                     dialect, "dmetaphone_alt",
-                    Literal(dialect, "Schmidt"),
+                    Parameter(dialect, "Schmidt"),
                 ).as_("dmeta_alt_schmidt"),
             ],
         )

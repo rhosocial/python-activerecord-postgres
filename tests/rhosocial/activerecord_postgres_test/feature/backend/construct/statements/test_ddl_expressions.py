@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.expression.objects import MaterializedView, 
 from rhosocial.activerecord.backend.expression import (
     Column,
     FunctionCall,
-    Literal,
+    Parameter,
     RawSQL,
     ColumnNotNullConstraint,
 )
@@ -542,7 +542,7 @@ class TestPartitionValue:
         expr = PostgresPartitionValue(
             dialect,
             FunctionCall(
-                dialect, "DATE_TRUNC", Literal(dialect, "month", inline=True)
+                dialect, "DATE_TRUNC", Parameter(dialect, "month", inline=True)
             ),
         )
         assert expr.to_sql() == ("DATE_TRUNC('month')", ())
@@ -555,7 +555,7 @@ class TestPartitionValue:
         """
         expr = PostgresPartitionValue(
             dialect,
-            FunctionCall(dialect, "DATE_TRUNC", Literal(dialect, "month")),
+            FunctionCall(dialect, "DATE_TRUNC", Parameter(dialect, "month")),
         )
         with pytest.raises(ValueError, match="must not contain bind parameters"):
             expr.to_sql()
@@ -578,7 +578,7 @@ class TestPartitionValue:
         lambda dialect: FunctionCall(dialect, "DATE", Column(dialect, "created_at")),
     ])
     def test_partition_value_rejects_unsafe_expression(self, dialect, expression_factory):
-        with pytest.raises(TypeError, match="FunctionCall, Literal, or RawSQL"):
+        with pytest.raises(TypeError, match="FunctionCall, Parameter, or RawSQL"):
             PostgresPartitionValue(dialect, expression_factory(dialect))
 
     def test_default_partition_value_requires_pg11(self):
@@ -827,7 +827,7 @@ class TestCreatePartitionExpression:
     def test_create_partition_literals_are_inlined(self, dialect):
         clause = PartitionByHashClause(
             dialect,
-            [FunctionCall(dialect, "LOWER", Literal(dialect, "bucket", inline=True))],
+            [FunctionCall(dialect, "LOWER", Parameter(dialect, "bucket", inline=True))],
         )
         expr = PostgresCreatePartitionStatement(
             dialect,
@@ -835,8 +835,8 @@ class TestCreatePartitionExpression:
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01", inline=True),
-                "to": Literal(dialect, "2027-01-01", inline=True),
+                "from": Parameter(dialect, "2026-01-01", inline=True),
+                "to": Parameter(dialect, "2027-01-01", inline=True),
             },
             partition_clause=clause,
         )
@@ -857,7 +857,7 @@ class TestCreatePartitionExpression:
             {
                 "values": [
                     FunctionCall(
-                        dialect, "LOWER", Literal(dialect, "ACTIVE", inline=True)
+                        dialect, "LOWER", Parameter(dialect, "ACTIVE", inline=True)
                     )
                 ]
             },
@@ -1127,9 +1127,9 @@ class TestAttachPartitionExpression:
             "events",
             "RANGE",
             {
-                "from": Literal(dialect, "2026-01-01", inline=True),
+                "from": Parameter(dialect, "2026-01-01", inline=True),
                 "to": FunctionCall(
-                    dialect, "DATE_TRUNC", Literal(dialect, "year", inline=True)
+                    dialect, "DATE_TRUNC", Parameter(dialect, "year", inline=True)
                 ),
             },
         )

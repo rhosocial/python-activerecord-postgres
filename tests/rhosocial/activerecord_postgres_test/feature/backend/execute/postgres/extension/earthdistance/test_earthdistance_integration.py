@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
@@ -81,8 +81,8 @@ def earthdistance_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "POINT", Literal(dialect, 0), Literal(dialect, 0))],
-                [FunctionCall(dialect, "POINT", Literal(dialect, 0), Literal(dialect, 1))],
+                [FunctionCall(dialect, "POINT", Parameter(dialect, 0), Parameter(dialect, 0))],
+                [FunctionCall(dialect, "POINT", Parameter(dialect, 0), Parameter(dialect, 1))],
             ],
         ),
     )
@@ -112,8 +112,8 @@ class TestEarthdistanceIntegration:
         # earth_distance returns meters between two points on Earth's surface
         dist_func = FunctionCall(
             dialect, "earth_distance",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 1)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 1)),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
@@ -128,8 +128,8 @@ class TestEarthdistanceIntegration:
 
         box_func = FunctionCall(
             dialect, "earth_box",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
-            Literal(dialect, 100.0),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 0)),
+            Parameter(dialect, 100.0),
         ).as_("bbox")
         query = QueryStatement(dialect=dialect, select=[box_func])
         sql, params = query.to_sql()
@@ -143,8 +143,8 @@ class TestEarthdistanceIntegration:
 
         dist_func = FunctionCall(
             dialect, "earth_distance",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 40.7), Parameter(dialect, -74.0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 40.7), Parameter(dialect, -74.0)),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
@@ -193,8 +193,8 @@ async def async_earthdistance_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "POINT", Literal(dialect, 0), Literal(dialect, 0))],
-                [FunctionCall(dialect, "POINT", Literal(dialect, 0), Literal(dialect, 1))],
+                [FunctionCall(dialect, "POINT", Parameter(dialect, 0), Parameter(dialect, 0))],
+                [FunctionCall(dialect, "POINT", Parameter(dialect, 0), Parameter(dialect, 1))],
             ],
         ),
     )
@@ -224,8 +224,8 @@ class TestAsyncEarthdistanceIntegration:
 
         dist_func = FunctionCall(
             dialect, "earth_distance",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 1)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 1)),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()
@@ -241,8 +241,8 @@ class TestAsyncEarthdistanceIntegration:
 
         box_func = FunctionCall(
             dialect, "earth_box",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 0), Literal(dialect, 0)),
-            Literal(dialect, 100.0),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 0), Parameter(dialect, 0)),
+            Parameter(dialect, 100.0),
         ).as_("bbox")
         query = QueryStatement(dialect=dialect, select=[box_func])
         sql, params = query.to_sql()
@@ -257,8 +257,8 @@ class TestAsyncEarthdistanceIntegration:
 
         dist_func = FunctionCall(
             dialect, "earth_distance",
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
-            FunctionCall(dialect, "ll_to_earth", Literal(dialect, 40.7), Literal(dialect, -74.0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 40.7), Parameter(dialect, -74.0)),
+            FunctionCall(dialect, "ll_to_earth", Parameter(dialect, 40.7), Parameter(dialect, -74.0)),
         ).as_("dist")
         query = QueryStatement(dialect=dialect, select=[dist_func])
         sql, params = query.to_sql()

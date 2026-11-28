@@ -71,8 +71,8 @@ def hstore_literal(
     elif isinstance(data, dict):
         text = PostgresHstore(data=data).to_postgres_string()
     else:
-        return core.Literal(dialect, data)
-    return core.CastExpression(dialect, core.Literal(dialect, text), PostgresHstoreType(dialect))
+        return core.Parameter(dialect, data)
+    return core.CastExpression(dialect, core.Parameter(dialect, text), PostgresHstoreType(dialect))
 
 
 # ============== Constructors ==============
@@ -750,7 +750,7 @@ def hstore_to_array_operator(
     """
     return BinaryExpression(
         dialect, "%",
-        core.Literal(dialect, ""),
+        core.Parameter(dialect, ""),
         hstore_expr,
     )
 
@@ -774,7 +774,7 @@ def hstore_to_matrix_operator(
     """
     return BinaryExpression(
         dialect, "%#",
-        core.Literal(dialect, ""),
+        core.Parameter(dialect, ""),
         hstore_expr,
     )
 

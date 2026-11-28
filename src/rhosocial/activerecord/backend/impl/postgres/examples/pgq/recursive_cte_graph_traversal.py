@@ -53,7 +53,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.core import Parameter, Column
     from rhosocial.activerecord.backend.expression.predicates import BetweenPredicate, ComparisonPredicate
     from rhosocial.activerecord.backend.expression.query_parts import (
         WhereClause,
@@ -87,20 +87,20 @@ if __name__ == "__main__":
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'follows'), follows_cols, if_not_exists=True).to_sql())
 
     users_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 'Alice'), Literal(dialect, 'NYC')],
-        [Literal(dialect, 2), Literal(dialect, 'Bob'), Literal(dialect, 'NYC')],
-        [Literal(dialect, 3), Literal(dialect, 'Charlie'), Literal(dialect, 'LA')],
-        [Literal(dialect, 4), Literal(dialect, 'Diana'), Literal(dialect, 'NYC')],
-        [Literal(dialect, 5), Literal(dialect, 'Eve'), Literal(dialect, 'LA')],
+        [Parameter(dialect, 1), Parameter(dialect, 'Alice'), Parameter(dialect, 'NYC')],
+        [Parameter(dialect, 2), Parameter(dialect, 'Bob'), Parameter(dialect, 'NYC')],
+        [Parameter(dialect, 3), Parameter(dialect, 'Charlie'), Parameter(dialect, 'LA')],
+        [Parameter(dialect, 4), Parameter(dialect, 'Diana'), Parameter(dialect, 'NYC')],
+        [Parameter(dialect, 5), Parameter(dialect, 'Eve'), Parameter(dialect, 'LA')],
     ])
     backend.execute(*InsertStatement(dialect, 'users', columns=['id', 'name', 'city'], source=users_data).to_sql())
 
     follows_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 1), Literal(dialect, 2)],
-        [Literal(dialect, 2), Literal(dialect, 2), Literal(dialect, 3)],
-        [Literal(dialect, 3), Literal(dialect, 1), Literal(dialect, 3)],
-        [Literal(dialect, 4), Literal(dialect, 4), Literal(dialect, 1)],
-        [Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 5)],
+        [Parameter(dialect, 1), Parameter(dialect, 1), Parameter(dialect, 2)],
+        [Parameter(dialect, 2), Parameter(dialect, 2), Parameter(dialect, 3)],
+        [Parameter(dialect, 3), Parameter(dialect, 1), Parameter(dialect, 3)],
+        [Parameter(dialect, 4), Parameter(dialect, 4), Parameter(dialect, 1)],
+        [Parameter(dialect, 5), Parameter(dialect, 3), Parameter(dialect, 5)],
     ])
     backend.execute(*InsertStatement(dialect, 'follows', columns=['id', 'follower_id', 'followed_id'], source=follows_data).to_sql())
 
@@ -124,21 +124,21 @@ if __name__ == "__main__":
     backend.execute(*CreateTableStatement(dialect, Table(dialect, 'transactions'), txn_cols, if_not_exists=True).to_sql())
 
     accounts_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 'Alice Smith'), Literal(dialect, 'checking')],
-        [Literal(dialect, 2), Literal(dialect, 'Bob Corp'), Literal(dialect, 'business')],
-        [Literal(dialect, 3), Literal(dialect, 'Charlie Ltd'), Literal(dialect, 'business')],
-        [Literal(dialect, 4), Literal(dialect, 'Diana Offshore'), Literal(dialect, 'offshore')],
-        [Literal(dialect, 5), Literal(dialect, 'Eve Holding'), Literal(dialect, 'offshore')],
-        [Literal(dialect, 6), Literal(dialect, 'Foreign Entity'), Literal(dialect, 'offshore')],
+        [Parameter(dialect, 1), Parameter(dialect, 'Alice Smith'), Parameter(dialect, 'checking')],
+        [Parameter(dialect, 2), Parameter(dialect, 'Bob Corp'), Parameter(dialect, 'business')],
+        [Parameter(dialect, 3), Parameter(dialect, 'Charlie Ltd'), Parameter(dialect, 'business')],
+        [Parameter(dialect, 4), Parameter(dialect, 'Diana Offshore'), Parameter(dialect, 'offshore')],
+        [Parameter(dialect, 5), Parameter(dialect, 'Eve Holding'), Parameter(dialect, 'offshore')],
+        [Parameter(dialect, 6), Parameter(dialect, 'Foreign Entity'), Parameter(dialect, 'offshore')],
     ])
     backend.execute(*InsertStatement(dialect, 'accounts', columns=['id', 'account_holder', 'account_type'], source=accounts_data).to_sql())
 
     txn_data = ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 4), Literal(dialect, 3), Literal(dialect, 500000), Literal(dialect, '2024-01-15')],
-        [Literal(dialect, 2), Literal(dialect, 5), Literal(dialect, 3), Literal(dialect, 300000), Literal(dialect, '2024-02-01')],
-        [Literal(dialect, 3), Literal(dialect, 3), Literal(dialect, 2), Literal(dialect, 600000), Literal(dialect, '2024-03-01')],
-        [Literal(dialect, 4), Literal(dialect, 2), Literal(dialect, 1), Literal(dialect, 450000), Literal(dialect, '2024-04-01')],
-        [Literal(dialect, 5), Literal(dialect, 6), Literal(dialect, 5), Literal(dialect, 1000000), Literal(dialect, '2024-05-01')],
+        [Parameter(dialect, 1), Parameter(dialect, 4), Parameter(dialect, 3), Parameter(dialect, 500000), Parameter(dialect, '2024-01-15')],
+        [Parameter(dialect, 2), Parameter(dialect, 5), Parameter(dialect, 3), Parameter(dialect, 300000), Parameter(dialect, '2024-02-01')],
+        [Parameter(dialect, 3), Parameter(dialect, 3), Parameter(dialect, 2), Parameter(dialect, 600000), Parameter(dialect, '2024-03-01')],
+        [Parameter(dialect, 4), Parameter(dialect, 2), Parameter(dialect, 1), Parameter(dialect, 450000), Parameter(dialect, '2024-04-01')],
+        [Parameter(dialect, 5), Parameter(dialect, 6), Parameter(dialect, 5), Parameter(dialect, 1000000), Parameter(dialect, '2024-05-01')],
     ])
     backend.execute(*InsertStatement(dialect, 'transactions', columns=['id', 'source_account_id', 'target_account_id', 'amount', 'ts'], source=txn_data).to_sql())
 
@@ -158,10 +158,10 @@ if __name__ == "__main__":
         select=[
             Column(dialect, 'id'),
             Column(dialect, 'name'),
-            cast(dialect, Literal(dialect, 0), IntegerType(dialect)).as_('depth'),
+            cast(dialect, Parameter(dialect, 0), IntegerType(dialect)).as_('depth'),
         ],
         from_=Table(dialect, 'users'),
-        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'name'), Literal(dialect, 'Alice'))),
+        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'name'), Parameter(dialect, 'Alice'))),
     )
 
     # --- Recursive query: follow edges one hop, depth+1, bound depth<4 ---
@@ -181,10 +181,10 @@ if __name__ == "__main__":
         select=[
             Column(dialect, 'id', table='u'),
             Column(dialect, 'name', table='u'),
-            ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='t'), Literal(dialect, 1)).as_('depth'),
+            ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='t'), Parameter(dialect, 1)).as_('depth'),
         ],
         from_=recursive_join,
-        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='t'), Literal(dialect, 4))),
+        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='t'), Parameter(dialect, 4))),
     )
 
     # --- Combine with UNION ALL ---
@@ -213,7 +213,7 @@ if __name__ == "__main__":
         ],
         from_=Table(dialect, 'traversal'),
         where=WhereClause(dialect, condition=BetweenPredicate(
-            dialect, Column(dialect, 'depth'), Literal(dialect, 1), Literal(dialect, 3),
+            dialect, Column(dialect, 'depth'), Parameter(dialect, 1), Parameter(dialect, 3),
         )),
         order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'name')]),
     )
@@ -259,10 +259,10 @@ if __name__ == "__main__":
             Column(dialect, 'account_holder', table='a'),
             Column(dialect, 'account_type', table='a'),
             Column(dialect, 'amount', table='tx'),
-            cast(dialect, Literal(dialect, 1), IntegerType(dialect)).as_('depth'),
+            cast(dialect, Parameter(dialect, 1), IntegerType(dialect)).as_('depth'),
         ],
         from_=aml_base_join,
-        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'target_account_id', table='tx'), Literal(dialect, 1))),
+        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "=", Column(dialect, 'target_account_id', table='tx'), Parameter(dialect, 1))),
     )
 
     # --- Recursive query: trace upstream along the transaction chain ---
@@ -284,10 +284,10 @@ if __name__ == "__main__":
             Column(dialect, 'account_holder', table='a'),
             Column(dialect, 'account_type', table='a'),
             Column(dialect, 'amount', table='tx'),
-            ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='tr'), Literal(dialect, 1)).as_('depth'),
+            ArithmeticOperation(dialect, 'add', Column(dialect, 'depth', table='tr'), Parameter(dialect, 1)).as_('depth'),
         ],
         from_=aml_recursive_join,
-        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='tr'), Literal(dialect, 5))),
+        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, "<", Column(dialect, 'depth', table='tr'), Parameter(dialect, 5))),
     )
 
     # --- Combine with UNION ALL ---
@@ -317,7 +317,7 @@ if __name__ == "__main__":
             Column(dialect, 'depth'),
         ],
         from_=Table(dialect, 'fund_trace'),
-        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, ">=", Column(dialect, 'depth'), Literal(dialect, 1))),
+        where=WhereClause(dialect, condition=ComparisonPredicate(dialect, ">=", Column(dialect, 'depth'), Parameter(dialect, 1))),
         order_by=OrderByClause(dialect, [Column(dialect, 'depth'), Column(dialect, 'id')]),
     )
 

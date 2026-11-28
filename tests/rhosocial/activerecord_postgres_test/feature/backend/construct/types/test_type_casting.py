@@ -11,7 +11,7 @@ import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression import cast
-from rhosocial.activerecord.backend.expression.core import Column, Literal, CastExpression
+from rhosocial.activerecord.backend.expression.core import Column, Parameter, CastExpression
 from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (
@@ -68,9 +68,9 @@ class TestTypeCastingMixin:
         assert params == ()
 
     def test_literal_cast(self):
-        """Test type cast on Literal."""
-        lit = Literal(self.dialect, "123")
-        # A Literal is a value node and carries no operation surface of its
+        """Test type cast on Parameter."""
+        lit = Parameter(self.dialect, "123")
+        # A Parameter is a value node and carries no operation surface of its
         # own (rules 4.3), so the cast is composed with the cast factory over
         # it rather than as a chain on the literal.
         expr = cast(self.dialect, lit, _t(self.dialect, INTEGER))
@@ -172,7 +172,7 @@ class TestDialectFormatCast:
     def test_format_cast_preserves_params(self):
         """Test that parameters are preserved."""
         params_in = ("test_value",)
-        expr = cast(self.dialect, Literal(self.dialect, "test_value"), _t(self.dialect, TEXT))
+        expr = cast(self.dialect, Parameter(self.dialect, "test_value"), _t(self.dialect, TEXT))
         sql, params = expr.to_sql()
         assert sql == "%s::text"
         assert params == params_in

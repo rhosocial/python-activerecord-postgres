@@ -8,7 +8,7 @@ import pytest
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import Column, QueryStatement
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.objects import (
     Index,
     MaterializedView,
@@ -382,14 +382,14 @@ class TestDerivedStatements:
         inserts = PostgresInsertStatement(
             dialect,
             table,
-            ValuesSource(dialect, [[Literal(dialect, 1)]]),
+            ValuesSource(dialect, [[Parameter(dialect, 1)]]),
             ["a"],
             hints=(hint_seq_scan(dialect, "t"),),
         )
         updates = PostgresUpdateStatement(
             dialect,
             table,
-            {"a": Literal(dialect, 1)},
+            {"a": Parameter(dialect, 1)},
             hints=(hint_parallel(dialect, "t", 4),),
         )
         deletes = PostgresDeleteStatement(
@@ -440,11 +440,11 @@ PLAIN_STATEMENTS = [
         ('SELECT "id" FROM "t"', ()),
     ),
     (
-        lambda d: InsertStatement(d, Table(d, "t"), ValuesSource(d, [[Literal(d, 1)]]), ["a"]),
+        lambda d: InsertStatement(d, Table(d, "t"), ValuesSource(d, [[Parameter(d, 1)]]), ["a"]),
         ('INSERT INTO "t" ("a") VALUES (%s)', (1,)),
     ),
     (
-        lambda d: UpdateStatement(d, Table(d, "t"), {"a": Literal(d, 1)}),
+        lambda d: UpdateStatement(d, Table(d, "t"), {"a": Parameter(d, 1)}),
         ('UPDATE "t" SET "a" = %s', (1,)),
     ),
     (
@@ -610,10 +610,10 @@ HINTED_STATEMENTS = [
         d, [Column(d, "id")], Table(d, "t"), hints=(hint_seq_scan(d, "t"),)
     ),
     lambda d: PostgresInsertStatement(
-        d, Table(d, "t"), ValuesSource(d, [[Literal(d, 1)]]), ["a"], hints=(hint_seq_scan(d, "t"),)
+        d, Table(d, "t"), ValuesSource(d, [[Parameter(d, 1)]]), ["a"], hints=(hint_seq_scan(d, "t"),)
     ),
     lambda d: PostgresUpdateStatement(
-        d, Table(d, "t"), {"a": Literal(d, 1)}, hints=(hint_seq_scan(d, "t"),)
+        d, Table(d, "t"), {"a": Parameter(d, 1)}, hints=(hint_seq_scan(d, "t"),)
     ),
     lambda d: PostgresDeleteStatement(d, Table(d, "t"), hints=(hint_seq_scan(d, "t"),)),
     lambda d: PostgresExplainStatement(

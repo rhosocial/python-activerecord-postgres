@@ -892,12 +892,12 @@ class TestCreateIndexExpressionAllOptions:
 
     def test_where(self):
         d = PostgresDialect()
-        from rhosocial.activerecord.backend.expression import Literal
+        from rhosocial.activerecord.backend.expression import Parameter
         from rhosocial.activerecord.backend.expression import Column
         from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         expr = CreateIndexStatement(
             d, Index(d, 'idx_w'), Table(d, 't'), ["a"],
-            where=ComparisonPredicate(d, "=", Column(d, "status"), Literal(d, 1)),
+            where=ComparisonPredicate(d, "=", Column(d, "status"), Parameter(d, 1)),
         )
         sql, params = expr.to_sql()
         assert "WHERE" in sql
@@ -925,12 +925,12 @@ class TestCreateIndexExpressionAllOptions:
 
     def test_expression_opclass(self):
         """An operator class can be bound to a functional index column."""
-        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression import Column, Parameter
         from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
 
         d = PostgresDialect()
         expr_col = ArithmeticOperation(
-            d, "add", Column(d, "a"), Literal(d, 1, inline=True)
+            d, "add", Column(d, "a"), Parameter(d, 1, inline=True)
         )
         expr = PostgresCreateIndexExpression(
             d, Index(d, 'idx_e'), Table(d, 't'), [expr_col],
@@ -944,11 +944,11 @@ class TestCreateIndexExpressionAllOptions:
 
     def test_expression_column_with_params_is_refused(self):
         """A bind parameter in an index expression cannot execute on the server."""
-        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression import Column, Parameter
         from rhosocial.activerecord.backend.expression.operators import ArithmeticOperation
 
         d = PostgresDialect()
-        expr_col = ArithmeticOperation(d, "add", Column(d, "a"), Literal(d, 1))
+        expr_col = ArithmeticOperation(d, "add", Column(d, "a"), Parameter(d, 1))
         expr = CreateIndexStatement(d, Index(d, 'idx_p'), Table(d, 't'), [expr_col])
         with pytest.raises(ValueError, match="bind parameters"):
             expr.to_sql()
@@ -959,13 +959,13 @@ class TestFormatCreateIndexPgStatementWhereExpression:
 
     def test_where_expression(self):
         d = PostgresDialect()
-        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression import Column, Parameter
         from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
         sql, params = create_index_pg(d, 
             index_name="idx_active",
             table_name="users",
             columns=["email"],
-            where_clause=ComparisonPredicate(d, "=", Column(d, "status"), Literal(d, 1)),
+            where_clause=ComparisonPredicate(d, "=", Column(d, "status"), Parameter(d, 1)),
         ).to_sql()
         assert "WHERE" in sql
         assert params == (1,)
@@ -1078,7 +1078,7 @@ class TestIndexMixinDirect:
         assert self._IndexMixinHigh().supports_index_if_exists() is True
 
     def test_format_create_index_expression_column(self):
-        from rhosocial.activerecord.backend.expression import Column, Literal  # noqa: F401
+        from rhosocial.activerecord.backend.expression import Column, Parameter  # noqa: F401
         d = PostgresDialect((15, 0, 0))
         expr = CreateIndexStatement(d, Index(d, 'idx_e'), Table(d, 't'), [Column(d, "a")])
         sql, _ = expr.to_sql()

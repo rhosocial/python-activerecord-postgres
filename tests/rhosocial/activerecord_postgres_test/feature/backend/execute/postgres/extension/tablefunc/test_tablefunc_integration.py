@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.types import (
     TextType, IntegerType,
 )
@@ -83,12 +83,12 @@ def tablefunc_env(postgres_backend_single):
 
     # Setup: insert seed data for sales
     sales_rows = [
-        [Literal(dialect, "Jan"), Literal(dialect, "Electronics"), Literal(dialect, 100)],
-        [Literal(dialect, "Jan"), Literal(dialect, "Clothing"), Literal(dialect, 200)],
-        [Literal(dialect, "Feb"), Literal(dialect, "Electronics"), Literal(dialect, 150)],
-        [Literal(dialect, "Feb"), Literal(dialect, "Clothing"), Literal(dialect, 250)],
-        [Literal(dialect, "Mar"), Literal(dialect, "Electronics"), Literal(dialect, 120)],
-        [Literal(dialect, "Mar"), Literal(dialect, "Clothing"), Literal(dialect, 180)],
+        [Parameter(dialect, "Jan"), Parameter(dialect, "Electronics"), Parameter(dialect, 100)],
+        [Parameter(dialect, "Jan"), Parameter(dialect, "Clothing"), Parameter(dialect, 200)],
+        [Parameter(dialect, "Feb"), Parameter(dialect, "Electronics"), Parameter(dialect, 150)],
+        [Parameter(dialect, "Feb"), Parameter(dialect, "Clothing"), Parameter(dialect, 250)],
+        [Parameter(dialect, "Mar"), Parameter(dialect, "Electronics"), Parameter(dialect, 120)],
+        [Parameter(dialect, "Mar"), Parameter(dialect, "Clothing"), Parameter(dialect, 180)],
     ]
     insert_sales = InsertStatement(
         dialect=dialect,
@@ -122,10 +122,10 @@ def tablefunc_env(postgres_backend_single):
 
     # Setup: insert hierarchical data (root -> child1, child2 -> grandchild)
     tree_rows = [
-        [Literal(dialect, "root"), Literal(dialect, None)],
-        [Literal(dialect, "child1"), Literal(dialect, 1)],
-        [Literal(dialect, "child2"), Literal(dialect, 1)],
-        [Literal(dialect, "grandchild"), Literal(dialect, 2)],
+        [Parameter(dialect, "root"), Parameter(dialect, None)],
+        [Parameter(dialect, "child1"), Parameter(dialect, 1)],
+        [Parameter(dialect, "child2"), Parameter(dialect, 1)],
+        [Parameter(dialect, "grandchild"), Parameter(dialect, 2)],
     ]
     insert_tree = InsertStatement(
         dialect=dialect,
@@ -361,12 +361,12 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     # Setup: insert seed data for sales
     sales_rows = [
-        [Literal(dialect, "Jan"), Literal(dialect, "Electronics"), Literal(dialect, 100)],
-        [Literal(dialect, "Jan"), Literal(dialect, "Clothing"), Literal(dialect, 200)],
-        [Literal(dialect, "Feb"), Literal(dialect, "Electronics"), Literal(dialect, 150)],
-        [Literal(dialect, "Feb"), Literal(dialect, "Clothing"), Literal(dialect, 250)],
-        [Literal(dialect, "Mar"), Literal(dialect, "Electronics"), Literal(dialect, 120)],
-        [Literal(dialect, "Mar"), Literal(dialect, "Clothing"), Literal(dialect, 180)],
+        [Parameter(dialect, "Jan"), Parameter(dialect, "Electronics"), Parameter(dialect, 100)],
+        [Parameter(dialect, "Jan"), Parameter(dialect, "Clothing"), Parameter(dialect, 200)],
+        [Parameter(dialect, "Feb"), Parameter(dialect, "Electronics"), Parameter(dialect, 150)],
+        [Parameter(dialect, "Feb"), Parameter(dialect, "Clothing"), Parameter(dialect, 250)],
+        [Parameter(dialect, "Mar"), Parameter(dialect, "Electronics"), Parameter(dialect, 120)],
+        [Parameter(dialect, "Mar"), Parameter(dialect, "Clothing"), Parameter(dialect, 180)],
     ]
     insert_sales = InsertStatement(
         dialect=dialect,
@@ -400,10 +400,10 @@ async def async_tablefunc_env(async_postgres_backend_single):
 
     # Setup: insert hierarchical data (root -> child1, child2 -> grandchild)
     tree_rows = [
-        [Literal(dialect, "root"), Literal(dialect, None)],
-        [Literal(dialect, "child1"), Literal(dialect, 1)],
-        [Literal(dialect, "child2"), Literal(dialect, 1)],
-        [Literal(dialect, "grandchild"), Literal(dialect, 2)],
+        [Parameter(dialect, "root"), Parameter(dialect, None)],
+        [Parameter(dialect, "child1"), Parameter(dialect, 1)],
+        [Parameter(dialect, "child2"), Parameter(dialect, 1)],
+        [Parameter(dialect, "grandchild"), Parameter(dialect, 2)],
     ]
     insert_tree = InsertStatement(
         dialect=dialect,

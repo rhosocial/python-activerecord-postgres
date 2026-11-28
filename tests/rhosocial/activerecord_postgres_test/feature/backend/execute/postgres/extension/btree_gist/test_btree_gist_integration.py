@@ -38,7 +38,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -63,7 +63,8 @@ def btree_gist_env(postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -75,7 +76,7 @@ def btree_gist_env(postgres_backend_single):
     ]
     create_expr = CreateTableStatement(
         dialect=dialect,
-        table=Table(dialect, 'test_btree_gist'),
+        table=Table(dialect, "test_btree_gist"),
         columns=columns,
         if_not_exists=True,
     )
@@ -84,14 +85,14 @@ def btree_gist_env(postgres_backend_single):
 
     # Setup: insert seed data using expression
     rows = [
-        [Literal(dialect, "Event A"), Literal(dialect, "2024-01-15 10:00:00"), Literal(dialect, 10)],
-        [Literal(dialect, "Event B"), Literal(dialect, "2024-03-20 14:30:00"), Literal(dialect, 20)],
-        [Literal(dialect, "Event C"), Literal(dialect, "2024-06-10 09:00:00"), Literal(dialect, 30)],
-        [Literal(dialect, "Event D"), Literal(dialect, "2024-09-05 16:45:00"), Literal(dialect, 40)],
+        [Parameter(dialect, "Event A"), Parameter(dialect, "2024-01-15 10:00:00"), Parameter(dialect, 10)],
+        [Parameter(dialect, "Event B"), Parameter(dialect, "2024-03-20 14:30:00"), Parameter(dialect, 20)],
+        [Parameter(dialect, "Event C"), Parameter(dialect, "2024-06-10 09:00:00"), Parameter(dialect, 30)],
+        [Parameter(dialect, "Event D"), Parameter(dialect, "2024-09-05 16:45:00"), Parameter(dialect, 40)],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
-        into=Table(dialect, 'test_btree_gist'),
+        into=Table(dialect, "test_btree_gist"),
         columns=["name", "created_at", "value"],
         source=ValuesSource(dialect, rows),
     )
@@ -103,7 +104,7 @@ def btree_gist_env(postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableStatement(
         dialect=dialect,
-        table=Table(dialect, 'test_btree_gist'),
+        table=Table(dialect, "test_btree_gist"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -136,7 +137,9 @@ class TestBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist")),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gist")
+            ),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -167,7 +170,9 @@ class TestBtreeGistIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist")),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gist")
+            ),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -203,7 +208,7 @@ class TestBtreeGistIntegration:
                 dialect,
                 ">",
                 Column(dialect, "created_at"),
-                Literal(dialect, "2024-03-01 00:00:00"),
+                Parameter(dialect, "2024-03-01 00:00:00"),
             ),
         )
         sql, params = query.to_sql()
@@ -227,7 +232,8 @@ async def async_btree_gist_env(async_postgres_backend_single):
     # Setup: create test table using expression
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -239,7 +245,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     ]
     create_expr = CreateTableStatement(
         dialect=dialect,
-        table=Table(dialect, 'test_btree_gist_async'),
+        table=Table(dialect, "test_btree_gist_async"),
         columns=columns,
         if_not_exists=True,
     )
@@ -248,14 +254,14 @@ async def async_btree_gist_env(async_postgres_backend_single):
 
     # Setup: insert seed data using expression
     rows = [
-        [Literal(dialect, "Event A"), Literal(dialect, "2024-01-15 10:00:00"), Literal(dialect, 10)],
-        [Literal(dialect, "Event B"), Literal(dialect, "2024-03-20 14:30:00"), Literal(dialect, 20)],
-        [Literal(dialect, "Event C"), Literal(dialect, "2024-06-10 09:00:00"), Literal(dialect, 30)],
-        [Literal(dialect, "Event D"), Literal(dialect, "2024-09-05 16:45:00"), Literal(dialect, 40)],
+        [Parameter(dialect, "Event A"), Parameter(dialect, "2024-01-15 10:00:00"), Parameter(dialect, 10)],
+        [Parameter(dialect, "Event B"), Parameter(dialect, "2024-03-20 14:30:00"), Parameter(dialect, 20)],
+        [Parameter(dialect, "Event C"), Parameter(dialect, "2024-06-10 09:00:00"), Parameter(dialect, 30)],
+        [Parameter(dialect, "Event D"), Parameter(dialect, "2024-09-05 16:45:00"), Parameter(dialect, 40)],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
-        into=Table(dialect, 'test_btree_gist_async'),
+        into=Table(dialect, "test_btree_gist_async"),
         columns=["name", "created_at", "value"],
         source=ValuesSource(dialect, rows),
     )
@@ -267,7 +273,7 @@ async def async_btree_gist_env(async_postgres_backend_single):
     # Teardown: drop table using expression
     drop_expr = DropTableStatement(
         dialect=dialect,
-        table=Table(dialect, 'test_btree_gist_async'),
+        table=Table(dialect, "test_btree_gist_async"),
         if_exists=True,
     )
     sql, params = drop_expr.to_sql()
@@ -302,7 +308,7 @@ class TestAsyncBtreeGistIntegration:
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist_async")
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gist_async")
             ),
         )
         sql, params = query.to_sql()
@@ -336,7 +342,7 @@ class TestAsyncBtreeGistIntegration:
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gist_async")
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gist_async")
             ),
         )
         sql, params = query.to_sql()
@@ -374,7 +380,7 @@ class TestAsyncBtreeGistIntegration:
                 dialect,
                 ">",
                 Column(dialect, "created_at"),
-                Literal(dialect, "2024-03-01 00:00:00"),
+                Parameter(dialect, "2024-03-01 00:00:00"),
             ),
         )
         sql, params = query.to_sql()

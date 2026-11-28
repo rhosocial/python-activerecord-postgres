@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -39,7 +39,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresGeographyType,
 )
 
-
 # --- Helper functions ---
 
 
@@ -47,7 +46,8 @@ def _setup_geo_points_table(backend, dialect, table):
     """Create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -71,8 +71,16 @@ def _setup_geo_points_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1.0 2.0)"), Literal(dialect, 4326))],
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3.0 4.0)"), Literal(dialect, 4326))],
+                [
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1.0 2.0)"), Parameter(dialect, 4326)
+                    )
+                ],
+                [
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3.0 4.0)"), Parameter(dialect, 4326)
+                    )
+                ],
             ],
         ),
     )
@@ -84,7 +92,8 @@ def _setup_geo_distance_table(backend, dialect, table):
     """Create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -108,8 +117,8 @@ def _setup_geo_distance_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326))],
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3 4)"), Literal(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3 4)"), Parameter(dialect, 4326))],
             ],
         ),
     )
@@ -121,7 +130,8 @@ def _setup_geo_contains_table(backend, dialect, table):
     """Create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -149,8 +159,8 @@ def _setup_geo_contains_table(backend, dialect, table):
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     )
                 ],
             ],
@@ -164,7 +174,8 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
     """Create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -188,7 +199,7 @@ def _setup_geo_index_table(backend, dialect, table, index_name):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1 1)"), Literal(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1 1)"), Parameter(dialect, 4326))],
             ],
         ),
     )
@@ -211,7 +222,8 @@ def _setup_geog_table(backend, dialect, table):
     """Create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -235,7 +247,7 @@ def _setup_geog_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeogFromText", Literal(dialect, "SRID=4326;POINT(0 0)"))],
+                [FunctionCall(dialect, "ST_GeogFromText", Parameter(dialect, "SRID=4326;POINT(0 0)"))],
             ],
         ),
     )
@@ -258,7 +270,8 @@ async def _async_setup_geo_points_table(backend, dialect, table):
     """Async: create and populate the test_geo_points table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -282,8 +295,16 @@ async def _async_setup_geo_points_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1.0 2.0)"), Literal(dialect, 4326))],
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3.0 4.0)"), Literal(dialect, 4326))],
+                [
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1.0 2.0)"), Parameter(dialect, 4326)
+                    )
+                ],
+                [
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3.0 4.0)"), Parameter(dialect, 4326)
+                    )
+                ],
             ],
         ),
     )
@@ -295,7 +316,8 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
     """Async: create and populate the test_geo_distance table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -319,8 +341,8 @@ async def _async_setup_geo_distance_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326))],
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3 4)"), Literal(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3 4)"), Parameter(dialect, 4326))],
             ],
         ),
     )
@@ -332,7 +354,8 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
     """Async: create and populate the test_geo_contains table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -360,8 +383,8 @@ async def _async_setup_geo_contains_table(backend, dialect, table):
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     )
                 ],
             ],
@@ -375,7 +398,8 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
     """Async: create and populate the test_geo_index table with GiST index using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -399,7 +423,7 @@ async def _async_setup_geo_index_table(backend, dialect, table, index_name):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1 1)"), Literal(dialect, 4326))],
+                [FunctionCall(dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1 1)"), Parameter(dialect, 4326))],
             ],
         ),
     )
@@ -422,7 +446,8 @@ async def _async_setup_geog_table(backend, dialect, table):
     """Async: create and populate the test_geog table using expressions."""
     columns = [
         ColumnDefinition(
-            dialect, name="id",
+            dialect,
+            name="id",
             data_type=PostgresSerialType(dialect=dialect),
             constraints=[
                 ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
@@ -446,7 +471,7 @@ async def _async_setup_geog_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [FunctionCall(dialect, "ST_GeogFromText", Literal(dialect, "SRID=4326;POINT(0 0)"))],
+                [FunctionCall(dialect, "ST_GeogFromText", Parameter(dialect, "SRID=4326;POINT(0 0)"))],
             ],
         ),
     )
@@ -543,8 +568,12 @@ class TestPostGISIntegration:
                 FunctionCall(
                     dialect,
                     "ST_Distance",
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326)),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3 4)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326)
+                    ),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3 4)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("dist"),
             ],
         )
@@ -568,10 +597,12 @@ class TestPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(5 5)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(5 5)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("contains"),
             ],
         )
@@ -590,10 +621,12 @@ class TestPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(15 15)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(15 15)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("contains"),
             ],
         )
@@ -617,14 +650,14 @@ class TestPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((3 3, 8 3, 8 8, 3 8, 3 3))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((3 3, 8 3, 8 8, 3 8, 3 3))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("intersects"),
             ],
@@ -644,14 +677,14 @@ class TestPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((5 5, 8 5, 8 8, 5 8, 5 5))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((5 5, 8 5, 8 8, 5 8, 5 5))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("intersects"),
             ],
@@ -675,8 +708,8 @@ class TestPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("area"),
             ],
@@ -701,7 +734,7 @@ class TestPostGISIntegration:
                 dialect,
                 "=",
                 Column(dialect, "tablename"),
-                Literal(dialect, T_GEO_INDEX),
+                Parameter(dialect, T_GEO_INDEX),
             ),
         )
         sql, params = query.to_sql()
@@ -744,9 +777,9 @@ class TestPostGISIntegration:
                         dialect,
                         "ST_Transform",
                         FunctionCall(
-                            dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326)
+                            dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326)
                         ),
-                        Literal(dialect, 3857),
+                        Parameter(dialect, 3857),
                     ),
                 ).as_("wkt"),
             ],
@@ -768,7 +801,9 @@ class TestPostGISIntegration:
                 FunctionCall(
                     dialect,
                     "ST_AsGeoJSON",
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1 2)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1 2)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("geojson"),
             ],
         )
@@ -788,8 +823,10 @@ class TestPostGISIntegration:
         # ST_Buffer with ::geography cast - FunctionCall.cast() generates the
         # PostgreSQL-specific ::type syntax (e.g. ST_GEOMFROMTEXT(...)::geography)
         geog_point = FunctionCall(
-            dialect, "ST_GeomFromText",
-            Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
+            dialect,
+            "ST_GeomFromText",
+            Parameter(dialect, "POINT(0 0)"),
+            Parameter(dialect, 4326),
         ).cast(PostgresGeographyType(self.dialect))
         query = QueryStatement(
             dialect=dialect,
@@ -801,7 +838,7 @@ class TestPostGISIntegration:
                         dialect,
                         "ST_Buffer",
                         geog_point,
-                        Literal(dialect, 1000),
+                        Parameter(dialect, 1000),
                     ),
                 ).as_("wkt"),
             ],
@@ -876,8 +913,12 @@ class TestAsyncPostGISIntegration:
                 FunctionCall(
                     dialect,
                     "ST_Distance",
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326)),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(3 4)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326)
+                    ),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(3 4)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("dist"),
             ],
         )
@@ -902,10 +943,12 @@ class TestAsyncPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(5 5)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(5 5)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("contains"),
             ],
         )
@@ -924,10 +967,12 @@ class TestAsyncPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(15 15)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(15 15)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("contains"),
             ],
         )
@@ -952,14 +997,14 @@ class TestAsyncPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 5 0, 5 5, 0 5, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((3 3, 8 3, 8 8, 3 8, 3 3))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((3 3, 8 3, 8 8, 3 8, 3 3))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("intersects"),
             ],
@@ -979,14 +1024,14 @@ class TestAsyncPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 2 0, 2 2, 0 2, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((5 5, 8 5, 8 8, 5 8, 5 5))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((5 5, 8 5, 8 8, 5 8, 5 5))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("intersects"),
             ],
@@ -1011,8 +1056,8 @@ class TestAsyncPostGISIntegration:
                     FunctionCall(
                         dialect,
                         "ST_GeomFromText",
-                        Literal(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
-                        Literal(dialect, 4326),
+                        Parameter(dialect, "POLYGON((0 0, 10 0, 10 10, 0 10, 0 0))"),
+                        Parameter(dialect, 4326),
                     ),
                 ).as_("area"),
             ],
@@ -1036,7 +1081,7 @@ class TestAsyncPostGISIntegration:
                 dialect,
                 "=",
                 Column(dialect, "tablename"),
-                Literal(dialect, T_GEO_INDEX_ASYNC),
+                Parameter(dialect, T_GEO_INDEX_ASYNC),
             ),
         )
         sql, params = query.to_sql()
@@ -1081,9 +1126,9 @@ class TestAsyncPostGISIntegration:
                         dialect,
                         "ST_Transform",
                         FunctionCall(
-                            dialect, "ST_GeomFromText", Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326)
+                            dialect, "ST_GeomFromText", Parameter(dialect, "POINT(0 0)"), Parameter(dialect, 4326)
                         ),
-                        Literal(dialect, 3857),
+                        Parameter(dialect, 3857),
                     ),
                 ).as_("wkt"),
             ],
@@ -1105,7 +1150,9 @@ class TestAsyncPostGISIntegration:
                 FunctionCall(
                     dialect,
                     "ST_AsGeoJSON",
-                    FunctionCall(dialect, "ST_GeomFromText", Literal(dialect, "POINT(1 2)"), Literal(dialect, 4326)),
+                    FunctionCall(
+                        dialect, "ST_GeomFromText", Parameter(dialect, "POINT(1 2)"), Parameter(dialect, 4326)
+                    ),
                 ).as_("geojson"),
             ],
         )
@@ -1126,8 +1173,10 @@ class TestAsyncPostGISIntegration:
         # ST_Buffer with ::geography cast - FunctionCall.cast() generates the
         # PostgreSQL-specific ::type syntax (e.g. ST_GEOMFROMTEXT(...)::geography)
         geog_point = FunctionCall(
-            dialect, "ST_GeomFromText",
-            Literal(dialect, "POINT(0 0)"), Literal(dialect, 4326),
+            dialect,
+            "ST_GeomFromText",
+            Parameter(dialect, "POINT(0 0)"),
+            Parameter(dialect, 4326),
         ).cast(PostgresGeographyType(self.dialect))
         query = QueryStatement(
             dialect=dialect,
@@ -1139,7 +1188,7 @@ class TestAsyncPostGISIntegration:
                         dialect,
                         "ST_Buffer",
                         geog_point,
-                        Literal(dialect, 1000),
+                        Parameter(dialect, 1000),
                     ),
                 ).as_("wkt"),
             ],

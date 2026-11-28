@@ -37,7 +37,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
     PostgresCreateIndexExpression,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -83,9 +83,9 @@ def btree_gin_env(postgres_backend_single):
 
     # Setup: insert seed data using expression
     rows = [
-        [Literal(dialect, "Alice"), Literal(dialect, 10), Literal(dialect, "{engineering,backend}")],
-        [Literal(dialect, "Bob"), Literal(dialect, 20), Literal(dialect, "{marketing,frontend}")],
-        [Literal(dialect, "Charlie"), Literal(dialect, 30), Literal(dialect, "{engineering,frontend}")],
+        [Parameter(dialect, "Alice"), Parameter(dialect, 10), Parameter(dialect, "{engineering,backend}")],
+        [Parameter(dialect, "Bob"), Parameter(dialect, 20), Parameter(dialect, "{marketing,frontend}")],
+        [Parameter(dialect, "Charlie"), Parameter(dialect, 30), Parameter(dialect, "{engineering,frontend}")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -134,7 +134,7 @@ class TestBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin")),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gin")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -165,7 +165,7 @@ class TestBtreeGinIntegration:
             dialect=dialect,
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin")),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gin")),
         )
         sql, params = query.to_sql()
         result = backend.execute(sql, params, options=opts)
@@ -238,9 +238,9 @@ async def async_btree_gin_env(async_postgres_backend_single):
 
     # Setup: insert seed data using expression
     rows = [
-        [Literal(dialect, "Alice"), Literal(dialect, 10), Literal(dialect, "{engineering,backend}")],
-        [Literal(dialect, "Bob"), Literal(dialect, 20), Literal(dialect, "{marketing,frontend}")],
-        [Literal(dialect, "Charlie"), Literal(dialect, 30), Literal(dialect, "{engineering,frontend}")],
+        [Parameter(dialect, "Alice"), Parameter(dialect, 10), Parameter(dialect, "{engineering,backend}")],
+        [Parameter(dialect, "Bob"), Parameter(dialect, 20), Parameter(dialect, "{marketing,frontend}")],
+        [Parameter(dialect, "Charlie"), Parameter(dialect, 30), Parameter(dialect, "{engineering,frontend}")],
     ]
     insert_expr = InsertStatement(
         dialect=dialect,
@@ -291,7 +291,7 @@ class TestAsyncBtreeGinIntegration:
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin_async")
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gin_async")
             ),
         )
         sql, params = query.to_sql()
@@ -325,7 +325,7 @@ class TestAsyncBtreeGinIntegration:
             select=[Column(dialect, "indexname")],
             from_=Table(dialect, "pg_indexes"),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_btree_gin_async")
+                dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_btree_gin_async")
             ),
         )
         sql, params = query.to_sql()

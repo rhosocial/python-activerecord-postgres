@@ -52,15 +52,15 @@ if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-# ============== Literal Constructors ==============
+# ============== Parameter Constructors ==============
 
 def ltree_literal(
     dialect: "SQLDialectBase",
     path: str,
-) -> core.Literal:
+) -> core.Parameter:
     """Create an ltree literal expression.
 
-    Wraps a path string as a Literal expression suitable for use in
+    Wraps a path string as a Parameter expression suitable for use in
     ltree operations.
 
     Args:
@@ -68,14 +68,14 @@ def ltree_literal(
         path: Label path string (e.g., 'Top.Science.Astronomy')
 
     Returns:
-        Literal expression for the ltree path
+        Parameter expression for the ltree path
 
     Example:
         >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
         >>> dialect = PostgresDialect()
         >>> ltree_literal(dialect, 'Top.Science.Astronomy')
     """
-    return core.Literal(dialect, path)
+    return core.Parameter(dialect, path)
 
 
 def lquery_literal(
@@ -84,7 +84,7 @@ def lquery_literal(
 ) -> "bases.BaseExpression":
     """Create an lquery literal expression with type cast.
 
-    Wraps a pattern string as a Literal expression and casts it to
+    Wraps a pattern string as a Parameter expression and casts it to
     the lquery type, producing SQL like: pattern::lquery
 
     Args:
@@ -92,13 +92,13 @@ def lquery_literal(
         pattern: lquery pattern string (e.g., '*.Astronomy.*' or 'Top.*{1,2}')
 
     Returns:
-        Cast Literal expression for the lquery pattern
+        Cast Parameter expression for the lquery pattern
 
     Example:
         >>> lquery_literal(dialect, '*.Astronomy.*')
         # Generates SQL: '*.Astronomy.*'::lquery
     """
-    return core.CastExpression(dialect, core.Literal(dialect, pattern), PostgresLqueryType(dialect))
+    return core.CastExpression(dialect, core.Parameter(dialect, pattern), PostgresLqueryType(dialect))
 
 
 def ltxtquery_literal(
@@ -107,7 +107,7 @@ def ltxtquery_literal(
 ) -> "bases.BaseExpression":
     """Create an ltxtquery literal expression with type cast.
 
-    Wraps a query string as a Literal expression and casts it to
+    Wraps a query string as a Parameter expression and casts it to
     the ltxtquery type, producing SQL like: query::ltxtquery
 
     Args:
@@ -115,13 +115,13 @@ def ltxtquery_literal(
         query: ltxtquery string (e.g., 'Science & Astronomy')
 
     Returns:
-        Cast Literal expression for the ltxtquery
+        Cast Parameter expression for the ltxtquery
 
     Example:
         >>> ltxtquery_literal(dialect, 'Science & Astronomy')
         # Generates SQL: 'Science & Astronomy'::ltxtquery
     """
-    return core.CastExpression(dialect, core.Literal(dialect, query), PostgresLtxtqueryType(dialect))
+    return core.CastExpression(dialect, core.Parameter(dialect, query), PostgresLtxtqueryType(dialect))
 
 
 # ============== ltree Operators ==============
@@ -150,8 +150,8 @@ def ltree_ancestor(
     """
     return BinaryExpression(
         dialect, "@>",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        path if isinstance(path, bases.BaseExpression) else core.Literal(dialect, path),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path),
     )
 
 
@@ -179,8 +179,8 @@ def ltree_descendant(
     """
     return BinaryExpression(
         dialect, "<@",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        path if isinstance(path, bases.BaseExpression) else core.Literal(dialect, path),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path),
     )
 
 
@@ -207,8 +207,8 @@ def ltree_matches(
     """
     return BinaryExpression(
         dialect, "~",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        pattern if isinstance(pattern, bases.BaseExpression) else core.Literal(dialect, pattern),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        pattern if isinstance(pattern, bases.BaseExpression) else core.Parameter(dialect, pattern),
     )
 
 
@@ -235,8 +235,8 @@ def ltree_text_search(
     """
     return BinaryExpression(
         dialect, "@",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -263,8 +263,8 @@ def ltree_concat(
     """
     return BinaryExpression(
         dialect, "||",
-        left if isinstance(left, bases.BaseExpression) else core.Literal(dialect, left),
-        right if isinstance(right, bases.BaseExpression) else core.Literal(dialect, right),
+        left if isinstance(left, bases.BaseExpression) else core.Parameter(dialect, left),
+        right if isinstance(right, bases.BaseExpression) else core.Parameter(dialect, right),
     )
 
 
@@ -293,7 +293,7 @@ def ltree_nlevel(
     """
     return core.FunctionCall(
         dialect, "nlevel",
-        expr if isinstance(expr, bases.BaseExpression) else core.Literal(dialect, expr))
+        expr if isinstance(expr, bases.BaseExpression) else core.Parameter(dialect, expr))
 
 
 def ltree_subpath(
@@ -324,11 +324,11 @@ def ltree_subpath(
         # Generates SQL: subpath(path_col, 1)
     """
     args = [
-        expr if isinstance(expr, bases.BaseExpression) else core.Literal(dialect, expr),
-        start if isinstance(start, bases.BaseExpression) else core.Literal(dialect, start),
+        expr if isinstance(expr, bases.BaseExpression) else core.Parameter(dialect, expr),
+        start if isinstance(start, bases.BaseExpression) else core.Parameter(dialect, start),
     ]
     if length is not None:
-        args.append(length if isinstance(length, bases.BaseExpression) else core.Literal(dialect, length))
+        args.append(length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length))
     return core.FunctionCall(dialect, "subpath", *args)
 
 
@@ -353,7 +353,7 @@ def ltree_lca(
         # Generates SQL: lca('Top.Science.Astronomy', 'Top.Science.Physics')
         # Returns: 'Top.Science'
     """
-    args = [path if isinstance(path, bases.BaseExpression) else core.Literal(dialect, path) for path in paths]
+    args = [path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path) for path in paths]
     return core.FunctionCall(dialect, "lca", *args)
 
 
@@ -378,7 +378,7 @@ def ltree_index(
 
 __all__ = [
     "ltree_index",
-    # Literal constructors
+    # Parameter constructors
     "ltree_literal",
     "lquery_literal",
     "ltxtquery_literal",

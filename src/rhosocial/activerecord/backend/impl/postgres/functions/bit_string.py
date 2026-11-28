@@ -58,8 +58,8 @@ def bit_concat(
     """
     return ConcatenationOperation(
         dialect,
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
+        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
     )
 
 
@@ -80,8 +80,8 @@ def bit_and(
     """
     return BinaryExpression(
         dialect, "&",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
+        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
     )
 
 
@@ -102,8 +102,8 @@ def bit_or(
     """
     return BinaryExpression(
         dialect, "|",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
+        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
     )
 
 
@@ -124,8 +124,8 @@ def bit_xor(
     """
     return BinaryExpression(
         dialect, "#",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Literal(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Literal(dialect, bit2),
+        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
     )
 
 
@@ -144,7 +144,7 @@ def bit_not(
     """
     return UnaryExpression(
         dialect, "~",
-        bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
+        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
         pos="before",
     )
 
@@ -166,8 +166,8 @@ def bit_shift_left(
     """
     return BinaryExpression(
         dialect, "<<",
-        bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),
+        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
+        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
     )
 
 
@@ -188,8 +188,8 @@ def bit_shift_right(
     """
     return BinaryExpression(
         dialect, ">>",
-        bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),
+        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
+        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
     )
 
 
@@ -210,7 +210,7 @@ def bit_length(
     Returns:
         FunctionCall for length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit)
+    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
     return core.FunctionCall(dialect, "length", bit_expr)
 
 
@@ -227,7 +227,7 @@ def bit_length_func(
     Returns:
         FunctionCall for bit_length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit)
+    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
     return core.FunctionCall(dialect, "bit_length", bit_expr)
 
 
@@ -244,7 +244,7 @@ def bit_octet_length(
     Returns:
         FunctionCall for octet_length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit)
+    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
     return core.FunctionCall(dialect, "octet_length", bit_expr)
 
 
@@ -265,8 +265,8 @@ def bit_get_bit(
     """
     return core.FunctionCall(
         dialect, "get_bit",
-        bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),
+        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
+        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
     )
 
 
@@ -289,9 +289,9 @@ def bit_set_bit(
     """
     return core.FunctionCall(
         dialect, "set_bit",
-        bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Literal(dialect, n),
-        value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value),
+        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
+        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
+        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
     )
 
 
@@ -308,7 +308,7 @@ def bit_count(
     Returns:
         FunctionCall for bit_count(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Literal(dialect, bit)
+    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
     return core.FunctionCall(dialect, "bit_count", bit_expr)
 
 

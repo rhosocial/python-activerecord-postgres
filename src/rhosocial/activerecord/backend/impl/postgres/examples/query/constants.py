@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
+from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter
 from rhosocial.activerecord.backend.expression import functions as F
 from rhosocial.activerecord.backend.expression import functions as F
 
@@ -104,7 +104,7 @@ if __name__ == "__main__":
     query_format = QueryStatement(
         dialect=dialect,
         select=[
-            FunctionCall(dialect, 'TO_CHAR', F.now(dialect), Literal(dialect, 'YYYY-MM-DD')).as_('formatted_date'),
+            FunctionCall(dialect, 'TO_CHAR', F.now(dialect), Parameter(dialect, 'YYYY-MM-DD')).as_('formatted_date'),
         ],
     )
     sql, params = query_format.to_sql()

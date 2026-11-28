@@ -42,7 +42,7 @@ if __name__ == "__main__":
     from rhosocial.activerecord.backend.expression import (
         QueryStatement,
         FunctionCall,
-        Literal,
+        Parameter,
     )
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
@@ -75,10 +75,10 @@ if __name__ == "__main__":
         # gen_salt(type) generates a random salt for use with crypt()
         # bf = Blowfish (recommended), 8 = number of rounds (4-31)
         gen_salt_call = FunctionCall(
-            dialect, "gen_salt", Literal(dialect, "bf"), Literal(dialect, 8)
+            dialect, "gen_salt", Parameter(dialect, "bf"), Parameter(dialect, 8)
         )
         crypt_call = FunctionCall(
-            dialect, "crypt", Literal(dialect, "my_secret_password"), gen_salt_call
+            dialect, "crypt", Parameter(dialect, "my_secret_password"), gen_salt_call
         ).as_("hashed_password")
         query = QueryStatement(
             dialect=dialect,
@@ -99,7 +99,7 @@ if __name__ == "__main__":
             # Re-hash the input password using the stored hash as salt
             # If the result equals the stored hash, the password is correct
             verify_crypt = FunctionCall(
-                dialect, "crypt", Literal(dialect, "my_secret_password"), Literal(dialect, stored_hash)
+                dialect, "crypt", Parameter(dialect, "my_secret_password"), Parameter(dialect, stored_hash)
             ).as_("rehashed")
             verify_query = QueryStatement(
                 dialect=dialect,
@@ -121,10 +121,10 @@ if __name__ == "__main__":
         # digest(data, algorithm) returns bytea
         # Algorithms: md5, sha1, sha224, sha256, sha384, sha512
         digest_call = FunctionCall(
-            dialect, "digest", Literal(dialect, "Hello, World!"), Literal(dialect, "sha256")
+            dialect, "digest", Parameter(dialect, "Hello, World!"), Parameter(dialect, "sha256")
         )
         encode_call = FunctionCall(
-            dialect, "encode", digest_call, Literal(dialect, "hex")
+            dialect, "encode", digest_call, Parameter(dialect, "hex")
         ).as_("sha256_digest")
         query = QueryStatement(
             dialect=dialect,
@@ -140,18 +140,18 @@ if __name__ == "__main__":
         # Example 4: Multiple digest algorithms comparison
         md5_call = FunctionCall(
             dialect, "encode",
-            FunctionCall(dialect, "digest", Literal(dialect, "test data"), Literal(dialect, "md5")),
-            Literal(dialect, "hex"),
+            FunctionCall(dialect, "digest", Parameter(dialect, "test data"), Parameter(dialect, "md5")),
+            Parameter(dialect, "hex"),
         ).as_("md5")
         sha1_call = FunctionCall(
             dialect, "encode",
-            FunctionCall(dialect, "digest", Literal(dialect, "test data"), Literal(dialect, "sha1")),
-            Literal(dialect, "hex"),
+            FunctionCall(dialect, "digest", Parameter(dialect, "test data"), Parameter(dialect, "sha1")),
+            Parameter(dialect, "hex"),
         ).as_("sha1")
         sha256_call = FunctionCall(
             dialect, "encode",
-            FunctionCall(dialect, "digest", Literal(dialect, "test data"), Literal(dialect, "sha256")),
-            Literal(dialect, "hex"),
+            FunctionCall(dialect, "digest", Parameter(dialect, "test data"), Parameter(dialect, "sha256")),
+            Parameter(dialect, "hex"),
         ).as_("sha256")
         query = QueryStatement(
             dialect=dialect,
@@ -168,12 +168,12 @@ if __name__ == "__main__":
         # hmac(data, key, algorithm) returns bytea
         hmac_call = FunctionCall(
             dialect, "hmac",
-            Literal(dialect, "message data"),
-            Literal(dialect, "secret_key"),
-            Literal(dialect, "sha256"),
+            Parameter(dialect, "message data"),
+            Parameter(dialect, "secret_key"),
+            Parameter(dialect, "sha256"),
         )
         encode_hmac = FunctionCall(
-            dialect, "encode", hmac_call, Literal(dialect, "hex")
+            dialect, "encode", hmac_call, Parameter(dialect, "hex")
         ).as_("hmac_sha256")
         query = QueryStatement(
             dialect=dialect,
@@ -190,8 +190,8 @@ if __name__ == "__main__":
         # Only available if PostgreSQL was built with OpenSSL
         encrypt_call = FunctionCall(
             dialect, "pgp_sym_encrypt",
-            Literal(dialect, "sensitive data"),
-            Literal(dialect, "encryption_key"),
+            Parameter(dialect, "sensitive data"),
+            Parameter(dialect, "encryption_key"),
         ).as_("encrypted")
         query = QueryStatement(
             dialect=dialect,
@@ -209,8 +209,8 @@ if __name__ == "__main__":
         if encrypted:
             decrypt_call = FunctionCall(
                 dialect, "pgp_sym_decrypt",
-                Literal(dialect, encrypted),
-                Literal(dialect, "encryption_key"),
+                Parameter(dialect, encrypted),
+                Parameter(dialect, "encryption_key"),
             ).as_("decrypted")
             query = QueryStatement(
                 dialect=dialect,

@@ -56,7 +56,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
         normal_rand,
         crosstab,
@@ -120,12 +120,12 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "Jan"), Literal(dialect, "Electronics"), Literal(dialect, 100)],
-                    [Literal(dialect, "Jan"), Literal(dialect, "Clothing"), Literal(dialect, 200)],
-                    [Literal(dialect, "Feb"), Literal(dialect, "Electronics"), Literal(dialect, 150)],
-                    [Literal(dialect, "Feb"), Literal(dialect, "Clothing"), Literal(dialect, 250)],
-                    [Literal(dialect, "Mar"), Literal(dialect, "Electronics"), Literal(dialect, 120)],
-                    [Literal(dialect, "Mar"), Literal(dialect, "Clothing"), Literal(dialect, 180)],
+                    [Parameter(dialect, "Jan"), Parameter(dialect, "Electronics"), Parameter(dialect, 100)],
+                    [Parameter(dialect, "Jan"), Parameter(dialect, "Clothing"), Parameter(dialect, 200)],
+                    [Parameter(dialect, "Feb"), Parameter(dialect, "Electronics"), Parameter(dialect, 150)],
+                    [Parameter(dialect, "Feb"), Parameter(dialect, "Clothing"), Parameter(dialect, 250)],
+                    [Parameter(dialect, "Mar"), Parameter(dialect, "Electronics"), Parameter(dialect, 120)],
+                    [Parameter(dialect, "Mar"), Parameter(dialect, "Clothing"), Parameter(dialect, 180)],
                 ],
             ),
         )
@@ -164,11 +164,11 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "CEO"), Literal(dialect, None)],
-                    [Literal(dialect, "VP Engineering"), Literal(dialect, 1)],
-                    [Literal(dialect, "VP Sales"), Literal(dialect, 1)],
-                    [Literal(dialect, "Engineer A"), Literal(dialect, 2)],
-                    [Literal(dialect, "Engineer B"), Literal(dialect, 2)],
+                    [Parameter(dialect, "CEO"), Parameter(dialect, None)],
+                    [Parameter(dialect, "VP Engineering"), Parameter(dialect, 1)],
+                    [Parameter(dialect, "VP Sales"), Parameter(dialect, 1)],
+                    [Parameter(dialect, "Engineer A"), Parameter(dialect, 2)],
+                    [Parameter(dialect, "Engineer B"), Parameter(dialect, 2)],
                 ],
             ),
         )

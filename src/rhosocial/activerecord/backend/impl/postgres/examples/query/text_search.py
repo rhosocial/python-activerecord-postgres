@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -70,11 +70,11 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 'PostgreSQL Tutorial'),
-                 Literal(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
-                [Literal(dialect, 'MySQL Guide'), Literal(dialect, 'Learn MySQL from beginner to advanced level.')],
-                [Literal(dialect, 'Database Design'),
-                 Literal(dialect, 'Best practices for designing relational databases.')],
+                [Parameter(dialect, 'PostgreSQL Tutorial'),
+                 Parameter(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
+                [Parameter(dialect, 'MySQL Guide'), Parameter(dialect, 'Learn MySQL from beginner to advanced level.')],
+                [Parameter(dialect, 'Database Design'),
+                 Parameter(dialect, 'Best practices for designing relational databases.')],
             ],
         ),
     )
@@ -87,14 +87,14 @@ if __name__ == "__main__":
         QueryStatement, Column,
     )
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+    from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     search_term = 'PostgreSQL'
 
     # Build to_tsvector and plainto_tsquery using FunctionCall
-    tsvector_expr = FunctionCall(dialect, 'to_tsvector', Literal(dialect, 'english'), Column(dialect, 'content'))
-    tsquery_expr = FunctionCall(dialect, 'plainto_tsquery', Literal(dialect, 'english'), Literal(dialect, search_term))
+    tsvector_expr = FunctionCall(dialect, 'to_tsvector', Parameter(dialect, 'english'), Column(dialect, 'content'))
+    tsquery_expr = FunctionCall(dialect, 'plainto_tsquery', Parameter(dialect, 'english'), Parameter(dialect, search_term))
 
     # Use @@ operator via ComparisonPredicate
     match_pred = ComparisonPredicate(dialect, '@@', tsvector_expr, tsquery_expr)

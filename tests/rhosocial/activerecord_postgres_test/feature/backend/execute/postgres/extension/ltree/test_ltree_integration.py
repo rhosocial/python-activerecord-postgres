@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.predicates import (
     ComparisonPredicate,
@@ -94,11 +94,11 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "Top"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -133,22 +133,22 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "root"), PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [cast(dialect, Parameter(dialect, "root"), PostgresLtreeType(dialect)), Parameter(dialect, "Root")],
                 [
-                    cast(dialect, Literal(dialect, "root.level1"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 1")
+                    cast(dialect, Parameter(dialect, "root.level1"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 1")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 2a")
+                    cast(dialect, Parameter(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 2a")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 2b")
+                    cast(dialect, Parameter(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 2b")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.other"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Other branch")
+                    cast(dialect, Parameter(dialect, "root.other"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Other branch")
                 ],
             ],
         ),
@@ -182,7 +182,7 @@ def ltree_env(postgres_backend_single):
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
+            [[cast(dialect, Parameter(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
@@ -215,9 +215,9 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "a.b.c"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "a.b.d"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "x.y.z"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "a.b.c"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "a.b.d"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "x.y.z"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -263,9 +263,9 @@ def ltree_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -311,7 +311,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -331,7 +331,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -351,7 +351,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -360,7 +360,7 @@ class TestLtreeIntegration:
         assert result3.data[0]['is_descendant'] is True
 
         # Test ~ (lquery match) operator: find paths matching pattern
-        # Use Literal in SELECT to compute the match, then filter in Python
+        # Use Parameter in SELECT to compute the match, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         match_expr = RawSQL(
             dialect, "path ~ 'Top.Science.*'::lquery AS matches"
@@ -386,7 +386,7 @@ class TestLtreeIntegration:
         opts = ExecutionOptions(stmt_type=StatementType.DQL)
 
         # Find all ancestors of 'root.level1.level2a'
-        # Use @> operator via Literal in SELECT, then filter in Python
+        # Use @> operator via Parameter in SELECT, then filter in Python
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         ancestor_expr = RawSQL(
             dialect, "path @> 'root.level1.level2a'::ltree AS is_ancestor"
@@ -443,7 +443,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -455,8 +455,8 @@ class TestLtreeIntegration:
         subpath_func = FunctionCall(
             dialect, "subpath",
             Column(dialect, "path"),
-            Literal(dialect, 0),
-            Literal(dialect, 2),
+            Parameter(dialect, 0),
+            Parameter(dialect, 2),
         ).as_("sub")
         query2 = QueryStatement(
             dialect=dialect,
@@ -465,7 +465,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -478,7 +478,7 @@ class TestLtreeIntegration:
         subpath_func2 = FunctionCall(
             dialect, "subpath",
             Column(dialect, "path"),
-            Literal(dialect, 2),
+            Parameter(dialect, 2),
         ).as_("sub")
         query3 = QueryStatement(
             dialect=dialect,
@@ -487,7 +487,7 @@ class TestLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -512,12 +512,12 @@ class TestLtreeIntegration:
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "tablename"),
-                    Literal(dialect, "test_ltree_idx"),
+                    Parameter(dialect, "test_ltree_idx"),
                 ),
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "indexname"),
-                    Literal(dialect, "idx_ltree_path"),
+                    Parameter(dialect, "idx_ltree_path"),
                 ),
             ),
         )
@@ -526,7 +526,7 @@ class TestLtreeIntegration:
         assert result.data is not None
         assert result.data[0]['cnt'] >= 1
 
-        # Insert data and query using index - use Literal for <@ operator in SELECT
+        # Insert data and query using index - use Parameter for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"
@@ -612,11 +612,11 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "Top"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -651,22 +651,22 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "root"), PostgresLtreeType(dialect)), Literal(dialect, "Root")],
+                [cast(dialect, Parameter(dialect, "root"), PostgresLtreeType(dialect)), Parameter(dialect, "Root")],
                 [
-                    cast(dialect, Literal(dialect, "root.level1"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 1")
+                    cast(dialect, Parameter(dialect, "root.level1"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 1")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 2a")
+                    cast(dialect, Parameter(dialect, "root.level1.level2a"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 2a")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Level 2b")
+                    cast(dialect, Parameter(dialect, "root.level1.level2b"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Level 2b")
                 ],
                 [
-                    cast(dialect, Literal(dialect, "root.other"), PostgresLtreeType(dialect)),
-                    Literal(dialect, "Other branch")
+                    cast(dialect, Parameter(dialect, "root.other"), PostgresLtreeType(dialect)),
+                    Parameter(dialect, "Other branch")
                 ],
             ],
         ),
@@ -700,7 +700,7 @@ async def async_ltree_env(async_postgres_backend_single):
         columns=["path"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
+            [[cast(dialect, Parameter(dialect, "A.B.C.D"), PostgresLtreeType(dialect))]],
         ),
     )
     sql, params = insert_func.to_sql()
@@ -733,9 +733,9 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "a.b.c"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "a.b.d"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "x.y.z"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "a.b.c"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "a.b.d"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "x.y.z"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -781,9 +781,9 @@ async def async_ltree_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
-                [cast(dialect, Literal(dialect, "Top.History"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.Science.Physics"), PostgresLtreeType(dialect))],
+                [cast(dialect, Parameter(dialect, "Top.History"), PostgresLtreeType(dialect))],
             ],
         ),
     )
@@ -830,7 +830,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql, params = query.to_sql()
@@ -850,7 +850,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -870,7 +870,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "path"),
-                cast(dialect, Literal(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
+                cast(dialect, Parameter(dialect, "Top.Science.Astronomy"), PostgresLtreeType(dialect)),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -962,7 +962,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -974,8 +974,8 @@ class TestAsyncLtreeIntegration:
         subpath_func = FunctionCall(
             dialect, "subpath",
             Column(dialect, "path"),
-            Literal(dialect, 0),
-            Literal(dialect, 2),
+            Parameter(dialect, 0),
+            Parameter(dialect, 2),
         ).as_("sub")
         query2 = QueryStatement(
             dialect=dialect,
@@ -984,7 +984,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -997,7 +997,7 @@ class TestAsyncLtreeIntegration:
         subpath_func2 = FunctionCall(
             dialect, "subpath",
             Column(dialect, "path"),
-            Literal(dialect, 2),
+            Parameter(dialect, 2),
         ).as_("sub")
         query3 = QueryStatement(
             dialect=dialect,
@@ -1006,7 +1006,7 @@ class TestAsyncLtreeIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql3, params3 = query3.to_sql()
@@ -1032,12 +1032,12 @@ class TestAsyncLtreeIntegration:
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "tablename"),
-                    Literal(dialect, "test_ltree_idx_async"),
+                    Parameter(dialect, "test_ltree_idx_async"),
                 ),
                 ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "indexname"),
-                    Literal(dialect, "idx_ltree_path_async"),
+                    Parameter(dialect, "idx_ltree_path_async"),
                 ),
             ),
         )
@@ -1046,7 +1046,7 @@ class TestAsyncLtreeIntegration:
         assert result.data is not None
         assert result.data[0]['cnt'] >= 1
 
-        # Insert data and query using index - use Literal for <@ operator in SELECT
+        # Insert data and query using index - use Parameter for <@ operator in SELECT
         # TODO: Replace with ComparisonPredicate when it supports .as_() alias
         descendant_expr = RawSQL(
             dialect, "path <@ 'a.b'::ltree AS is_descendant"

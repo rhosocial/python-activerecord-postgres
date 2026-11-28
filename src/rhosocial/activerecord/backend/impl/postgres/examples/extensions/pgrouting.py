@@ -55,7 +55,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.pgrouting import (
@@ -140,18 +140,18 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, 1), Literal(dialect, 2),
-                     Literal(dialect, 1.0), Literal(dialect, 1.0),
-                     Literal(dialect, 0.0), Literal(dialect, 0.0),
-                     Literal(dialect, 1.0), Literal(dialect, 0.0)],
-                    [Literal(dialect, 2), Literal(dialect, 3),
-                     Literal(dialect, 2.0), Literal(dialect, 2.0),
-                     Literal(dialect, 1.0), Literal(dialect, 0.0),
-                     Literal(dialect, 2.0), Literal(dialect, 0.0)],
-                    [Literal(dialect, 1), Literal(dialect, 3),
-                     Literal(dialect, 4.0), Literal(dialect, 4.0),
-                     Literal(dialect, 0.0), Literal(dialect, 0.0),
-                     Literal(dialect, 2.0), Literal(dialect, 0.0)],
+                    [Parameter(dialect, 1), Parameter(dialect, 2),
+                     Parameter(dialect, 1.0), Parameter(dialect, 1.0),
+                     Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                     Parameter(dialect, 1.0), Parameter(dialect, 0.0)],
+                    [Parameter(dialect, 2), Parameter(dialect, 3),
+                     Parameter(dialect, 2.0), Parameter(dialect, 2.0),
+                     Parameter(dialect, 1.0), Parameter(dialect, 0.0),
+                     Parameter(dialect, 2.0), Parameter(dialect, 0.0)],
+                    [Parameter(dialect, 1), Parameter(dialect, 3),
+                     Parameter(dialect, 4.0), Parameter(dialect, 4.0),
+                     Parameter(dialect, 0.0), Parameter(dialect, 0.0),
+                     Parameter(dialect, 2.0), Parameter(dialect, 0.0)],
                 ],
             ),
         )
@@ -165,8 +165,8 @@ if __name__ == "__main__":
         dijkstra_func = pgr_dijkstra(
             dialect,
             "SELECT id, source, target, cost, reverse_cost FROM route_edges",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -183,8 +183,8 @@ if __name__ == "__main__":
         astar_func = pgr_astar(
             dialect,
             "SELECT id, source, target, cost, reverse_cost, x1, y1, x2, y2 FROM route_edges",
-            Literal(dialect, 1),
-            Literal(dialect, 3),
+            Parameter(dialect, 1),
+            Parameter(dialect, 3),
         )
         query = QueryStatement(
             dialect=dialect,

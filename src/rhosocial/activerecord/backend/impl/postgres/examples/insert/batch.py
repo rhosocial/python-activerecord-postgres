@@ -68,7 +68,7 @@ if __name__ == "__main__":
         InsertStatement, ValuesSource, QueryStatement,
     )
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
+    from rhosocial.activerecord.backend.expression.core import Parameter, AllColumnsWildcard, Column
     from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
     insert = InsertStatement(
@@ -78,10 +78,10 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 'INFO'), Literal(dialect, 'System started')],
-                [Literal(dialect, 'DEBUG'), Literal(dialect, 'Loading configuration')],
-                [Literal(dialect, 'INFO'), Literal(dialect, 'Application ready')],
-                [Literal(dialect, 'WARNING'), Literal(dialect, 'Memory usage high')],
+                [Parameter(dialect, 'INFO'), Parameter(dialect, 'System started')],
+                [Parameter(dialect, 'DEBUG'), Parameter(dialect, 'Loading configuration')],
+                [Parameter(dialect, 'INFO'), Parameter(dialect, 'Application ready')],
+                [Parameter(dialect, 'WARNING'), Parameter(dialect, 'Memory usage high')],
             ],
         ),
     )

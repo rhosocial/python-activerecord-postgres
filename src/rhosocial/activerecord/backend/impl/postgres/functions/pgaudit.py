@@ -69,9 +69,9 @@ def pgaudit_set_role(
     """
     return core.FunctionCall(
         dialect, "set_config",
-        core.Literal(dialect, "pgaudit.role"),
-        role if isinstance(role, bases.BaseExpression) else core.Literal(dialect, role),
-        core.Literal(dialect, "false"),
+        core.Parameter(dialect, "pgaudit.role"),
+        role if isinstance(role, bases.BaseExpression) else core.Parameter(dialect, role),
+        core.Parameter(dialect, "false"),
     )
 
 
@@ -108,9 +108,9 @@ def pgaudit_log_level(
     """
     return core.FunctionCall(
         dialect, "set_config",
-        core.Literal(dialect, "pgaudit.log_level"),
-        level if isinstance(level, bases.BaseExpression) else core.Literal(dialect, level),
-        core.Literal(dialect, "false"),
+        core.Parameter(dialect, "pgaudit.log_level"),
+        level if isinstance(level, bases.BaseExpression) else core.Parameter(dialect, level),
+        core.Parameter(dialect, "false"),
     )
 
 
@@ -150,9 +150,9 @@ def pgaudit_include_catalog(
         value = include
     return core.FunctionCall(
         dialect, "set_config",
-        core.Literal(dialect, "pgaudit.log_catalog"),
-        value if isinstance(value, bases.BaseExpression) else core.Literal(dialect, value),
-        core.Literal(dialect, "false"),
+        core.Parameter(dialect, "pgaudit.log_catalog"),
+        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
+        core.Parameter(dialect, "false"),
     )
 
 

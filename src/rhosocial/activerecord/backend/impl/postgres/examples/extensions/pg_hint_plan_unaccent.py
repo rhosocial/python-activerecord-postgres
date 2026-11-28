@@ -40,7 +40,7 @@ if __name__ == "__main__":
         InsertStatement,
         QueryStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal  # noqa: E402
+    from rhosocial.activerecord.backend.expression.core import Parameter  # noqa: E402
     from rhosocial.activerecord.backend.expression.objects import Table  # noqa: E402
     from rhosocial.activerecord.backend.expression.statements import ValuesSource  # noqa: E402
     from rhosocial.activerecord.backend.expression.types import TextType  # noqa: E402
@@ -93,7 +93,7 @@ if __name__ == "__main__":
             into=Table(dialect, TABLE),
             columns=["name"],
             source=ValuesSource(
-                dialect, [[Literal(dialect, value)] for value in ("Café", "Résumé", "plain")]
+                dialect, [[Parameter(dialect, value)] for value in ("Café", "Résumé", "plain")]
             ),
         ).to_sql()
     )

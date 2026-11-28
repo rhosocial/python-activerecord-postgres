@@ -22,7 +22,7 @@ from rhosocial.activerecord.backend.expression import (
     Column,
     CreateMaterializedViewStatement,
     DropMaterializedViewStatement,
-    Literal,
+    Parameter,
     QueryStatement,
     RefreshMaterializedViewStatement,
 )
@@ -925,7 +925,7 @@ class TestCreateMaterializedViewRefusesBoundParameters:
         dialect = _dialect()
         query = QueryStatement(
             dialect=dialect,
-            select=[Literal(dialect, 1)],
+            select=[Parameter(dialect, 1)],
             from_=Table(dialect, "sales"),
         )
         expr = _create(dialect, query=query)
@@ -939,7 +939,7 @@ class TestCreateMaterializedViewRefusesBoundParameters:
         dialect = _dialect()
         query = QueryStatement(
             dialect=dialect,
-            select=[Literal(dialect, 1, inline=True)],
+            select=[Parameter(dialect, 1, inline=True)],
             from_=Table(dialect, "sales"),
         )
         sql, params = _create(dialect, query=query).to_sql()

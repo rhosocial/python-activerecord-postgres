@@ -188,10 +188,10 @@ rhosocial-activerecord/          # Core package
 │       │   ├── advanced_functions.py # Advanced SQL functions (CASE, CAST, etc.)
 │       │   ├── aggregates.py   # Aggregate function expressions
 │       │   ├── bases.py        # Base expression classes and protocols
-│       │   ├── core.py         # Core expressions (Column, Literal, etc.)
+│       │   ├── core.py         # Core expressions (Column, Parameter, etc.)
 │       │   ├── functions.py    # Factory functions for expressions
 │       │   ├── graph.py        # Graph query expressions
-│       │   ├── literals.py     # Literal expressions
+│       │   ├── literals.py     # Identifier expressions
 │       │   ├── mixins.py       # Expression mixins with operator overloading
 │       │   ├── operators.py    # SQL operation expressions
 │       │   ├── predicates.py   # Predicate expressions

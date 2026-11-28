@@ -40,7 +40,7 @@ if __name__ == "__main__":
         PostgresCreateExtensionStatement,
     )
     from rhosocial.activerecord.backend.expression import QueryStatement
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.address_standardizer import (
@@ -89,7 +89,7 @@ if __name__ == "__main__":
         # Normalize a free-form address string into a standardized format
         std_func = standardize_address(
             dialect,
-            Literal(dialect, "123 Main St, Springfield, IL 62701"),
+            Parameter(dialect, "123 Main St, Springfield, IL 62701"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -106,7 +106,7 @@ if __name__ == "__main__":
         # Decompose an address into its component parts
         parse_func = parse_address(
             dialect,
-            Literal(dialect, "123 Main St, Springfield, IL 62701"),
+            Parameter(dialect, "123 Main St, Springfield, IL 62701"),
         )
         query = QueryStatement(
             dialect=dialect,

@@ -56,7 +56,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.hypopg import (
@@ -114,11 +114,11 @@ if __name__ == "__main__":
 
         # Insert sample data
         rows = [
-            [Literal(dialect, "Laptop"), Literal(dialect, "Electronics"), Literal(dialect, 999.99)],
-            [Literal(dialect, "Mouse"), Literal(dialect, "Electronics"), Literal(dialect, 29.99)],
-            [Literal(dialect, "Desk"), Literal(dialect, "Furniture"), Literal(dialect, 249.99)],
-            [Literal(dialect, "Chair"), Literal(dialect, "Furniture"), Literal(dialect, 199.99)],
-            [Literal(dialect, "Monitor"), Literal(dialect, "Electronics"), Literal(dialect, 499.99)],
+            [Parameter(dialect, "Laptop"), Parameter(dialect, "Electronics"), Parameter(dialect, 999.99)],
+            [Parameter(dialect, "Mouse"), Parameter(dialect, "Electronics"), Parameter(dialect, 29.99)],
+            [Parameter(dialect, "Desk"), Parameter(dialect, "Furniture"), Parameter(dialect, 249.99)],
+            [Parameter(dialect, "Chair"), Parameter(dialect, "Furniture"), Parameter(dialect, 199.99)],
+            [Parameter(dialect, "Monitor"), Parameter(dialect, "Electronics"), Parameter(dialect, 499.99)],
         ]
         insert_expr = InsertStatement(
             dialect=dialect,

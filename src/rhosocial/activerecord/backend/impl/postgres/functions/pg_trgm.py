@@ -66,8 +66,8 @@ def similarity(
     """
     return core.FunctionCall(
         dialect, "similarity",
-        text1 if isinstance(text1, bases.BaseExpression) else core.Literal(dialect, text1),
-        text2 if isinstance(text2, bases.BaseExpression) else core.Literal(dialect, text2),
+        text1 if isinstance(text1, bases.BaseExpression) else core.Parameter(dialect, text1),
+        text2 if isinstance(text2, bases.BaseExpression) else core.Parameter(dialect, text2),
     )
 
 
@@ -101,8 +101,8 @@ def word_similarity(
     """
     return core.FunctionCall(
         dialect, "word_similarity",
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        query if isinstance(query, bases.BaseExpression) else core.Literal(dialect, query),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
     )
 
 
@@ -133,7 +133,7 @@ def show_trgm(
     """
     return core.FunctionCall(
         dialect, "show_trgm",
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
     )
 
 
@@ -174,8 +174,8 @@ def similarity_operator(
     operator = "!%" if negate else "%"
     return BinaryExpression(
         dialect, operator,
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
-        text if isinstance(text, bases.BaseExpression) else core.Literal(dialect, text),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
     )
 
 

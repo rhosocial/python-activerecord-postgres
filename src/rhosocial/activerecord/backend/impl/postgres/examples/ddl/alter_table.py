@@ -18,7 +18,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.statements import (
@@ -72,7 +72,7 @@ if __name__ == "__main__":
         columns=['name'],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, 'Alice')]],
+            [[Parameter(dialect, 'Alice')]],
         ),
     )
     backend.execute(*insert_expr.to_sql())
@@ -165,7 +165,7 @@ if __name__ == "__main__":
             Column(dialect, 'is_nullable'),
         ],
         from_=Table(dialect, 'columns', schema_name='information_schema'),
-        where=ComparisonPredicate(dialect, "=", Column(dialect, 'table_name'), Literal(dialect, 'users')),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, 'table_name'), Parameter(dialect, 'users')),
         order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
     )
     options = ExecutionOptions(stmt_type=StatementType.DQL)

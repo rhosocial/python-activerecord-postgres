@@ -75,12 +75,12 @@ def cube_literal(
         array_literal = "ARRAY[{}]".format(coords_str)
         return core.FunctionCall(
             dialect, "cube",
-            core.Literal(dialect, array_literal),
+            core.Parameter(dialect, array_literal),
         )
     return core.FunctionCall(
         dialect, "cube",
         coordinates if isinstance(coordinates, bases.BaseExpression)
-        else core.Literal(dialect, coordinates),
+        else core.Parameter(dialect, coordinates),
     )
 
 
@@ -110,8 +110,8 @@ def cube_dimension(
     """
     return core.FunctionCall(
         dialect, "cube",
-        dim if isinstance(dim, bases.BaseExpression) else core.Literal(dialect, dim),
-        coord if isinstance(coord, bases.BaseExpression) else core.Literal(dialect, coord),
+        dim if isinstance(dim, bases.BaseExpression) else core.Parameter(dialect, dim),
+        coord if isinstance(coord, bases.BaseExpression) else core.Parameter(dialect, coord),
     )
 
 
@@ -141,7 +141,7 @@ def cube_size(
     return core.FunctionCall(
         dialect, "cube_size",
         cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Literal(dialect, cube_expr),
+        else core.Parameter(dialect, cube_expr),
     )
 
 
@@ -171,8 +171,8 @@ def cube_union(
     """
     return BinaryExpression(
         dialect, "union",
-        cube1 if isinstance(cube1, bases.BaseExpression) else core.Literal(dialect, cube1),
-        cube2 if isinstance(cube2, bases.BaseExpression) else core.Literal(dialect, cube2),
+        cube1 if isinstance(cube1, bases.BaseExpression) else core.Parameter(dialect, cube1),
+        cube2 if isinstance(cube2, bases.BaseExpression) else core.Parameter(dialect, cube2),
     )
 
 
@@ -200,8 +200,8 @@ def cube_inter(
     """
     return BinaryExpression(
         dialect, "inter",
-        cube1 if isinstance(cube1, bases.BaseExpression) else core.Literal(dialect, cube1),
-        cube2 if isinstance(cube2, bases.BaseExpression) else core.Literal(dialect, cube2),
+        cube1 if isinstance(cube1, bases.BaseExpression) else core.Parameter(dialect, cube1),
+        cube2 if isinstance(cube2, bases.BaseExpression) else core.Parameter(dialect, cube2),
     )
 
 
@@ -231,8 +231,8 @@ def cube_contains(
     return BinaryExpression(
         dialect, "@>",
         cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Literal(dialect, cube_expr),
-        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        else core.Parameter(dialect, cube_expr),
+        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
     )
 
 
@@ -263,8 +263,8 @@ def cube_distance(
     return BinaryExpression(
         dialect, "<->",
         cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Literal(dialect, cube_expr),
-        target if isinstance(target, bases.BaseExpression) else core.Literal(dialect, target),
+        else core.Parameter(dialect, cube_expr),
+        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
     )
 
 

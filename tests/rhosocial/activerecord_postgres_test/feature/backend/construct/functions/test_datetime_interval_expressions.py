@@ -3,7 +3,7 @@
 
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal, QueryStatement
+from rhosocial.activerecord.backend.expression import Column, Parameter, QueryStatement
 from rhosocial.activerecord.backend.expression.functions import (
     date_add,
     date_diff,
@@ -87,7 +87,7 @@ class TestDateTimeIntervalExpressions:
     ):
         expr = date_add(
             postgres_dialect,
-            Literal(postgres_dialect, "2026-06-04 10:00:00"),
+            Parameter(postgres_dialect, "2026-06-04 10:00:00"),
             30,
             "minute",
         )
@@ -146,8 +146,8 @@ class TestDateTimeIntervalExpressions:
         expr = date_diff(
             postgres_dialect,
             "month",
-            Literal(postgres_dialect, "2026-01-01"),
-            Literal(postgres_dialect, "2026-06-01"),
+            Parameter(postgres_dialect, "2026-01-01"),
+            Parameter(postgres_dialect, "2026-06-01"),
         )
 
         sql, params = expr.to_sql()
@@ -204,7 +204,7 @@ class TestDateTimeIntervalExpressions:
                 extract(postgres_dialect, "year", Column(postgres_dialect, "created_at"))
             ],
             from_="events",
-            where=shifted > Literal(postgres_dialect, "2026-01-01"),
+            where=shifted > Parameter(postgres_dialect, "2026-01-01"),
         )
 
         sql, params = query.to_sql()

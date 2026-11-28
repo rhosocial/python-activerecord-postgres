@@ -64,7 +64,7 @@ def hypopg_create_index(
     """
     return core.FunctionCall(
         dialect, "hypopg_create_index",
-        index_def if isinstance(index_def, bases.BaseExpression) else core.Literal(dialect, index_def),
+        index_def if isinstance(index_def, bases.BaseExpression) else core.Parameter(dialect, index_def),
     )
 
 
@@ -138,7 +138,7 @@ def hypopg_estimate_size(
     """
     return core.FunctionCall(
         dialect, "hypopg_relation_size",
-        index_id if isinstance(index_id, bases.BaseExpression) else core.Literal(dialect, index_id),
+        index_id if isinstance(index_id, bases.BaseExpression) else core.Parameter(dialect, index_id),
     )
 
 

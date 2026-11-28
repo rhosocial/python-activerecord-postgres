@@ -71,8 +71,8 @@ def pg_get_wal_records_info(
     """
     return core.FunctionCall(
         dialect, "pg_get_wal_records_info",
-        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Literal(dialect, start_lsn),
-        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Literal(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Parameter(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Parameter(dialect, end_lsn),
     )
 
 
@@ -105,8 +105,8 @@ def pg_get_wal_blocks_info(
     """
     return core.FunctionCall(
         dialect, "pg_get_wal_blocks_info",
-        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Literal(dialect, start_lsn),
-        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Literal(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Parameter(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Parameter(dialect, end_lsn),
     )
 
 

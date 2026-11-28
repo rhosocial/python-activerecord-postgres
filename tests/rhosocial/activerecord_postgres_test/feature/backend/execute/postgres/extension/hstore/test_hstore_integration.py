@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall, Subquery
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall, Subquery
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -79,7 +79,7 @@ def _setup_hstore_table(backend, dialect, table, hstore_value):
         columns=["data"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, hstore_value), PostgresHstoreType(dialect))]],
+            [[cast(dialect, Parameter(dialect, hstore_value), PostgresHstoreType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -114,7 +114,7 @@ async def _async_setup_hstore_table(backend, dialect, table, hstore_value):
         columns=["data"],
         source=ValuesSource(
             dialect,
-            [[cast(dialect, Literal(dialect, hstore_value), PostgresHstoreType(dialect))]],
+            [[cast(dialect, Parameter(dialect, hstore_value), PostgresHstoreType(dialect))]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -202,7 +202,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -215,7 +215,7 @@ class TestHstoreIntegration:
         val_a_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "a"),
+            Parameter(dialect, "a"),
         )).as_("val_a")
         query_a = QueryStatement(
             dialect=dialect,
@@ -224,7 +224,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query_a.to_sql()
@@ -236,7 +236,7 @@ class TestHstoreIntegration:
         val_b_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "b"),
+            Parameter(dialect, "b"),
         )).as_("val_b")
         query_b = QueryStatement(
             dialect=dialect,
@@ -245,7 +245,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query_b.to_sql()
@@ -262,7 +262,7 @@ class TestHstoreIntegration:
         contains_expr = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "color=>red"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "color=>red"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query = QueryStatement(
             dialect=dialect,
@@ -271,7 +271,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -283,7 +283,7 @@ class TestHstoreIntegration:
         contains_expr2 = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "color=>blue"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "color=>blue"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query2 = QueryStatement(
             dialect=dialect,
@@ -292,7 +292,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -309,7 +309,7 @@ class TestHstoreIntegration:
         has_name_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "name"),
+            Parameter(dialect, "name"),
         )).as_("has_name")
         query = QueryStatement(
             dialect=dialect,
@@ -318,7 +318,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -330,7 +330,7 @@ class TestHstoreIntegration:
         has_email_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "email"),
+            Parameter(dialect, "email"),
         )).as_("has_email")
         query2 = QueryStatement(
             dialect=dialect,
@@ -339,7 +339,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -356,7 +356,7 @@ class TestHstoreIntegration:
         merged_expr = Subquery(dialect, BinaryExpression(
             dialect, "||",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "b=>2"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "b=>2"), PostgresHstoreType(dialect)),
         )).as_("merged")
         query = QueryStatement(
             dialect=dialect,
@@ -365,7 +365,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -390,7 +390,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -415,7 +415,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -436,7 +436,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -460,13 +460,13 @@ class TestHstoreIntegration:
                 "data": BinaryExpression(
                     dialect, "||",
                     Column(dialect, "data"),
-                    cast(dialect, Literal(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
+                    cast(dialect, Parameter(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
                 ),
             },
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = update_expr.to_sql()
@@ -476,7 +476,7 @@ class TestHstoreIntegration:
         status_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "status"),
+            Parameter(dialect, "status"),
         )).as_("status")
         query = QueryStatement(
             dialect=dialect,
@@ -485,7 +485,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -508,13 +508,13 @@ class TestHstoreIntegration:
                 "data": FunctionCall(
                     dialect, "delete",
                     Column(dialect, "data"),
-                    Literal(dialect, "remove"),
+                    Parameter(dialect, "remove"),
                 ),
             },
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = update_expr.to_sql()
@@ -524,12 +524,12 @@ class TestHstoreIntegration:
         has_remove_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "remove"),
+            Parameter(dialect, "remove"),
         )).as_("has_remove")
         has_keep_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "keep"),
+            Parameter(dialect, "keep"),
         )).as_("has_keep")
         query = QueryStatement(
             dialect=dialect,
@@ -538,7 +538,7 @@ class TestHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -600,7 +600,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -612,7 +612,7 @@ class TestAsyncHstoreIntegration:
         val_a_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "a"),
+            Parameter(dialect, "a"),
         )).as_("val_a")
         query_a = QueryStatement(
             dialect=dialect,
@@ -621,7 +621,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query_a.to_sql()
@@ -633,7 +633,7 @@ class TestAsyncHstoreIntegration:
         val_b_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "b"),
+            Parameter(dialect, "b"),
         )).as_("val_b")
         query_b = QueryStatement(
             dialect=dialect,
@@ -642,7 +642,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query_b.to_sql()
@@ -660,7 +660,7 @@ class TestAsyncHstoreIntegration:
         contains_expr = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "color=>red"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "color=>red"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query = QueryStatement(
             dialect=dialect,
@@ -669,7 +669,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -681,7 +681,7 @@ class TestAsyncHstoreIntegration:
         contains_expr2 = Subquery(dialect, BinaryExpression(
             dialect, "@>",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "color=>blue"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "color=>blue"), PostgresHstoreType(dialect)),
         )).as_("contains")
         query2 = QueryStatement(
             dialect=dialect,
@@ -690,7 +690,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -708,7 +708,7 @@ class TestAsyncHstoreIntegration:
         has_name_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "name"),
+            Parameter(dialect, "name"),
         )).as_("has_name")
         query = QueryStatement(
             dialect=dialect,
@@ -717,7 +717,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -729,7 +729,7 @@ class TestAsyncHstoreIntegration:
         has_email_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "email"),
+            Parameter(dialect, "email"),
         )).as_("has_email")
         query2 = QueryStatement(
             dialect=dialect,
@@ -738,7 +738,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -756,7 +756,7 @@ class TestAsyncHstoreIntegration:
         merged_expr = Subquery(dialect, BinaryExpression(
             dialect, "||",
             Column(dialect, "data"),
-            cast(dialect, Literal(dialect, "b=>2"), PostgresHstoreType(dialect)),
+            cast(dialect, Parameter(dialect, "b=>2"), PostgresHstoreType(dialect)),
         )).as_("merged")
         query = QueryStatement(
             dialect=dialect,
@@ -765,7 +765,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -791,7 +791,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -817,7 +817,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -838,7 +838,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql2, params2 = query2.to_sql()
@@ -863,13 +863,13 @@ class TestAsyncHstoreIntegration:
                 "data": BinaryExpression(
                     dialect, "||",
                     Column(dialect, "data"),
-                    cast(dialect, Literal(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
+                    cast(dialect, Parameter(dialect, "status=>inactive"), PostgresHstoreType(dialect)),
                 ),
             },
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = update_expr.to_sql()
@@ -879,7 +879,7 @@ class TestAsyncHstoreIntegration:
         status_expr = Subquery(dialect, BinaryExpression(
             dialect, "->",
             Column(dialect, "data"),
-            Literal(dialect, "status"),
+            Parameter(dialect, "status"),
         )).as_("status")
         query = QueryStatement(
             dialect=dialect,
@@ -888,7 +888,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()
@@ -912,13 +912,13 @@ class TestAsyncHstoreIntegration:
                 "data": FunctionCall(
                     dialect, "delete",
                     Column(dialect, "data"),
-                    Literal(dialect, "remove"),
+                    Parameter(dialect, "remove"),
                 ),
             },
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = update_expr.to_sql()
@@ -928,12 +928,12 @@ class TestAsyncHstoreIntegration:
         has_remove_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "remove"),
+            Parameter(dialect, "remove"),
         )).as_("has_remove")
         has_keep_expr = Subquery(dialect, BinaryExpression(
             dialect, "?",
             Column(dialect, "data"),
-            Literal(dialect, "keep"),
+            Parameter(dialect, "keep"),
         )).as_("has_keep")
         query = QueryStatement(
             dialect=dialect,
@@ -942,7 +942,7 @@ class TestAsyncHstoreIntegration:
             where=ComparisonPredicate(
                 dialect, "=",
                 Column(dialect, "id"),
-                Literal(dialect, 1),
+                Parameter(dialect, 1),
             ),
         )
         sql, params = query.to_sql()

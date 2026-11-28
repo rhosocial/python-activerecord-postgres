@@ -19,7 +19,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_cron import (
     cron_schedule,
     cron_unschedule,
@@ -51,7 +51,7 @@ class TestPgCronIntegration:
             schedule_func = cron_schedule(
                 dialect,
                 "0 * * * *",
-                Literal(dialect, "SELECT 1"),
+                Parameter(dialect, "SELECT 1"),
             )
             query = QueryStatement(
                 dialect=dialect,
@@ -89,7 +89,7 @@ class TestPgCronIntegration:
             schedule_func = cron_schedule(
                 dialect,
                 "0 * * * *",
-                Literal(dialect, "SELECT 1"),
+                Parameter(dialect, "SELECT 1"),
             )
             query = QueryStatement(
                 dialect=dialect,
@@ -139,7 +139,7 @@ class TestAsyncPgCronIntegration:
             schedule_func = cron_schedule(
                 dialect,
                 "0 * * * *",
-                Literal(dialect, "SELECT 1"),
+                Parameter(dialect, "SELECT 1"),
             )
             query = QueryStatement(
                 dialect=dialect,
@@ -178,7 +178,7 @@ class TestAsyncPgCronIntegration:
             schedule_func = cron_schedule(
                 dialect,
                 "0 * * * *",
-                Literal(dialect, "SELECT 1"),
+                Parameter(dialect, "SELECT 1"),
             )
             query = QueryStatement(
                 dialect=dialect,

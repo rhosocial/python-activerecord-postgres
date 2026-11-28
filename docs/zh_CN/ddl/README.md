@@ -89,14 +89,14 @@ create_idx = CreateIndexStatement(
 PostgreSQL 支持带 WHERE 子句的局部索引：
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Parameter
 
 create_idx = CreateIndexStatement(
     dialect,
     index_name="idx_active_users",
     table_name="users",
     columns=["email"],
-    where=Column(dialect, "status") == Literal(dialect, "active")
+    where=Column(dialect, "status") == Parameter(dialect, "active")
 )
 ```
 

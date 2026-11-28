@@ -35,7 +35,7 @@ if __name__ == "__main__":
         InsertStatement,
         QueryStatement,
     )
-    from rhosocial.activerecord.backend.expression.core import Literal  # noqa: E402
+    from rhosocial.activerecord.backend.expression.core import Parameter  # noqa: E402
     from rhosocial.activerecord.backend.expression.objects import Table  # noqa: E402
     from rhosocial.activerecord.backend.expression.statements import ValuesSource  # noqa: E402
     from rhosocial.activerecord.backend.impl.postgres.expression import (  # noqa: E402
@@ -96,7 +96,7 @@ if __name__ == "__main__":
             dialect=dialect,
             into=Table(dialect, TABLE),
             columns=["id"],
-            source=ValuesSource(dialect, [[Literal(dialect, 1)]]),
+            source=ValuesSource(dialect, [[Parameter(dialect, 1)]]),
         ).to_sql(),
         options=DDL,
     )

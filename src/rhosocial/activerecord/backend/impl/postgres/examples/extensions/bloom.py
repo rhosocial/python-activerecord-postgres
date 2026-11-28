@@ -58,7 +58,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
@@ -111,11 +111,11 @@ if __name__ == "__main__":
 
         # Example 2: Insert sample data
         rows = [
-            [Literal(dialect, "Alice"), Literal(dialect, "alice@example.com"), Literal(dialect, "New York")],
-            [Literal(dialect, "Bob"), Literal(dialect, "bob@example.com"), Literal(dialect, "Los Angeles")],
-            [Literal(dialect, "Charlie"), Literal(dialect, "charlie@example.com"), Literal(dialect, "Chicago")],
-            [Literal(dialect, "Diana"), Literal(dialect, "diana@example.com"), Literal(dialect, "New York")],
-            [Literal(dialect, "Eve"), Literal(dialect, "eve@example.com"), Literal(dialect, "Boston")],
+            [Parameter(dialect, "Alice"), Parameter(dialect, "alice@example.com"), Parameter(dialect, "New York")],
+            [Parameter(dialect, "Bob"), Parameter(dialect, "bob@example.com"), Parameter(dialect, "Los Angeles")],
+            [Parameter(dialect, "Charlie"), Parameter(dialect, "charlie@example.com"), Parameter(dialect, "Chicago")],
+            [Parameter(dialect, "Diana"), Parameter(dialect, "diana@example.com"), Parameter(dialect, "New York")],
+            [Parameter(dialect, "Eve"), Parameter(dialect, "eve@example.com"), Parameter(dialect, "Boston")],
         ]
         insert_expr = InsertStatement(
             dialect=dialect,
@@ -152,7 +152,7 @@ if __name__ == "__main__":
             where=ComparisonPredicate(
                 Column(dialect, "city"),
                 "=",
-                Literal(dialect, "New York"),
+                Parameter(dialect, "New York"),
             ),
         )
         sql, params = query.to_sql()

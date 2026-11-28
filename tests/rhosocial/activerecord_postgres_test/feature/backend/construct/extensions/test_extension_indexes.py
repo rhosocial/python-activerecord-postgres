@@ -2,7 +2,7 @@
 """Extension index factories return expression nodes with one-to-one formatters."""
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Parameter
 from rhosocial.activerecord.backend.expression.functions.aggregate import count
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
@@ -72,7 +72,7 @@ class TestPreviouslyClaimedGaps:
     def test_predicate_alias(self):
         d = PostgresDialect((15, 0, 0))
         expr = ComparisonPredicate(
-            d, "=", Column(d, "a"), Literal(d, 1, inline=True)
+            d, "=", Column(d, "a"), Parameter(d, 1, inline=True)
         ).as_("cmp")
         assert expr.to_sql() == ('"a" = 1 AS "cmp"', ())
 

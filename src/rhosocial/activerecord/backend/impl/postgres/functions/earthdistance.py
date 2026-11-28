@@ -66,9 +66,9 @@ def ll_to_earth(
     return core.FunctionCall(
         dialect, "ll_to_earth",
         latitude if isinstance(latitude, bases.BaseExpression)
-        else core.Literal(dialect, latitude),
+        else core.Parameter(dialect, latitude),
         longitude if isinstance(longitude, bases.BaseExpression)
-        else core.Literal(dialect, longitude),
+        else core.Parameter(dialect, longitude),
     )
 
 
@@ -100,8 +100,8 @@ def earth_distance(
     """
     return core.FunctionCall(
         dialect, "earth_distance",
-        point1 if isinstance(point1, bases.BaseExpression) else core.Literal(dialect, point1),
-        point2 if isinstance(point2, bases.BaseExpression) else core.Literal(dialect, point2),
+        point1 if isinstance(point1, bases.BaseExpression) else core.Parameter(dialect, point1),
+        point2 if isinstance(point2, bases.BaseExpression) else core.Parameter(dialect, point2),
     )
 
 
@@ -130,8 +130,8 @@ def earth_box(
     """
     return core.FunctionCall(
         dialect, "earth_box",
-        center if isinstance(center, bases.BaseExpression) else core.Literal(dialect, center),
-        radius if isinstance(radius, bases.BaseExpression) else core.Literal(dialect, radius),
+        center if isinstance(center, bases.BaseExpression) else core.Parameter(dialect, center),
+        radius if isinstance(radius, bases.BaseExpression) else core.Parameter(dialect, radius),
     )
 
 
@@ -168,7 +168,7 @@ def earthdistance_operator(
     """
     return BinaryExpression(
         dialect, operator,
-        column if isinstance(column, bases.BaseExpression) else core.Literal(dialect, column),
+        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
         ll_to_earth(dialect, latitude, longitude),
     )
 
@@ -202,7 +202,7 @@ def point_inside_circle(
     """
     return BinaryExpression(
         dialect, "<@",
-        point if isinstance(point, bases.BaseExpression) else core.Literal(dialect, point),
+        point if isinstance(point, bases.BaseExpression) else core.Parameter(dialect, point),
         earth_box(dialect, ll_to_earth(dialect, center_lat, center_lon), radius),
     )
 

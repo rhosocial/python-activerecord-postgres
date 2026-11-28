@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -94,8 +94,8 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')],
-                [Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')],
+                [Parameter(dialect, 'Alice'), Parameter(dialect, 'alice@example.com')],
+                [Parameter(dialect, 'Bob'), Parameter(dialect, 'bob@example.com')],
             ],
         ),
     )
@@ -108,9 +108,9 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 1), Literal(dialect, 100.00), Literal(dialect, 'completed')],
-                [Literal(dialect, 1), Literal(dialect, 50.00), Literal(dialect, 'pending')],
-                [Literal(dialect, 2), Literal(dialect, 75.00), Literal(dialect, 'completed')],
+                [Parameter(dialect, 1), Parameter(dialect, 100.00), Parameter(dialect, 'completed')],
+                [Parameter(dialect, 1), Parameter(dialect, 50.00), Parameter(dialect, 'pending')],
+                [Parameter(dialect, 2), Parameter(dialect, 75.00), Parameter(dialect, 'completed')],
             ],
         ),
     )
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     customers = NamedRelationRef(dialect, Table(dialect, 'customers'), alias='c')
@@ -156,7 +156,7 @@ if __name__ == "__main__":
                     dialect,
                     '=',
                     Column(dialect, 'status', table='o'),
-                    Literal(dialect, 'completed'),
+                    Parameter(dialect, 'completed'),
                 ),
             ),
         ),

@@ -57,7 +57,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.core import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
 
@@ -108,11 +108,11 @@ if __name__ == "__main__":
 
         # Example 2: Insert employee data
         rows = [
-            [Literal(dialect, "Alice"), Literal(dialect, "Engineering")],
-            [Literal(dialect, "Bob"), Literal(dialect, "Marketing")],
-            [Literal(dialect, "Charlie"), Literal(dialect, "Engineering")],
-            [Literal(dialect, "Diana"), Literal(dialect, "Sales")],
-            [Literal(dialect, "Eve"), Literal(dialect, "Engineering")],
+            [Parameter(dialect, "Alice"), Parameter(dialect, "Engineering")],
+            [Parameter(dialect, "Bob"), Parameter(dialect, "Marketing")],
+            [Parameter(dialect, "Charlie"), Parameter(dialect, "Engineering")],
+            [Parameter(dialect, "Diana"), Parameter(dialect, "Sales")],
+            [Parameter(dialect, "Eve"), Parameter(dialect, "Engineering")],
         ]
         insert_expr = InsertStatement(
             dialect=dialect,

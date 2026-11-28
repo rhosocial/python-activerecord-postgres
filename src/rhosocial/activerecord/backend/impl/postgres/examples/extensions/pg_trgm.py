@@ -50,7 +50,7 @@ if __name__ == "__main__":
         FunctionCall,
         BinaryExpression,
         OrderByClause,
-        Literal,
+        Parameter,
         ColumnNotNullConstraint,
         ColumnPrimaryKeyConstraint,
     )
@@ -132,12 +132,12 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "Introduction to PostgreSQL")],
-                    [Literal(dialect, "PostgreSQL Performance Tuning")],
-                    [Literal(dialect, "Advanced SQL Queries")],
-                    [Literal(dialect, "Database Design Principles")],
-                    [Literal(dialect, "PostgreSQL Replication Guide")],
-                    [Literal(dialect, "MySQL vs PostgreSQL Comparison")],
+                    [Parameter(dialect, "Introduction to PostgreSQL")],
+                    [Parameter(dialect, "PostgreSQL Performance Tuning")],
+                    [Parameter(dialect, "Advanced SQL Queries")],
+                    [Parameter(dialect, "Database Design Principles")],
+                    [Parameter(dialect, "PostgreSQL Replication Guide")],
+                    [Parameter(dialect, "MySQL vs PostgreSQL Comparison")],
                 ],
             ),
         )
@@ -154,13 +154,13 @@ if __name__ == "__main__":
         # Note: as_() modifies the object in-place, so create separate instances
         # for SELECT (with alias) and WHERE (without alias)
         sim_select = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "PostgreSQL intro")
         ).as_("sim_score")
         sim_where = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "PostgreSQL intro")
         )
         sim_order = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL intro")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "PostgreSQL intro")
         )
         query = QueryStatement(
             dialect=dialect,
@@ -169,7 +169,7 @@ if __name__ == "__main__":
                 sim_select,
             ],
             from_=Table(dialect, "articles"),
-            where=sim_where > Literal(dialect, 0.1),
+            where=sim_where > Parameter(dialect, 0.1),
             order_by=OrderByClause(dialect, [(sim_order, "DESC")]),
         )
         sql, params = query.to_sql()
@@ -188,7 +188,7 @@ if __name__ == "__main__":
             select=[Column(dialect, "title")],
             from_=Table(dialect, "articles"),
             where=BinaryExpression(
-                dialect, "%", Column(dialect, "title"), Literal(dialect, "Postgres guide")
+                dialect, "%", Column(dialect, "title"), Parameter(dialect, "Postgres guide")
             ),
             order_by=OrderByClause(dialect, [(Column(dialect, "title"), "ASC")]),
         )
@@ -202,13 +202,13 @@ if __name__ == "__main__":
 
         # Example 5: Show similarity scores for comparison
         sim_pg_select = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "PostgreSQL")
         ).as_("sim_postgresql")
         sim_design_select = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "database design")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "database design")
         ).as_("sim_design")
         sim_pg_order = FunctionCall(
-            dialect, "similarity", Column(dialect, "title"), Literal(dialect, "PostgreSQL")
+            dialect, "similarity", Column(dialect, "title"), Parameter(dialect, "PostgreSQL")
         )
         query = QueryStatement(
             dialect=dialect,

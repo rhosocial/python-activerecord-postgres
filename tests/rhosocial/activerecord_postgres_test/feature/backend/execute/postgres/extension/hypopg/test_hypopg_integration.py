@@ -25,7 +25,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.hypopg import (
     hypopg_create_index,
     hypopg_reset,
@@ -75,8 +75,8 @@ def hypopg_env(postgres_backend_single):
     for i in range(10):
         rows.append(
             [
-                Literal(dialect, f"user{i}"),
-                Literal(dialect, f"user{i}@example.com"),
+                Parameter(dialect, f"user{i}"),
+                Parameter(dialect, f"user{i}@example.com"),
             ]
         )
     insert_expr = InsertStatement(
@@ -291,8 +291,8 @@ async def async_hypopg_env(async_postgres_backend_single):
     for i in range(10):
         rows.append(
             [
-                Literal(dialect, f"user{i}"),
-                Literal(dialect, f"user{i}@example.com"),
+                Parameter(dialect, f"user{i}"),
+                Parameter(dialect, f"user{i}@example.com"),
             ]
         )
     insert_expr = InsertStatement(

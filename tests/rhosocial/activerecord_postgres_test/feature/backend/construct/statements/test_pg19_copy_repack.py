@@ -10,16 +10,12 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.errors import QueryError
 from rhosocial.activerecord.backend.expression import (
     Column,
-    Literal,
+    Parameter,
     QueryStatement,
     RawSQL,
 )
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.serialization import (
-    deserialize,
-    serialize,
-)
 from rhosocial.activerecord.backend.impl.postgres.backend.async_backend import AsyncPostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.expression import (
@@ -30,10 +26,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression import (
     PostgresRepackStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.protocols import (
-    PostgresCopySupport,
-    PostgresRepackSupport,
-)
 
 
 class SyncCopy:
@@ -136,7 +128,7 @@ def select_query(dialect):
         dialect,
         select=[Column(dialect, "id")],
         from_=Table(dialect, "users"),
-        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 3)),
+        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Parameter(dialect, 3)),
     )
 
 
@@ -483,7 +475,7 @@ def test_copy_from_where_returns_parameters():
     expression = PostgresCopyFromStatement(
         dialect,
         "users",
-        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Literal(dialect, 7)),
+        where=ComparisonPredicate(dialect, ">", Column(dialect, "id"), Parameter(dialect, 7)),
     )
 
     sql, params = expression.to_sql()
@@ -539,21 +531,6 @@ def test_repack_strict_relationships():
             table_name="users",
             all_using_index=True,
         ).to_sql()
-
-
-def test_protocol_mro_and_serialization():
-    dialect = PostgresDialect((19, 0, 0))
-    assert isinstance(dialect, PostgresCopySupport)
-    assert isinstance(dialect, PostgresRepackSupport)
-    # The protocols are satisfied structurally by the mixins; they are not
-    # bases, so the MRO carries the real methods rather than ellipsis stubs.
-    assert PostgresCopySupport not in PostgresDialect.__mro__
-    assert PostgresRepackSupport not in PostgresDialect.__mro__
-
-    original = PostgresCopyToStatement(dialect, query=select_query(dialect))
-    restored = deserialize(serialize(original), dialect, registry=dialect.artifact_registry())
-    assert isinstance(restored, PostgresCopyToStatement)
-    assert restored.to_sql() == original.to_sql()
 
 
 def test_sync_copy_to_consumes_complete_stream_and_passes_parameters():

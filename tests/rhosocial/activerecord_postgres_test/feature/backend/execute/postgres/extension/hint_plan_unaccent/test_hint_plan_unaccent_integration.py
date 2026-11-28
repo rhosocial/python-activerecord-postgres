@@ -18,7 +18,7 @@ from rhosocial.activerecord.backend.expression import (
     InsertStatement,
     QueryStatement,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
@@ -57,7 +57,7 @@ def _create_table(backend, dialect, table):
         ).to_sql(),
         options=DDL,
     )
-    rows = [[Literal(dialect, name)] for name in ("Café", "Résumé", "naïve", "plain")]
+    rows = [[Parameter(dialect, name)] for name in ("Café", "Résumé", "naïve", "plain")]
     backend.execute(
         *InsertStatement(
             dialect=dialect,
@@ -110,7 +110,7 @@ async def async_hint_env(async_postgres_backend_single):
             into=Table(dialect, table),
             columns=["name"],
             source=ValuesSource(
-                dialect, [[Literal(dialect, name)] for name in ("Café", "Résumé", "naïve", "plain")]
+                dialect, [[Parameter(dialect, name)] for name in ("Café", "Résumé", "naïve", "plain")]
             ),
         ).to_sql()
     )
@@ -148,7 +148,7 @@ class TestHintPlanIntegration:
             select=[Column(dialect, "id")],
             from_=Table(dialect, table),
             where=ComparisonPredicate(
-                dialect, "=", Column(dialect, "name"), Literal(dialect, "Cafe")
+                dialect, "=", Column(dialect, "name"), Parameter(dialect, "Cafe")
             ),
         )
         # Make the index the planner's default on this four-row table so the

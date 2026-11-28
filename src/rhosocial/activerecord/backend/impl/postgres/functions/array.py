@@ -40,7 +40,7 @@ def array_agg(
         >>> func.to_sql()
         ('array_agg(%s)', ('value',))
     """
-    expr = expression if isinstance(expression, bases.BaseExpression) else core.Literal(dialect, expression)
+    expr = expression if isinstance(expression, bases.BaseExpression) else core.Parameter(dialect, expression)
     return core.FunctionCall(dialect, "array_agg", expr)
 
 
@@ -66,7 +66,7 @@ def array_agg_distinct(
         >>> func.to_sql()
         ('array_agg(DISTINCT %s)', ('value',))
     """
-    expr = expression if isinstance(expression, bases.BaseExpression) else core.Literal(dialect, expression)
+    expr = expression if isinstance(expression, bases.BaseExpression) else core.Parameter(dialect, expression)
     return core.FunctionCall(dialect, "array_agg", expr, is_distinct=True)
 
 
@@ -91,8 +91,8 @@ def array_append(
         >>> func.to_sql()
         ('array_append(%s, %s)', ('arr', 3))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
     return core.FunctionCall(dialect, "array_append", arr_expr, elem_expr)
 
 
@@ -117,8 +117,8 @@ def array_cat(
         >>> func.to_sql()
         ('array_cat(%s, %s)', ('arr1', 'arr2'))
     """
-    arr1_expr = array1 if isinstance(array1, bases.BaseExpression) else core.Literal(dialect, array1)
-    arr2_expr = array2 if isinstance(array2, bases.BaseExpression) else core.Literal(dialect, array2)
+    arr1_expr = array1 if isinstance(array1, bases.BaseExpression) else core.Parameter(dialect, array1)
+    arr2_expr = array2 if isinstance(array2, bases.BaseExpression) else core.Parameter(dialect, array2)
     return core.FunctionCall(dialect, "array_cat", arr1_expr, arr2_expr)
 
 
@@ -141,7 +141,7 @@ def array_dims(
         >>> func.to_sql()
         ('array_dims(%s)', ('arr',))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
     return core.FunctionCall(dialect, "array_dims", arr_expr)
 
 
@@ -168,11 +168,11 @@ def array_fill(
         >>> func.to_sql()
         ('array_fill(%s, %s)', (0, 'dims'))
     """
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
-    dims_expr = dimensions if isinstance(dimensions, bases.BaseExpression) else core.Literal(dialect, dimensions)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
+    dims_expr = dimensions if isinstance(dimensions, bases.BaseExpression) else core.Parameter(dialect, dimensions)
     args = [elem_expr, dims_expr]
     if bounds is not None:
-        bounds_expr = bounds if isinstance(bounds, bases.BaseExpression) else core.Literal(dialect, bounds)
+        bounds_expr = bounds if isinstance(bounds, bases.BaseExpression) else core.Parameter(dialect, bounds)
         args.append(bounds_expr)
     return core.FunctionCall(dialect, "array_fill", *args)
 
@@ -198,8 +198,8 @@ def array_length(
         >>> func.to_sql()
         ('array_length(%s, %s)', ('arr', 1))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Literal(dialect, dimension)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Parameter(dialect, dimension)
     return core.FunctionCall(dialect, "array_length", arr_expr, dim_expr)
 
 
@@ -224,8 +224,8 @@ def array_lower(
         >>> func.to_sql()
         ('array_lower(%s, %s)', ('arr', 1))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Literal(dialect, dimension)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Parameter(dialect, dimension)
     return core.FunctionCall(dialect, "array_lower", arr_expr, dim_expr)
 
 
@@ -248,7 +248,7 @@ def array_ndims(
         >>> func.to_sql()
         ('array_ndims(%s)', ('arr',))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
     return core.FunctionCall(dialect, "array_ndims", arr_expr)
 
 
@@ -275,11 +275,11 @@ def array_position(
         >>> func.to_sql()
         ('array_position(%s, %s)', ('arr', 'elem'))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
     args = [arr_expr, elem_expr]
     if start is not None:
-        start_expr = start if isinstance(start, bases.BaseExpression) else core.Literal(dialect, start)
+        start_expr = start if isinstance(start, bases.BaseExpression) else core.Parameter(dialect, start)
         args.append(start_expr)
     return core.FunctionCall(dialect, "array_position", *args)
 
@@ -305,8 +305,8 @@ def array_positions(
         >>> func.to_sql()
         ('array_positions(%s, %s)', ('arr', 'elem'))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
     return core.FunctionCall(dialect, "array_positions", arr_expr, elem_expr)
 
 
@@ -331,8 +331,8 @@ def array_prepend(
         >>> func.to_sql()
         ('array_prepend(%s, %s)', (1, 'arr'))
     """
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
     return core.FunctionCall(dialect, "array_prepend", elem_expr, arr_expr)
 
 
@@ -357,8 +357,8 @@ def array_remove(
         >>> func.to_sql()
         ('array_remove(%s, %s)', ('arr', 2))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Literal(dialect, element)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    elem_expr = element if isinstance(element, bases.BaseExpression) else core.Parameter(dialect, element)
     return core.FunctionCall(dialect, "array_remove", arr_expr, elem_expr)
 
 
@@ -385,9 +385,9 @@ def array_replace(
         >>> func.to_sql()
         ('array_replace(%s, %s, %s)', ('arr', 2, 4))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    from_expr = from_elem if isinstance(from_elem, bases.BaseExpression) else core.Literal(dialect, from_elem)
-    to_expr = to_elem if isinstance(to_elem, bases.BaseExpression) else core.Literal(dialect, to_elem)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    from_expr = from_elem if isinstance(from_elem, bases.BaseExpression) else core.Parameter(dialect, from_elem)
+    to_expr = to_elem if isinstance(to_elem, bases.BaseExpression) else core.Parameter(dialect, to_elem)
     return core.FunctionCall(dialect, "array_replace", arr_expr, from_expr, to_expr)
 
 
@@ -414,11 +414,11 @@ def array_to_string(
         >>> func.to_sql()
         ('array_to_string(%s, %s)', ('arr', ','))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    delim_expr = delimiter if isinstance(delimiter, bases.BaseExpression) else core.Literal(dialect, delimiter)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    delim_expr = delimiter if isinstance(delimiter, bases.BaseExpression) else core.Parameter(dialect, delimiter)
     args = [arr_expr, delim_expr]
     if null_text is not None:
-        null_expr = null_text if isinstance(null_text, bases.BaseExpression) else core.Literal(dialect, null_text)
+        null_expr = null_text if isinstance(null_text, bases.BaseExpression) else core.Parameter(dialect, null_text)
         args.append(null_expr)
     return core.FunctionCall(dialect, "array_to_string", *args)
 
@@ -444,8 +444,8 @@ def array_upper(
         >>> func.to_sql()
         ('array_upper(%s, %s)', ('arr', 1))
     """
-    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Literal(dialect, array)
-    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Literal(dialect, dimension)
+    arr_expr = array if isinstance(array, bases.BaseExpression) else core.Parameter(dialect, array)
+    dim_expr = dimension if isinstance(dimension, bases.BaseExpression) else core.Parameter(dialect, dimension)
     return core.FunctionCall(dialect, "array_upper", arr_expr, dim_expr)
 
 
@@ -469,7 +469,7 @@ def unnest(
         ('unnest(%s, %s)', ('arr1', 'arr2'))
     """
     args = [
-        a if isinstance(a, bases.BaseExpression) else core.Literal(dialect, a)
+        a if isinstance(a, bases.BaseExpression) else core.Parameter(dialect, a)
         for a in arrays
     ]
     return core.FunctionCall(dialect, "unnest", *args)
@@ -498,11 +498,11 @@ def string_to_array(
         >>> func.to_sql()
         ('string_to_array(%s, %s)', ('str', ','))
     """
-    str_expr = string if isinstance(string, bases.BaseExpression) else core.Literal(dialect, string)
-    delim_expr = delimiter if isinstance(delimiter, bases.BaseExpression) else core.Literal(dialect, delimiter)
+    str_expr = string if isinstance(string, bases.BaseExpression) else core.Parameter(dialect, string)
+    delim_expr = delimiter if isinstance(delimiter, bases.BaseExpression) else core.Parameter(dialect, delimiter)
     args = [str_expr, delim_expr]
     if null_text is not None:
-        null_expr = null_text if isinstance(null_text, bases.BaseExpression) else core.Literal(dialect, null_text)
+        null_expr = null_text if isinstance(null_text, bases.BaseExpression) else core.Parameter(dialect, null_text)
         args.append(null_expr)
     return core.FunctionCall(dialect, "string_to_array", *args)
 

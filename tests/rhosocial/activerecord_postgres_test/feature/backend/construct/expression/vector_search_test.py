@@ -6,7 +6,7 @@ connection) and assert on the generated SQL, so they run without a server.
 """
 import pytest
 
-from rhosocial.activerecord.backend.expression import Column, Literal, predicates
+from rhosocial.activerecord.backend.expression import Column, Parameter, predicates
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     create_vector_index,
     vector_distance,
@@ -46,7 +46,7 @@ class TestVectorSearch:
     def test_where_filter(self, postgres_dialect):
         tenant_pred = predicates.ComparisonPredicate(
             postgres_dialect, "=", Column(postgres_dialect, "tenant"),
-            Literal(postgres_dialect, "acme"),
+            Parameter(postgres_dialect, "acme"),
         )
         expr = vector_search(
             postgres_dialect, "documents", [1.0, 0.5, 0.2],

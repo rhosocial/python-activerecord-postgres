@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateIndexStatement,
     CreateTableStatement,
     DropTableStatement,
-    Literal,
+    Parameter,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
@@ -86,7 +86,7 @@ if __name__ == "__main__":
         table=Table(dialect, "orders"),
         columns=["customer_id"],
         where=ComparisonPredicate(
-            dialect, "=", Column(dialect, "status"), Literal(dialect, "unpaid", inline=True)
+            dialect, "=", Column(dialect, "status"), Parameter(dialect, "unpaid", inline=True)
         ),
     )
 

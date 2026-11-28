@@ -30,7 +30,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard, Column
+from rhosocial.activerecord.backend.expression.core import Parameter, AllColumnsWildcard, Column
 from rhosocial.activerecord.backend.expression.types import DateType, DecimalType, VarCharType
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
@@ -127,10 +127,10 @@ if __name__ == "__main__":
         into=Table(dialect, 'orders'),
         columns=['order_date', 'customer_name', 'amount'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, '2024-02-15'), Literal(dialect, 'Alice'), Literal(dialect, 150.00)],
-            [Literal(dialect, '2024-05-20'), Literal(dialect, 'Bob'), Literal(dialect, 250.00)],
-            [Literal(dialect, '2024-08-10'), Literal(dialect, 'Charlie'), Literal(dialect, 350.00)],
-            [Literal(dialect, '2024-11-05'), Literal(dialect, 'Diana'), Literal(dialect, 450.00)],
+            [Parameter(dialect, '2024-02-15'), Parameter(dialect, 'Alice'), Parameter(dialect, 150.00)],
+            [Parameter(dialect, '2024-05-20'), Parameter(dialect, 'Bob'), Parameter(dialect, 250.00)],
+            [Parameter(dialect, '2024-08-10'), Parameter(dialect, 'Charlie'), Parameter(dialect, 350.00)],
+            [Parameter(dialect, '2024-11-05'), Parameter(dialect, 'Diana'), Parameter(dialect, 450.00)],
         ]),
     )
     sql, params = insert_expr.to_sql()

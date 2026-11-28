@@ -26,7 +26,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import (
     cast,
-    Literal,
+    Parameter,
     Column,
     ColumnConstraint,
     ColumnDefinition,
@@ -123,7 +123,7 @@ def insert(backend, table, name, value, data_type):
         into=Table(dialect, table),
         columns=[name],
         source=ValuesSource(
-            dialect, [[cast(dialect, Literal(dialect, value), data_type)]]),
+            dialect, [[cast(dialect, Parameter(dialect, value), data_type)]]),
     ).to_sql())
 
 
@@ -157,7 +157,7 @@ class TestNetworkOperationsExecute:
         assert str(read(pg, self.col(pg).netmask(), self.TABLE)) == "255.255.255.0"
 
     def test_set_mask_widens(self, pg):
-        result = self.col(pg).set_mask(Literal(pg.dialect, 16))
+        result = self.col(pg).set_mask(Parameter(pg.dialect, 16))
         assert str(read(pg, result, self.TABLE)) == "192.168.0.0/16"
 
     def test_abbrev(self, pg):
@@ -175,7 +175,7 @@ class TestNetworkOperationsExecute:
         assert str(result) == "63.87.254.255/24"
 
     def test_merge_finds_the_common_network(self, pg):
-        other = cast(pg.dialect, Literal(pg.dialect, "192.168.1.200"),
+        other = cast(pg.dialect, Parameter(pg.dialect, "192.168.1.200"),
                      PostgresInetType(pg.dialect))
         assert str(read(pg, self.col(pg).merge(other), self.TABLE)) == "192.168.1.0/24"
 
@@ -188,7 +188,7 @@ class TestNetworkOperationsExecute:
     ])
     def test_and_mask_with_a_disjoint_address(self, pg, value, expected):
         dialect = pg.dialect
-        other = cast(dialect, Literal(dialect, value), PostgresInetType(dialect))
+        other = cast(dialect, Parameter(dialect, value), PostgresInetType(dialect))
         # A cidr & b only makes sense; both operands must be the same family,
         # so this checks the operator renders and runs at all.
         assert read(pg, self.col(pg).and_mask(other), self.TABLE) is not None \
@@ -216,13 +216,13 @@ class TestRangeOperationsExecute:
 
     def other(self, backend, text):
         dialect = backend.dialect
-        return cast(dialect, Literal(dialect, text), PostgresInt4RangeType(dialect))
+        return cast(dialect, Parameter(dialect, text), PostgresInt4RangeType(dialect))
 
     @pytest.mark.parametrize(
         "value,contains", [(1, True), (3, True), (4, True), (5, False), (9, False)]
     )
     def test_containment(self, pg, value, contains):
-        result = self.col(pg).contains(Literal(pg.dialect, value))
+        result = self.col(pg).contains(Parameter(pg.dialect, value))
         assert bool(read(pg, result, self.TABLE)) is contains
 
     @pytest.mark.parametrize(
@@ -319,7 +319,7 @@ class TestMultirangeOperationsExecute:
 
     def test_multirange_overlaps(self, pg):
         dialect = pg.dialect
-        other = cast(dialect, Literal(dialect, "{[4,9)}"),
+        other = cast(dialect, Parameter(dialect, "{[4,9)}"),
                      PostgresInt4MultirangeType(dialect))
         result = self.col(pg).multirange_overlaps(other)
         assert bool(read(pg, result, self.TABLE)) is True
@@ -346,24 +346,24 @@ class TestHstoreOperationsExecute:
         return cls(backend.dialect, Column(backend.dialect, "v", table=self.TABLE))
 
     def test_get(self, pg):
-        assert read(pg, self.col(pg).get(Literal(pg.dialect, "a")), self.TABLE) == "1"
+        assert read(pg, self.col(pg).get(Parameter(pg.dialect, "a")), self.TABLE) == "1"
 
     def test_get_of_a_missing_key(self, pg):
-        assert read(pg, self.col(pg).get(Literal(pg.dialect, "zz")), self.TABLE) is None
+        assert read(pg, self.col(pg).get(Parameter(pg.dialect, "zz")), self.TABLE) is None
 
     def test_a_present_but_null_value(self, pg):
         """b exists with a NULL value; get() gives NULL, not a missing key."""
-        assert read(pg, self.col(pg).get(Literal(pg.dialect, "b")), self.TABLE) is None
+        assert read(pg, self.col(pg).get(Parameter(pg.dialect, "b")), self.TABLE) is None
 
     @pytest.mark.parametrize("key,exists", [("a", True), ("b", True), ("zz", False)])
     def test_exist(self, pg, key, exists):
         """exist() counts a NULL value as existing, which is the whole point."""
-        assert bool(read(pg, self.col(pg).has_key(Literal(pg.dialect, key)), self.TABLE)) is exists
+        assert bool(read(pg, self.col(pg).has_key(Parameter(pg.dialect, key)), self.TABLE)) is exists
 
     @pytest.mark.parametrize("key,defined", [("a", True), ("b", False), ("zz", False)])
     def test_defined(self, pg, key, defined):
         """defined() is the stricter one: present *and* not NULL."""
-        assert bool(read(pg, self.col(pg).is_defined(Literal(pg.dialect, key)), self.TABLE)) is defined
+        assert bool(read(pg, self.col(pg).is_defined(Parameter(pg.dialect, key)), self.TABLE)) is defined
 
     def test_keys(self, pg):
         keys = read(pg, self.col(pg).keys(), self.TABLE)
@@ -396,7 +396,7 @@ class TestLtreeOperationsExecute:
 
     def path(self, backend, text):
         dialect = backend.dialect
-        return cast(dialect, Literal(dialect, text), PostgresLtreeType(dialect))
+        return cast(dialect, Parameter(dialect, text), PostgresLtreeType(dialect))
 
     def test_nlevel(self, pg):
         assert read(pg, self.col(pg).nlevel(), self.TABLE) == 3

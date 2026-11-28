@@ -38,7 +38,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.core import Parameter, Column
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate, IsNullPredicate
     from rhosocial.activerecord.backend.expression.statements import (
         ColumnDefinition,
@@ -75,11 +75,11 @@ if __name__ == "__main__":
         into=Table(dialect, 'employees'),
         columns=['name', 'manager_id'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'CEO'), Literal(dialect, None)],
-            [Literal(dialect, 'VP Sales'), Literal(dialect, 1)],
-            [Literal(dialect, 'VP Engineering'), Literal(dialect, 1)],
-            [Literal(dialect, 'Sales Manager'), Literal(dialect, 2)],
-            [Literal(dialect, 'Engineer'), Literal(dialect, 3)],
+            [Parameter(dialect, 'CEO'), Parameter(dialect, None)],
+            [Parameter(dialect, 'VP Sales'), Parameter(dialect, 1)],
+            [Parameter(dialect, 'VP Engineering'), Parameter(dialect, 1)],
+            [Parameter(dialect, 'Sales Manager'), Parameter(dialect, 2)],
+            [Parameter(dialect, 'Engineer'), Parameter(dialect, 3)],
         ]),
     )
     sql, params = insert_expr.to_sql()
@@ -97,7 +97,7 @@ if __name__ == "__main__":
             dialect=dialect,
             select=[Column(dialect, 'id'), Column(dialect, 'name')],
             from_=Table(dialect, 'employees'),
-            where=ComparisonPredicate(dialect, '>', Column(dialect, 'id'), Literal(dialect, 2)),
+            where=ComparisonPredicate(dialect, '>', Column(dialect, 'id'), Parameter(dialect, 2)),
         ),
     )
 
@@ -127,7 +127,7 @@ if __name__ == "__main__":
             Column(dialect, 'id'),
             Column(dialect, 'name'),
             Column(dialect, 'manager_id'),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
         ],
         from_=Table(dialect, 'employees'),
         where=IsNullPredicate(dialect, Column(dialect, 'manager_id')),

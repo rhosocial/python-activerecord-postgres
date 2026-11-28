@@ -21,10 +21,6 @@ from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl import postgres
 
 EXPRESSION_NS = postgres.__name__ + ".expression"
-# Column classes that model a column's *surface* (no family operation) live in
-# ``column_types``, parallel to ``expression`` rather than inside it. They are
-# still BaseExpression subclasses, but that module is a legitimate home.
-COLUMN_TYPES_NS = postgres.__name__ + ".column_types"
 BACKEND_NS = postgres.__name__ + "."
 
 
@@ -87,7 +83,6 @@ def test_no_expression_defined_outside_expression_namespace(all_expression_class
         for cls in all_expression_classes
         if cls.__module__.startswith(BACKEND_NS)
         and not cls.__module__.startswith(EXPRESSION_NS)
-        and not cls.__module__.startswith(COLUMN_TYPES_NS)
     ]
     assert not offenders, (
         "BaseExpression subclasses defined in this backend but outside "

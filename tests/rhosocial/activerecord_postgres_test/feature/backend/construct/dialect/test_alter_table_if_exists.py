@@ -136,7 +136,7 @@ class TestAlterColumnTypeAndUsing:
         assert params == ()
 
     def test_set_data_type_with_using(self, dialect):
-        from rhosocial.activerecord.backend.expression import Column, Literal
+        from rhosocial.activerecord.backend.expression import Column, Parameter
         from rhosocial.activerecord.backend.expression.operators import (
             ArithmeticOperation,
         )
@@ -150,7 +150,7 @@ class TestAlterColumnTypeAndUsing:
             "SET DATA TYPE",
             new_value="NUMERIC(10,2)",
             using=ArithmeticOperation(
-                dialect, "add", Column(dialect, "price"), Literal(dialect, 1)
+                dialect, "add", Column(dialect, "price"), Parameter(dialect, 1)
             ),
         )
         sql, serialized = action.to_sql()

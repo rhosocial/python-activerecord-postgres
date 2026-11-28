@@ -27,7 +27,7 @@ whose DEFAULT clauses embed the rendered literals, read back through
 import datetime
 import uuid as uuid_module
 
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.execution_testing import (
     ExecutionOutcome,
     classify_execution,
@@ -65,9 +65,9 @@ class TestLiveLiteralRoundTrip:
     def test_column_defaults_round_trip(self, postgres_backend):
         """The three tier-2 literals as column DEFAULTs survive a read-back."""
         dialect = postgres_backend.dialect
-        iv_default, _ = Literal(dialect, self.INTERVAL, inline=True).to_sql()
-        b_default, _ = Literal(dialect, self.BINARY, inline=True).to_sql()
-        u_default, _ = Literal(dialect, self.UUID, inline=True).to_sql()
+        iv_default, _ = Parameter(dialect, self.INTERVAL, inline=True).to_sql()
+        b_default, _ = Parameter(dialect, self.BINARY, inline=True).to_sql()
+        u_default, _ = Parameter(dialect, self.UUID, inline=True).to_sql()
 
         table = "test_typed_value_defaults"
         postgres_backend.execute(f"""
@@ -93,7 +93,7 @@ class TestLiveLiteralRoundTrip:
         """The per-component minus signs read back as one negated span."""
         dialect = postgres_backend.dialect
         span = datetime.timedelta(days=-2, hours=-3, minutes=-4, seconds=-5, microseconds=-6)
-        iv_default, _ = Literal(dialect, span, inline=True).to_sql()
+        iv_default, _ = Parameter(dialect, span, inline=True).to_sql()
 
         table = "test_typed_value_negative_interval"
         postgres_backend.execute(f"""
@@ -110,7 +110,7 @@ class TestLiveLiteralRoundTrip:
     def test_zero_interval_default_round_trip(self, postgres_backend):
         """``INTERVAL '0 seconds'`` reads back as a zero span."""
         dialect = postgres_backend.dialect
-        iv_default, _ = Literal(dialect, datetime.timedelta(0), inline=True).to_sql()
+        iv_default, _ = Parameter(dialect, datetime.timedelta(0), inline=True).to_sql()
         assert iv_default == "INTERVAL '0 seconds'"
 
         table = "test_typed_value_zero_interval"

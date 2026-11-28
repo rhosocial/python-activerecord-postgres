@@ -1,4 +1,4 @@
-# src/rhosocial/activerecord/backend/impl/postgres/column_types.py
+# src/rhosocial/activerecord/backend/impl/postgres/expression/column_types.py
 """PostgreSQL's own column classes.
 
 A column class is an *operation surface*: it says what a value held in a column
@@ -81,7 +81,7 @@ class PostgresGeometryColumn(GeometryColumn):
         answers (point, line, lseg, box, path, polygon, circle), so it is safe
         on this shared class.
         """
-        from .functions.geometric import geometry_distance
+        from ..functions.geometric import geometry_distance
 
         return geometry_distance(self._dialect, self, other)
 
@@ -96,24 +96,24 @@ class PostgresAreaGeometryColumn(PostgresGeometryColumn):
 
     def contains(self, other) -> "BinaryExpression":
         """``col @> other``: whether this geometry contains the other."""
-        from .functions.geometric import geometry_contains
+        from ..functions.geometric import geometry_contains
 
         return geometry_contains(self._dialect, self, other)
 
     def contained_by(self, other) -> "BinaryExpression":
         """``col <@ other``: whether this geometry is contained by the other."""
-        from .functions.geometric import geometry_contained_by
+        from ..functions.geometric import geometry_contained_by
 
         return geometry_contained_by(self._dialect, self, other)
 
     def overlaps(self, other) -> "BinaryExpression":
         """``col && other``: whether the two geometries overlap."""
-        from .functions.geometric import geometry_overlaps
+        from ..functions.geometric import geometry_overlaps
 
         return geometry_overlaps(self._dialect, self, other)
 
 
-class PostgisGeometryColumn(PostgresGeometryColumn):
+class PostgresPostgisGeometryColumn(PostgresGeometryColumn):
     """A ``geometry`` column backed by the PostGIS extension.
 
     The ``ST_*`` functions are an extension's surface, not the core server's,
@@ -126,42 +126,42 @@ class PostgisGeometryColumn(PostgresGeometryColumn):
     def st_distance(self, other, use_spheroid: bool = False) -> "FunctionCall":
         """``ST_Distance(col, other[, use_spheroid])``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_distance
+        from ..functions.postgis import st_distance
 
         return st_distance(self._dialect, self, other, use_spheroid)
 
     def st_contains(self, other) -> "FunctionCall":
         """``ST_Contains(col, other)``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_contains
+        from ..functions.postgis import st_contains
 
         return st_contains(self._dialect, self, other)
 
     def st_within(self, other) -> "FunctionCall":
         """``ST_Within(col, other)``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_within
+        from ..functions.postgis import st_within
 
         return st_within(self._dialect, self, other)
 
     def st_intersects(self, other) -> "FunctionCall":
         """``ST_Intersects(col, other)``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_intersects
+        from ..functions.postgis import st_intersects
 
         return st_intersects(self._dialect, self, other)
 
     def st_area(self) -> "FunctionCall":
         """``ST_Area(col)``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_area
+        from ..functions.postgis import st_area
 
         return st_area(self._dialect, self)
 
     def st_length(self) -> "FunctionCall":
         """``ST_Length(col)``."""
         _require(self._dialect, "supports_postgis_spatial_functions")
-        from .functions.postgis import st_length
+        from ..functions.postgis import st_length
 
         return st_length(self._dialect, self)
 
@@ -176,28 +176,28 @@ class PostgresVectorColumn(VectorColumn):
     def l2_distance(self, other) -> "BinaryExpression":
         """``col <-> other``: Euclidean distance."""
         _require(self._dialect, "supports_pgvector_similarity_search")
-        from .functions.pgvector import vector_l2_distance
+        from ..functions.pgvector import vector_l2_distance
 
         return vector_l2_distance(self._dialect, self, other)
 
     def cosine_distance(self, other) -> "BinaryExpression":
         """``col <=> other``: cosine distance."""
         _require(self._dialect, "supports_pgvector_similarity_search")
-        from .functions.pgvector import vector_cosine_distance
+        from ..functions.pgvector import vector_cosine_distance
 
         return vector_cosine_distance(self._dialect, self, other)
 
     def inner_product(self, other) -> "BinaryExpression":
         """``col <#> other``: negative inner product."""
         _require(self._dialect, "supports_pgvector_similarity_search")
-        from .functions.pgvector import vector_inner_product
+        from ..functions.pgvector import vector_inner_product
 
         return vector_inner_product(self._dialect, self, other)
 
     def cosine_similarity(self, other) -> "ArithmeticOperation":
         """``1 - (col <=> other)``: cosine similarity."""
         _require(self._dialect, "supports_pgvector_similarity_search")
-        from .functions.pgvector import vector_cosine_similarity
+        from ..functions.pgvector import vector_cosine_similarity
 
         return vector_cosine_similarity(self._dialect, self, other)
 
@@ -212,42 +212,42 @@ class PostgresRangeColumn(RangeColumn):
     def contains(self, other) -> "BinaryExpression":
         """``col @> other``: does the range contain the element or range?"""
         _require(self._dialect, "supports_range_operators")
-        from .functions.range import range_contains
+        from ..functions.range import range_contains
 
         return range_contains(self._dialect, self, other)
 
     def contained_by(self, other) -> "BinaryExpression":
         """``col <@ other``."""
         _require(self._dialect, "supports_range_operators")
-        from .functions.range import range_contained_by
+        from ..functions.range import range_contained_by
 
         return range_contained_by(self._dialect, self, other)
 
     def overlaps(self, other) -> "BinaryExpression":
         """``col && other``."""
         _require(self._dialect, "supports_range_operators")
-        from .functions.range import range_overlaps
+        from ..functions.range import range_overlaps
 
         return range_overlaps(self._dialect, self, other)
 
     def is_empty(self) -> "FunctionCall":
         """``ISEMPTY(col)``."""
         _require(self._dialect, "supports_range_functions")
-        from .functions.range import range_is_empty
+        from ..functions.range import range_is_empty
 
         return range_is_empty(self._dialect, self)
 
     def lower(self) -> "FunctionCall":
         """``LOWER(col)``."""
         _require(self._dialect, "supports_range_functions")
-        from .functions.range import range_lower
+        from ..functions.range import range_lower
 
         return range_lower(self._dialect, self)
 
     def upper(self) -> "FunctionCall":
         """``UPPER(col)``."""
         _require(self._dialect, "supports_range_functions")
-        from .functions.range import range_upper
+        from ..functions.range import range_upper
 
         return range_upper(self._dialect, self)
 
@@ -258,21 +258,21 @@ class PostgresMultirangeColumn(MultirangeColumn):
     def contains(self, other) -> "BinaryExpression":
         """``col @> other``."""
         _require(self._dialect, "supports_multirange")
-        from .functions.range import multirange_contains
+        from ..functions.range import multirange_contains
 
         return multirange_contains(self._dialect, self, other)
 
     def contained_by(self, other) -> "BinaryExpression":
         """``col <@ other``."""
         _require(self._dialect, "supports_multirange")
-        from .functions.range import multirange_is_contained_by
+        from ..functions.range import multirange_is_contained_by
 
         return multirange_is_contained_by(self._dialect, self, other)
 
     def overlaps(self, other) -> "BinaryExpression":
         """``col && other``."""
         _require(self._dialect, "supports_multirange")
-        from .functions.range import multirange_overlaps
+        from ..functions.range import multirange_overlaps
 
         return multirange_overlaps(self._dialect, self, other)
 
@@ -286,49 +286,49 @@ class PostgresBitStringColumn(BitStringColumn):
 
     def bit_and(self, other) -> "BinaryExpression":
         """``col & other``."""
-        from .functions.bit_string import bit_and
+        from ..functions.bit_string import bit_and
 
         return bit_and(self._dialect, self, other)
 
     def bit_or(self, other) -> "BinaryExpression":
         """``col | other``."""
-        from .functions.bit_string import bit_or
+        from ..functions.bit_string import bit_or
 
         return bit_or(self._dialect, self, other)
 
     def bit_xor(self, other) -> "BinaryExpression":
         """``col # other`` -- PostgreSQL's spelling of bitwise XOR."""
-        from .functions.bit_string import bit_xor
+        from ..functions.bit_string import bit_xor
 
         return bit_xor(self._dialect, self, other)
 
     def bit_not(self) -> "UnaryExpression":
         """``~ col``."""
-        from .functions.bit_string import bit_not
+        from ..functions.bit_string import bit_not
 
         return bit_not(self._dialect, self)
 
     def bit_length(self) -> "FunctionCall":
         """``BIT_LENGTH(col)``, not the generic ``LENGTH``."""
-        from .functions.bit_string import bit_length_func
+        from ..functions.bit_string import bit_length_func
 
         return bit_length_func(self._dialect, self)
 
     def bit_count(self) -> "FunctionCall":
         """``BIT_COUNT(col)``: the number of set bits."""
-        from .functions.bit_string import bit_count
+        from ..functions.bit_string import bit_count
 
         return bit_count(self._dialect, self)
 
     def shift_left(self, n: int) -> "BinaryExpression":
         """``col << n``."""
-        from .functions.bit_string import bit_shift_left
+        from ..functions.bit_string import bit_shift_left
 
         return bit_shift_left(self._dialect, self, n)
 
     def shift_right(self, n: int) -> "BinaryExpression":
         """``col >> n``."""
-        from .functions.bit_string import bit_shift_right
+        from ..functions.bit_string import bit_shift_right
 
         return bit_shift_right(self._dialect, self, n)
 
@@ -342,13 +342,13 @@ class PostgresTextSearchColumn(ColumnBase):
 
     def matches(self, query) -> "BinaryExpression":
         """``col @@ query``: does the vector match the query?"""
-        from .functions.text_search import ts_matches
+        from ..functions.text_search import ts_matches
 
         return ts_matches(self._dialect, self, query)
 
     def rank(self, query, weights=None) -> "FunctionCall":
         """``ts_rank(col, query[, weights])``: the relevance of the match."""
-        from .functions.text_search import ts_rank
+        from ..functions.text_search import ts_rank
 
         return ts_rank(self._dialect, self, query, weights)
 
@@ -381,18 +381,18 @@ class PostgresHstoreColumn(ColumnBase):
     def exist(self, key) -> "FunctionCall":
         """``EXIST(col, key)``: whether the key is present, even with NULL."""
         _require(self._dialect, "supports_hstore_operators")
-        from rhosocial.activerecord.backend.expression import Literal
-        from .functions.hstore import hstore_exist
+        from rhosocial.activerecord.backend.expression import Parameter
+        from ..functions.hstore import hstore_exist
 
-        return hstore_exist(self._dialect, self, Literal(self._dialect, key))
+        return hstore_exist(self._dialect, self, Parameter(self._dialect, key))
 
     def defined(self, key) -> "FunctionCall":
         """``DEFINED(col, key)``: whether the key is present and non-NULL."""
         _require(self._dialect, "supports_hstore_operators")
-        from rhosocial.activerecord.backend.expression import Literal
-        from .functions.hstore import hstore_defined
+        from rhosocial.activerecord.backend.expression import Parameter
+        from ..functions.hstore import hstore_defined
 
-        return hstore_defined(self._dialect, self, Literal(self._dialect, key))
+        return hstore_defined(self._dialect, self, Parameter(self._dialect, key))
 
     @property
     def format_method(self) -> str:
@@ -445,7 +445,7 @@ class PostgresLsnColumn(ColumnBase):
 __all__ = [
     "PostgresGeometryColumn",
     "PostgresAreaGeometryColumn",
-    "PostgisGeometryColumn",
+    "PostgresPostgisGeometryColumn",
     "PostgresVectorColumn",
     "PostgresRangeColumn",
     "PostgresMultirangeColumn",

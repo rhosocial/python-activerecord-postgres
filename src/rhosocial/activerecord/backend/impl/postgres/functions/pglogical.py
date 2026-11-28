@@ -62,8 +62,8 @@ def pglogical_create_node(
     """
     return core.FunctionCall(
         dialect, "pglogical.create_node",
-        node_name if isinstance(node_name, bases.BaseExpression) else core.Literal(dialect, node_name),
-        dsn if isinstance(dsn, bases.BaseExpression) else core.Literal(dialect, dsn),
+        node_name if isinstance(node_name, bases.BaseExpression) else core.Parameter(dialect, node_name),
+        dsn if isinstance(dsn, bases.BaseExpression) else core.Parameter(dialect, dsn),
     )
 
 
@@ -98,13 +98,13 @@ def pglogical_create_publication(
         >>> pglogical_create_publication(dialect, 'my_pub', '{users, orders}', '{default}')
     """
     args = [
-        pub_name if isinstance(pub_name, bases.BaseExpression) else core.Literal(dialect, pub_name),
-        tables if isinstance(tables, bases.BaseExpression) else core.Literal(dialect, tables),
+        pub_name if isinstance(pub_name, bases.BaseExpression) else core.Parameter(dialect, pub_name),
+        tables if isinstance(tables, bases.BaseExpression) else core.Parameter(dialect, tables),
     ]
     if replication_sets is not None:
         args.append(
             replication_sets if isinstance(replication_sets, bases.BaseExpression)
-            else core.Literal(dialect, replication_sets))
+            else core.Parameter(dialect, replication_sets))
     return core.FunctionCall(dialect, "pglogical.create_publication", *args)
 
 
@@ -141,15 +141,15 @@ def pglogical_create_subscription(
         ...     dialect, 'my_sub', 'host=provider.db dbname=mydb', '{my_pub}', '{default}')
     """
     args = [
-        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
-        provider_dsn if isinstance(provider_dsn, bases.BaseExpression) else core.Literal(dialect, provider_dsn),
+        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
+        provider_dsn if isinstance(provider_dsn, bases.BaseExpression) else core.Parameter(dialect, provider_dsn),
         publication_names if isinstance(publication_names, bases.BaseExpression)
-        else core.Literal(dialect, publication_names),
+        else core.Parameter(dialect, publication_names),
     ]
     if replication_sets is not None:
         args.append(
             replication_sets if isinstance(replication_sets, bases.BaseExpression)
-            else core.Literal(dialect, replication_sets))
+            else core.Parameter(dialect, replication_sets))
     return core.FunctionCall(dialect, "pglogical.create_subscription", *args)
 
 
@@ -178,7 +178,7 @@ def pglogical_show_subscription_status(
     if sub_name is not None:
         return core.FunctionCall(
             dialect, "pglogical.show_subscription_status",
-            sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
+            sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
         )
     return core.FunctionCall(
         dialect, "pglogical.show_subscription_status",
@@ -210,10 +210,10 @@ def pglogical_alter_subscription_synchronize(
         >>> pglogical_alter_subscription_synchronize(dialect, 'my_sub', truncate=True)
     """
     args = [
-        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Literal(dialect, sub_name),
+        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
     ]
     if truncate is not None:
-        args.append(truncate if isinstance(truncate, bases.BaseExpression) else core.Literal(dialect, truncate))
+        args.append(truncate if isinstance(truncate, bases.BaseExpression) else core.Parameter(dialect, truncate))
     return core.FunctionCall(
         dialect, "pglogical.alter_subscription_synchronize", *args,
     )

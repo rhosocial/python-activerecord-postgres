@@ -90,7 +90,7 @@ CreateIndexStatement(..., index_type=PostgresIndexType.BRIN)    # 超大的有�
 ## 部分索引与唯一索引
 
 ```python
-from rhosocial.activerecord.backend.expression import Column, Literal
+from rhosocial.activerecord.backend.expression import Column, Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 CreateIndexStatement(
@@ -99,7 +99,7 @@ CreateIndexStatement(
     table=Table(dialect, "orders"),
     columns=["customer_id"],
     where=ComparisonPredicate(
-        dialect, "=", Column(dialect, "status"), Literal(dialect, "unpaid", inline=True)
+        dialect, "=", Column(dialect, "status"), Parameter(dialect, "unpaid", inline=True)
     ),
 )
 ```

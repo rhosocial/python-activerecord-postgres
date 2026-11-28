@@ -462,15 +462,15 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
     def _catalog_literal(self, value):
         """A catalog constant: written into the statement, never bound."""
-        from rhosocial.activerecord.backend.expression import Literal
+        from rhosocial.activerecord.backend.expression import Parameter
 
-        return Literal(self, value, inline=True)
+        return Parameter(self, value, inline=True)
 
     def _catalog_value(self, value):
         """Caller data: bound, so a name can never become part of the text."""
-        from rhosocial.activerecord.backend.expression import Literal
+        from rhosocial.activerecord.backend.expression import Parameter
 
-        return Literal(self, value)
+        return Parameter(self, value)
 
     def _catalog_oid(self, relation_name: str):
         """The ``oid`` of a catalog relation, resolved from its name by ``regclass``.
@@ -2918,7 +2918,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression import (
             ComparisonPredicate,
             JoinClause,
-            Literal,
+            Parameter,
         )
 
         params = expr.get_params()
@@ -2929,13 +2929,13 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                 self, "eq", self._catalog_column("nspname", "n"), self._catalog_value(schema)
             ),
             ComparisonPredicate(
-                self, "eq", self._catalog_column("idx_scan", "i"), Literal(self, 0)
+                self, "eq", self._catalog_column("idx_scan", "i"), Parameter(self, 0)
             ),
             ComparisonPredicate(
                 self,
                 "eq",
                 self._catalog_column("indisvalid", "ix"),
-                Literal(self, True, inline=True),
+                Parameter(self, True, inline=True),
             ),
         ]
 
@@ -4847,7 +4847,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         from rhosocial.activerecord.backend.expression import (
             FunctionCall,
             InPredicate,
-            Literal,
+            Parameter,
             LogicalPredicate,
             QueryStatement,
             RowCountWildcard,
@@ -4902,14 +4902,14 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
                         self,
                         "NULLIF",
                         CountFunction(self, column, distinct=True),
-                        Literal(self, 0, inline=True),
+                        Parameter(self, 0, inline=True),
                     )
                 ],
                 from_=source,
                 where=WhereClause(self, column.is_not_null()),
             ),
         )
-        return (covered * Literal(self, 1.0, inline=True)) / total
+        return (covered * Parameter(self, 1.0, inline=True)) / total
 
     def format_join_coverage_query_statement(
         self, expr: "JoinCoverageQueryStatement"

@@ -10,7 +10,7 @@ render assertions are the part that needs no server.
 
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.column_types import (
+from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
     PostgresAreaGeometryColumn,
     PostgresGeometryColumn,
 )
@@ -88,7 +88,7 @@ def test_the_area_operators_are_not_offered_on_a_point(dialect):
 
 @pytest.fixture
 def bits(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresBitStringColumn,
     )
 
@@ -100,7 +100,7 @@ def bits(dialect):
     [("bit_and", "&"), ("bit_or", "|"), ("bit_xor", "#")],
 )
 def test_bitwise_binary_operators(bits, dialect, method, operator):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresBitStringColumn,
     )
 
@@ -126,7 +126,7 @@ def test_bitwise_shifts(bits, method, operator):
 
 @pytest.fixture
 def ranges(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresRangeColumn,
     )
 
@@ -152,7 +152,7 @@ def test_range_functions(ranges, method, sql):
 @pytest.mark.parametrize("method", ["contains", "contained_by", "overlaps"])
 def test_range_operators_fail_on_a_server_without_them(method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresRangeColumn,
     )
 
@@ -165,7 +165,7 @@ def test_range_operators_fail_on_a_server_without_them(method):
 @pytest.mark.parametrize("method", ["is_empty", "lower", "upper"])
 def test_range_functions_fail_on_a_server_without_them(method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresRangeColumn,
     )
 
@@ -182,7 +182,7 @@ def test_range_functions_fail_on_a_server_without_them(method):
 
 @pytest.fixture
 def multiranges(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresMultirangeColumn,
     )
 
@@ -200,7 +200,7 @@ def test_multirange_operators(multiranges, method, operator):
 @pytest.mark.parametrize("method", ["contains", "contained_by", "overlaps"])
 def test_multirange_operators_fail_without_the_capability(method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresMultirangeColumn,
     )
 
@@ -217,7 +217,7 @@ def test_multirange_operators_fail_without_the_capability(method):
 
 @pytest.fixture
 def tsvector(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresTextSearchColumn,
     )
 
@@ -239,7 +239,7 @@ def test_text_search_rank(tsvector):
 
 @pytest.fixture
 def vectors(dialect, monkeypatch):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresVectorColumn,
     )
 
@@ -272,7 +272,7 @@ def test_vector_cosine_similarity(vectors):
 )
 def test_vector_ops_fail_when_the_extension_is_not_available(dialect, method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresVectorColumn,
     )
 
@@ -288,7 +288,7 @@ def test_vector_ops_fail_when_the_extension_is_not_available(dialect, method):
 
 @pytest.fixture
 def hstore(dialect, monkeypatch):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresHstoreColumn,
     )
 
@@ -306,7 +306,7 @@ def test_hstore_key_predicates(hstore, method, name):
 @pytest.mark.parametrize("method", ["exist", "defined"])
 def test_hstore_ops_fail_when_the_extension_is_not_available(dialect, method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresHstoreColumn,
     )
 
@@ -322,12 +322,12 @@ def test_hstore_ops_fail_when_the_extension_is_not_available(dialect, method):
 
 @pytest.fixture
 def postgis(dialect, monkeypatch):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
-        PostgisGeometryColumn,
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
+        PostgresPostgisGeometryColumn,
     )
 
     monkeypatch.setattr(dialect, "supports_postgis_spatial_functions", lambda: True)
-    return PostgisGeometryColumn(dialect, "g")
+    return PostgresPostgisGeometryColumn(dialect, "g")
 
 
 @pytest.mark.parametrize(
@@ -340,11 +340,11 @@ def postgis(dialect, monkeypatch):
     ],
 )
 def test_postgis_predicates_and_distance(postgis, dialect, method, name):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
-        PostgisGeometryColumn,
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
+        PostgresPostgisGeometryColumn,
     )
 
-    other = PostgisGeometryColumn(dialect, "h")
+    other = PostgresPostgisGeometryColumn(dialect, "h")
     sql, params = getattr(postgis, method)(other).to_sql()
     assert sql == f'{name}("g", "h")'
     assert params == ()
@@ -361,24 +361,24 @@ def test_postgis_measurements(postgis, method, name):
 )
 def test_postgis_ops_fail_without_the_extension(dialect, method):
     from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
-        PostgisGeometryColumn,
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
+        PostgresPostgisGeometryColumn,
     )
 
-    column = PostgisGeometryColumn(dialect, "g")
+    column = PostgresPostgisGeometryColumn(dialect, "g")
     args = () if method in ("st_area", "st_length") else (column,)
     with pytest.raises(UnsupportedFeatureError, match="supports_postgis_spatial_functions"):
         getattr(column, method)(*args)
 
 
 def test_the_postgis_wrapper_resolves_to_the_extension_class(dialect):
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
-        PostgisGeometryColumn,
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
+        PostgresPostgisGeometryColumn,
     )
     from rhosocial.activerecord.backend.impl.postgres.type_values import (
         Point,
         PostgresGeometry,
     )
 
-    assert dialect.suggest_extra_column_types().table[PostgresGeometry] is PostgisGeometryColumn
-    assert dialect.suggest_extra_column_types().table[Point] is not PostgisGeometryColumn
+    assert dialect.suggest_extra_column_types().table[PostgresGeometry] is PostgresPostgisGeometryColumn
+    assert dialect.suggest_extra_column_types().table[Point] is not PostgresPostgisGeometryColumn

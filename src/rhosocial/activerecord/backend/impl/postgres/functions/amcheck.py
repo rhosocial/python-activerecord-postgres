@@ -19,7 +19,7 @@ def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
     if isinstance(value, bases.BaseExpression):
         return value
-    return core.Literal(dialect, value)
+    return core.Parameter(dialect, value)
 
 
 class SkipMode(str, Enum):
@@ -44,7 +44,7 @@ def bt_index_check(
     if heapallindexed is not None:
         if not isinstance(heapallindexed, bool):
             raise TypeError("heapallindexed must be a bool")
-        arguments.append(core.Literal(dialect, heapallindexed))
+        arguments.append(core.Parameter(dialect, heapallindexed))
     return core.FunctionCall(dialect, "bt_index_check", *arguments)
 
 
@@ -56,7 +56,7 @@ def bt_index_parent_check(
     if heapallindexed is not None:
         if not isinstance(heapallindexed, bool):
             raise TypeError("heapallindexed must be a bool")
-        arguments.append(core.Literal(dialect, heapallindexed))
+        arguments.append(core.Parameter(dialect, heapallindexed))
     return core.FunctionCall(dialect, "bt_index_parent_check", *arguments)
 
 
@@ -82,11 +82,11 @@ def verify_heapam(
     return core.FunctionCall(
         dialect, "verify_heapam",
         regclass,
-        core.Literal(dialect, on_error_stop),
-        core.Literal(dialect, check_toast),
-        core.Literal(dialect, skip.value),
-        core.CastExpression(dialect, core.Literal(dialect, start_block), bigint),
-        core.CastExpression(dialect, core.Literal(dialect, end_block), bigint),
+        core.Parameter(dialect, on_error_stop),
+        core.Parameter(dialect, check_toast),
+        core.Parameter(dialect, skip.value),
+        core.CastExpression(dialect, core.Parameter(dialect, start_block), bigint),
+        core.CastExpression(dialect, core.Parameter(dialect, end_block), bigint),
     )
 
 

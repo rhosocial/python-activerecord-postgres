@@ -11,7 +11,7 @@ import pytest
 
 from rhosocial.activerecord.backend.expression import (
     Column,
-    Literal,
+    Parameter,
     QueryStatement,
     seconds_between,
 )
@@ -89,8 +89,8 @@ class TestSecondsBetweenExpression:
     def test_literal_params_follow_sql_order(self, postgres_dialect):
         expr = seconds_between(
             postgres_dialect,
-            Literal(postgres_dialect, "2026-01-01 00:00:00"),
-            Literal(postgres_dialect, "2026-01-02 00:00:00"),
+            Parameter(postgres_dialect, "2026-01-01 00:00:00"),
+            Parameter(postgres_dialect, "2026-01-02 00:00:00"),
         )
 
         sql, params = expr.to_sql()

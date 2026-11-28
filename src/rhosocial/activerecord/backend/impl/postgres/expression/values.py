@@ -35,7 +35,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions import hstore as _hs
 from rhosocial.activerecord.backend.impl.postgres.functions import ltree as _ltree
 from rhosocial.activerecord.backend.impl.postgres.functions import network as _network
 from rhosocial.activerecord.backend.impl.postgres.functions import range as _range
-from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
+from rhosocial.activerecord.backend.expression.core import CastExpression, Parameter
 from rhosocial.activerecord.backend.expression.types import BigIntType, IntegerType
 
 
@@ -54,14 +54,14 @@ def _typed_element(dialect, element_type, element):
     width is taken from the range's own element type, so an int8range gets
     bigint and an int4range gets integer.
 
-    A ``Literal`` wrapping a number is unwrapped and re-typed the same way.
+    A ``Parameter`` wrapping a number is unwrapped and re-typed the same way.
     The width is a property of the range, not of how the caller chose to spell
     the value, and testing the Python type instead meant that passing an
-    explicit ``Literal(dialect, 5)`` -- the form everything else in this
+    explicit ``Parameter(dialect, 5)`` -- the form everything else in this
     codebase now takes -- silently bound smallint again and took the operator
     down with it.
     """
-    if isinstance(element, Literal):
+    if isinstance(element, Parameter):
         value = getattr(element, "value", None)
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return element
@@ -77,10 +77,10 @@ def _typed_element(dialect, element_type, element):
     # "integer" or a PostgreSQL one named "postgres_int4", and both mean the
     # same width. Only the width matters here, not which module declared it.
     if name in ("postgres_int4", "integer", "int4", "int"):
-        return CastExpression(dialect, Literal(dialect, element), IntegerType(dialect))
+        return CastExpression(dialect, Parameter(dialect, element), IntegerType(dialect))
 
     if name in ("postgres_int8", "bigint", "int8"):
-        return CastExpression(dialect, Literal(dialect, element), BigIntType(dialect))
+        return CastExpression(dialect, Parameter(dialect, element), BigIntType(dialect))
     return element
 
 
@@ -199,7 +199,7 @@ class PostgresNetworkValue(
         """The wrapped call's arguments, so a factory can take this node.
 
         The function factories build a FunctionCall from whatever they are
-        given, and they accept a Column, a Literal or another expression. This
+        given, and they accept a Column, a Parameter or another expression. This
         wrapper is neither of those, so without this the second operation in a
         chain -- ``col.network().masklen()`` -- would have nothing to pass on.
         """
@@ -315,7 +315,7 @@ class PostgresRangeValue(
         """The wrapped call's arguments, so a factory can take this node.
 
         The function factories build a FunctionCall from whatever they are
-        given, and they accept a Column, a Literal or another expression. This
+        given, and they accept a Column, a Parameter or another expression. This
         wrapper is neither of those, so without this the second operation in a
         chain -- ``col.network().masklen()`` -- would have nothing to pass on.
         """
@@ -447,7 +447,7 @@ class PostgresHstoreValue(
         """The wrapped call's arguments, so a factory can take this node.
 
         The function factories build a FunctionCall from whatever they are
-        given, and they accept a Column, a Literal or another expression. This
+        given, and they accept a Column, a Parameter or another expression. This
         wrapper is neither of those, so without this the second operation in a
         chain -- ``col.network().masklen()`` -- would have nothing to pass on.
         """
@@ -545,7 +545,7 @@ class PostgresLtreeValue(
         """The wrapped call's arguments, so a factory can take this node.
 
         The function factories build a FunctionCall from whatever they are
-        given, and they accept a Column, a Literal or another expression. This
+        given, and they accept a Column, a Parameter or another expression. This
         wrapper is neither of those, so without this the second operation in a
         chain -- ``col.network().masklen()`` -- would have nothing to pass on.
         """

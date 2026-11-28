@@ -4,7 +4,7 @@ PostgreSQL PGroonga function factories and v2 operator factories.
 
 Every factory takes the dialect as its first argument and returns an Expression
 node.  A plain string ``column`` is a column reference; query text is a bound
-Literal value.  Pass an Expression explicitly when you need a different shape.
+Parameter value.  Pass an Expression explicitly when you need a different shape.
 
 PGroonga documentation: https://pgroonga.github.io/reference/
 
@@ -31,14 +31,14 @@ def _column(dialect: "SQLDialectBase", column: Operand) -> bases.BaseExpression:
 
 def _literal(dialect: "SQLDialectBase", value: Any) -> bases.BaseExpression:
     """A string is a bound value; an Expression is used as given."""
-    return core.Literal(dialect, value) if not isinstance(value, bases.BaseExpression) else value
+    return core.Parameter(dialect, value) if not isinstance(value, bases.BaseExpression) else value
 
 
 def _array(dialect: "SQLDialectBase", values: Sequence[Any]) -> bases.BaseExpression:
     """Bind a sequence as one array parameter (or pass an Expression through)."""
     if isinstance(values, bases.BaseExpression):
         return values
-    return core.Literal(dialect, list(values))
+    return core.Parameter(dialect, list(values))
 
 
 def _binary(

@@ -47,13 +47,13 @@ def range_contains(
     return BinaryExpression(
         dialect, "@>",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value),
+        else core.Parameter(dialect, range_value),
         element if isinstance(element, bases.BaseExpression)
-        else core.Literal(dialect, element.to_postgres_string())
+        else core.Parameter(dialect, element.to_postgres_string())
         if isinstance(element, PostgresRange)
-        else core.Literal(dialect, element),
+        else core.Parameter(dialect, element),
     )
 
 
@@ -78,13 +78,13 @@ def range_contained_by(
     return BinaryExpression(
         dialect, "<@",
         element if isinstance(element, bases.BaseExpression)
-        else core.Literal(dialect, element.to_postgres_string())
+        else core.Parameter(dialect, element.to_postgres_string())
         if isinstance(element, PostgresRange)
-        else core.Literal(dialect, element),
+        else core.Parameter(dialect, element),
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value),
+        else core.Parameter(dialect, range_value),
     )
 
 
@@ -109,13 +109,13 @@ def range_contains_range(
     return BinaryExpression(
         dialect, "@>",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -137,13 +137,13 @@ def range_overlaps(
     return BinaryExpression(
         dialect, "&&",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -165,13 +165,13 @@ def range_adjacent(
     return BinaryExpression(
         dialect, "-|-",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -193,13 +193,13 @@ def range_strictly_left_of(
     return BinaryExpression(
         dialect, "<<",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -221,13 +221,13 @@ def range_strictly_right_of(
     return BinaryExpression(
         dialect, ">>",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -249,13 +249,13 @@ def range_not_extend_right(
     return BinaryExpression(
         dialect, "&<",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -277,13 +277,13 @@ def range_not_extend_left(
     return BinaryExpression(
         dialect, "&>",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -305,13 +305,13 @@ def range_union(
     return BinaryExpression(
         dialect, "+",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -333,13 +333,13 @@ def range_intersection(
     return BinaryExpression(
         dialect, "*",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -361,13 +361,13 @@ def range_difference(
     return BinaryExpression(
         dialect, "-",
         range1 if isinstance(range1, bases.BaseExpression)
-        else core.Literal(dialect, range1.to_postgres_string())
+        else core.Parameter(dialect, range1.to_postgres_string())
         if isinstance(range1, PostgresRange)
-        else core.Literal(dialect, range1),
+        else core.Parameter(dialect, range1),
         range2 if isinstance(range2, bases.BaseExpression)
-        else core.Literal(dialect, range2.to_postgres_string())
+        else core.Parameter(dialect, range2.to_postgres_string())
         if isinstance(range2, PostgresRange)
-        else core.Literal(dialect, range2),
+        else core.Parameter(dialect, range2),
     )
 
 
@@ -389,9 +389,9 @@ def range_lower(
     return core.FunctionCall(
         dialect, "lower",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_upper(
@@ -410,9 +410,9 @@ def range_upper(
     return core.FunctionCall(
         dialect, "upper",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_is_empty(
@@ -431,9 +431,9 @@ def range_is_empty(
     return core.FunctionCall(
         dialect, "isempty",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_lower_inc(
@@ -452,9 +452,9 @@ def range_lower_inc(
     return core.FunctionCall(
         dialect, "lower_inc",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_upper_inc(
@@ -473,9 +473,9 @@ def range_upper_inc(
     return core.FunctionCall(
         dialect, "upper_inc",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_lower_inf(
@@ -494,9 +494,9 @@ def range_lower_inf(
     return core.FunctionCall(
         dialect, "lower_inf",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 def range_upper_inf(
@@ -515,9 +515,9 @@ def range_upper_inf(
     return core.FunctionCall(
         dialect, "upper_inf",
         range_value if isinstance(range_value, bases.BaseExpression)
-        else core.Literal(dialect, range_value.to_postgres_string())
+        else core.Parameter(dialect, range_value.to_postgres_string())
         if isinstance(range_value, PostgresRange)
-        else core.Literal(dialect, range_value))
+        else core.Parameter(dialect, range_value))
 
 
 # ============== Multirange Operators ==============
@@ -543,13 +543,13 @@ def multirange_contains(
     return BinaryExpression(
         dialect, "@>",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         element if isinstance(element, bases.BaseExpression)
-        else core.Literal(dialect, element.to_postgres_string())
+        else core.Parameter(dialect, element.to_postgres_string())
         if isinstance(element, PostgresRange)
-        else core.Literal(dialect, element),
+        else core.Parameter(dialect, element),
     )
 
 
@@ -574,13 +574,13 @@ def multirange_is_contained_by(
     return BinaryExpression(
         dialect, "<@",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         element if isinstance(element, bases.BaseExpression)
-        else core.Literal(dialect, element.to_postgres_string())
+        else core.Parameter(dialect, element.to_postgres_string())
         if isinstance(element, PostgresRange)
-        else core.Literal(dialect, element),
+        else core.Parameter(dialect, element),
     )
 
 
@@ -605,13 +605,13 @@ def multirange_overlaps(
     return BinaryExpression(
         dialect, "&&",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         other if isinstance(other, bases.BaseExpression)
-        else core.Literal(dialect, other.to_postgres_string())
+        else core.Parameter(dialect, other.to_postgres_string())
         if isinstance(other, PostgresRange)
-        else core.Literal(dialect, other),
+        else core.Parameter(dialect, other),
     )
 
 
@@ -636,13 +636,13 @@ def multirange_union(
     return BinaryExpression(
         dialect, "+",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         other if isinstance(other, bases.BaseExpression)
-        else core.Literal(dialect, other.to_postgres_string())
+        else core.Parameter(dialect, other.to_postgres_string())
         if isinstance(other, PostgresRange)
-        else core.Literal(dialect, other),
+        else core.Parameter(dialect, other),
     )
 
 
@@ -667,13 +667,13 @@ def multirange_intersection(
     return BinaryExpression(
         dialect, "*",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         other if isinstance(other, bases.BaseExpression)
-        else core.Literal(dialect, other.to_postgres_string())
+        else core.Parameter(dialect, other.to_postgres_string())
         if isinstance(other, PostgresRange)
-        else core.Literal(dialect, other),
+        else core.Parameter(dialect, other),
     )
 
 
@@ -698,13 +698,13 @@ def multirange_difference(
     return BinaryExpression(
         dialect, "-",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value),
+        else core.Parameter(dialect, multirange_value),
         other if isinstance(other, bases.BaseExpression)
-        else core.Literal(dialect, other.to_postgres_string())
+        else core.Parameter(dialect, other.to_postgres_string())
         if isinstance(other, PostgresRange)
-        else core.Literal(dialect, other),
+        else core.Parameter(dialect, other),
     )
 
 
@@ -732,9 +732,9 @@ def range_merge(
     return core.FunctionCall(
         dialect, "range_merge",
         multirange_value if isinstance(multirange_value, bases.BaseExpression)
-        else core.Literal(dialect, multirange_value.to_postgres_string())
+        else core.Parameter(dialect, multirange_value.to_postgres_string())
         if isinstance(multirange_value, PostgresRange)
-        else core.Literal(dialect, multirange_value))
+        else core.Parameter(dialect, multirange_value))
 
 
 def multirange_literal(
@@ -757,9 +757,9 @@ def multirange_literal(
     """
     args = [
         r if isinstance(r, bases.BaseExpression)
-        else core.Literal(dialect, r.to_postgres_string())
+        else core.Parameter(dialect, r.to_postgres_string())
         if isinstance(r, PostgresRange)
-        else core.Literal(dialect, r)
+        else core.Parameter(dialect, r)
         for r in ranges
     ]
     return core.FunctionCall(dialect, multirange_type, *args)
@@ -785,9 +785,9 @@ def multirange_constructor(
     """
     args = [
         r if isinstance(r, bases.BaseExpression)
-        else core.Literal(dialect, r.to_postgres_string())
+        else core.Parameter(dialect, r.to_postgres_string())
         if isinstance(r, PostgresRange)
-        else core.Literal(dialect, r)
+        else core.Parameter(dialect, r)
         for r in range_values
     ]
     return core.FunctionCall(dialect, multirange_type, *args)
@@ -981,25 +981,25 @@ def _build_range_constructor_args(
 
     # Lower bound: NULL if None, otherwise convert to expression
     if lower is None:
-        args.append(core.Literal(dialect, "NULL"))
+        args.append(core.Parameter(dialect, "NULL"))
     else:
         args.append(lower if isinstance(lower, bases.BaseExpression)
-        else core.Literal(dialect, lower.to_postgres_string())
+        else core.Parameter(dialect, lower.to_postgres_string())
         if isinstance(lower, PostgresRange)
-        else core.Literal(dialect, lower))
+        else core.Parameter(dialect, lower))
 
     # Upper bound: NULL if None, otherwise convert to expression
     if upper is None:
-        args.append(core.Literal(dialect, "NULL"))
+        args.append(core.Parameter(dialect, "NULL"))
     else:
         args.append(upper if isinstance(upper, bases.BaseExpression)
-        else core.Literal(dialect, upper.to_postgres_string())
+        else core.Parameter(dialect, upper.to_postgres_string())
         if isinstance(upper, PostgresRange)
-        else core.Literal(dialect, upper))
+        else core.Parameter(dialect, upper))
 
     # Optional bounds argument
     if bounds is not _BOUNDS_UNSET:
-        args.append(core.Literal(dialect, bounds))
+        args.append(core.Parameter(dialect, bounds))
 
     return args
 

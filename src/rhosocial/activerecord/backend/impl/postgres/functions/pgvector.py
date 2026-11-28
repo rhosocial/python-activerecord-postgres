@@ -51,7 +51,7 @@ def _typed_vector(
 ) -> "bases.BaseExpression":
     """The vector text as a value node, cast to the vector type it spells.
 
-    ``Literal`` is the value node: it carries the value and the
+    ``Parameter`` is the value node: it carries the value and the
     bind-or-inline flag, and the casting operation is not part of it
     (expression-dialect §4.3 -- a value node declares no result type).
     The cast is therefore its own node, built here once instead of being
@@ -62,7 +62,7 @@ def _typed_vector(
         if dimensions is not None
         else PostgresVectorType(dialect)
     )
-    return core.CastExpression(dialect, core.Literal(dialect, text), target)
+    return core.CastExpression(dialect, core.Parameter(dialect, text), target)
 
 
 
@@ -102,7 +102,7 @@ def vector_l2_distance(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        left_expr = core.Literal(dialect, left)
+        left_expr = core.Parameter(dialect, left)
 
     if isinstance(right, bases.BaseExpression):
         right_expr = right
@@ -116,7 +116,7 @@ def vector_l2_distance(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        right_expr = core.Literal(dialect, right)
+        right_expr = core.Parameter(dialect, right)
 
     return BinaryExpression(dialect, "<->", left_expr, right_expr)
 
@@ -149,7 +149,7 @@ def vector_cosine_distance(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        left_expr = core.Literal(dialect, left)
+        left_expr = core.Parameter(dialect, left)
 
     if isinstance(right, bases.BaseExpression):
         right_expr = right
@@ -163,7 +163,7 @@ def vector_cosine_distance(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        right_expr = core.Literal(dialect, right)
+        right_expr = core.Parameter(dialect, right)
 
     return BinaryExpression(dialect, "<=>", left_expr, right_expr)
 
@@ -199,7 +199,7 @@ def vector_inner_product(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        left_expr = core.Literal(dialect, left)
+        left_expr = core.Parameter(dialect, left)
 
     if isinstance(right, bases.BaseExpression):
         right_expr = right
@@ -213,7 +213,7 @@ def vector_inner_product(
             dialect, vec.to_postgres_string(), vec.dimensions
         )
     else:
-        right_expr = core.Literal(dialect, right)
+        right_expr = core.Parameter(dialect, right)
 
     return BinaryExpression(dialect, "<#>", left_expr, right_expr)
 
@@ -277,7 +277,7 @@ def vector_cosine_similarity(
     # input) and the bind parameters are carried through unchanged.
     dist_sql, dist_params = cosine_dist.to_sql()
     grouped_dist = RawSQL(dialect, f"({dist_sql})", dist_params)
-    one = core.Literal(dialect, 1)
+    one = core.Parameter(dialect, 1)
     return ArithmeticOperation(dialect, "sub", one, grouped_dist)
 
 

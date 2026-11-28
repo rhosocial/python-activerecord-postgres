@@ -17,7 +17,7 @@ Three layers, because they fail differently:
    columns, and types whose value has no text form), and it is the one that
    catches a type whose rendered spelling the server does not recognise.
 2. **Insert through a cast** -- for every type with a text form, the value goes
-   in as ``cast(dialect, Literal(text), Type)``. This is the cast doing real work.
+   in as ``cast(dialect, Parameter(text), Type)``. This is the cast doing real work.
 3. **Read back through a cast** -- the stored value is cast to text and
    compared, so the assertion is on the value PostgreSQL actually holds rather
    than on a driver-specific Python object.
@@ -36,7 +36,7 @@ from rhosocial.activerecord.backend.expression import (
     CreateTableStatement,
     DropTableStatement,
     InsertStatement,
-    Literal,
+    Parameter,
     QueryStatement,
     ColumnPrimaryKeyConstraint,
 )
@@ -426,7 +426,7 @@ class TestInsertThroughACast:
                 columns=["v"],
                 source=ValuesSource(
                     dialect,
-                    [[cast(dialect, Literal(dialect, case.literal), case.factory(dialect))]],
+                    [[cast(dialect, Parameter(dialect, case.literal), case.factory(dialect))]],
                 ),
             )
             sql, params = insert.to_sql()
@@ -499,7 +499,7 @@ class TestChainedCasts:
             # whatever the *intermediate* type parses -- chain[1], not
             # chain[0], which is text for every chain and would feed "42" to a
             # date or a uuid.
-            expression = Literal(dialect, _CHAIN_INPUT[chain[1]])
+            expression = Parameter(dialect, _CHAIN_INPUT[chain[1]])
             for name in chain:
                 expression = cast(dialect, expression, _type_by_label(dialect, name))
             sql, params = InsertStatement(
@@ -568,7 +568,7 @@ class TestRejectedConversions:
             sql, params = InsertStatement(
                 dialect=dialect, into=Table(dialect, table), columns=["v"],
                 source=ValuesSource(dialect, [[
-                    cast(dialect, Literal(dialect, literal), case.factory(dialect))]]),
+                    cast(dialect, Parameter(dialect, literal), case.factory(dialect))]]),
             ).to_sql()
             with pytest.raises(DatabaseError):
                 backend.execute(sql, params)

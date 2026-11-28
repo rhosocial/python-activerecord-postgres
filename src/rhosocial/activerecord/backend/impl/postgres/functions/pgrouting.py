@@ -76,10 +76,10 @@ def pgr_dijkstra(
     """
     return core.FunctionCall(
         dialect, "pgr_dijkstra",
-        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Literal(dialect, edges_sql),
-        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Literal(dialect, start_vid),
-        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Literal(dialect, end_vid),
-        directed if isinstance(directed, bases.BaseExpression) else core.Literal(dialect, directed),
+        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Parameter(dialect, edges_sql),
+        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Parameter(dialect, start_vid),
+        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Parameter(dialect, end_vid),
+        directed if isinstance(directed, bases.BaseExpression) else core.Parameter(dialect, directed),
     )
 
 
@@ -127,10 +127,10 @@ def pgr_astar(
     """
     return core.FunctionCall(
         dialect, "pgr_astar",
-        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Literal(dialect, edges_sql),
-        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Literal(dialect, start_vid),
-        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Literal(dialect, end_vid),
-        directed if isinstance(directed, bases.BaseExpression) else core.Literal(dialect, directed),
+        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Parameter(dialect, edges_sql),
+        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Parameter(dialect, start_vid),
+        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Parameter(dialect, end_vid),
+        directed if isinstance(directed, bases.BaseExpression) else core.Parameter(dialect, directed),
     )
 
 

@@ -3,7 +3,7 @@
 These tests require a PostgreSQL database with the pgvector extension installed.
 Tests will be automatically skipped if the extension is not available.
 
-Vector literal values use Literal.cast(PostgresVectorType(self.dialect)) for inline embedding because
+Vector literal values use Parameter.cast(PostgresVectorType(self.dialect)) for inline embedding because
 psycopg does not natively support the vector type for bound parameters.
 pgvector distance operators (<->, <=>, <#>) still require RawSQL
 because ComparisonPredicate does not yet support .as_() alias.
@@ -33,7 +33,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression import cast
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -135,8 +135,8 @@ def vector_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -159,9 +159,9 @@ def vector_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -184,9 +184,9 @@ def vector_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[1.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -209,8 +209,8 @@ def vector_env(postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[-1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[-1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -402,7 +402,7 @@ class TestPgvectorIntegration:
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
-                    [[cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))]],
+                    [[cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))]],
                 ),
             )
             sql, params = insert_expr.to_sql()
@@ -413,9 +413,9 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 table=Table(dialect, "test_vector_update"),
                 assignments={"embedding": (
-                    cast(dialect, Literal(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))
+                    cast(dialect, Parameter(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))
                 )},
-                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
             )
             sql, params = update_expr.to_sql()
             backend.execute(sql, params)
@@ -426,7 +426,7 @@ class TestPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
                 from_=Table(dialect, "test_vector_update"),
-                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
             )
             sql, params = query.to_sql()
             result = backend.execute(sql, params, options=opts)
@@ -457,7 +457,7 @@ class TestPgvectorIntegration:
         try:
             # Insert 10 rows of vector data
             rows = [
-                [cast(dialect, Literal(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
+                [cast(dialect, Parameter(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
                 for i in range(10)
             ]
             insert_expr = InsertStatement(
@@ -483,7 +483,7 @@ class TestPgvectorIntegration:
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
                 where=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_ivfflat")
+                    dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_vector_ivfflat")
                 ),
             )
             sql, params = query.to_sql()
@@ -520,7 +520,7 @@ class TestPgvectorIntegration:
         try:
             # Insert 10 rows of vector data
             rows = [
-                [cast(dialect, Literal(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
+                [cast(dialect, Parameter(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
                 for i in range(10)
             ]
             insert_expr = InsertStatement(
@@ -546,7 +546,7 @@ class TestPgvectorIntegration:
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
                 where=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_hnsw")
+                    dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_vector_hnsw")
                 ),
             )
             sql, params = query.to_sql()
@@ -584,7 +584,7 @@ class TestPgvectorIntegration:
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
-                    [[cast(dialect, Literal(dialect, "[1.0, 2.0]"), PostgresVectorType(dialect))]],
+                    [[cast(dialect, Parameter(dialect, "[1.0, 2.0]"), PostgresVectorType(dialect))]],
                 ),
             )
             sql, params = insert_expr.to_sql()
@@ -643,8 +643,8 @@ async def async_vector_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -667,9 +667,9 @@ async def async_vector_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -692,9 +692,9 @@ async def async_vector_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[1.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 1.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[0.0, 0.0, 1.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -717,8 +717,8 @@ async def async_vector_env(async_postgres_backend_single):
         source=ValuesSource(
             dialect,
             [
-                [cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
-                [cast(dialect, Literal(dialect, "[-1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))],
+                [cast(dialect, Parameter(dialect, "[-1.0, 0.0, 0.0]"), PostgresVectorType(dialect))],
             ],
         ),
     )
@@ -911,7 +911,7 @@ class TestAsyncPgvectorIntegration:
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
-                    [[cast(dialect, Literal(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))]],
+                    [[cast(dialect, Parameter(dialect, "[1.0, 2.0, 3.0]"), PostgresVectorType(dialect))]],
                 ),
             )
             sql, params = insert_expr.to_sql()
@@ -921,9 +921,9 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 table=Table(dialect, "test_vector_update_async"),
                 assignments={"embedding": (
-                    cast(dialect, Literal(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))
+                    cast(dialect, Parameter(dialect, "[4.0, 5.0, 6.0]"), PostgresVectorType(dialect))
                 )},
-                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
             )
             sql, params = update_expr.to_sql()
             await backend.execute(sql, params)
@@ -933,7 +933,7 @@ class TestAsyncPgvectorIntegration:
                 dialect=dialect,
                 select=[Column(dialect, "embedding")],
                 from_=Table(dialect, "test_vector_update_async"),
-                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+                where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
             )
             sql, params = query.to_sql()
             result = await backend.execute(sql, params, options=opts)
@@ -963,7 +963,7 @@ class TestAsyncPgvectorIntegration:
 
         try:
             rows = [
-                [cast(dialect, Literal(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
+                [cast(dialect, Parameter(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
                 for i in range(10)
             ]
             insert_expr = InsertStatement(
@@ -988,7 +988,7 @@ class TestAsyncPgvectorIntegration:
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
                 where=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_ivfflat_async")
+                    dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_vector_ivfflat_async")
                 ),
             )
             sql, params = query.to_sql()
@@ -1023,7 +1023,7 @@ class TestAsyncPgvectorIntegration:
 
         try:
             rows = [
-                [cast(dialect, Literal(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
+                [cast(dialect, Parameter(dialect, f"[{i}.0, {i+1}.0, {i+2}.0]"), PostgresVectorType(dialect))]
                 for i in range(10)
             ]
             insert_expr = InsertStatement(
@@ -1048,7 +1048,7 @@ class TestAsyncPgvectorIntegration:
                 select=[Column(dialect, "indexname")],
                 from_=Table(dialect, "pg_indexes"),
                 where=ComparisonPredicate(
-                    dialect, "=", Column(dialect, "tablename"), Literal(dialect, "test_vector_hnsw_async")
+                    dialect, "=", Column(dialect, "tablename"), Parameter(dialect, "test_vector_hnsw_async")
                 ),
             )
             sql, params = query.to_sql()
@@ -1085,7 +1085,7 @@ class TestAsyncPgvectorIntegration:
                 columns=["embedding"],
                 source=ValuesSource(
                     dialect,
-                    [[cast(dialect, Literal(dialect, "[1.0, 2.0]"), PostgresVectorType(dialect))]],
+                    [[cast(dialect, Parameter(dialect, "[1.0, 2.0]"), PostgresVectorType(dialect))]],
                 ),
             )
             sql, params = insert_expr.to_sql()

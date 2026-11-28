@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.expression import (
     ExplainFormat,
     ExplainOptions,
     InsertStatement,
-    Literal,
+    Parameter,
     LogicalPredicate,
     QueryStatement,
     RawSQL,
@@ -153,7 +153,7 @@ def _insert_rows_expression(dialect, table_name: str, columns: list[str], rows: 
         columns=columns,
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, value) for value in row] for row in rows],
+            [[Parameter(dialect, value) for value in row] for row in rows],
         ),
     )
 
@@ -437,8 +437,8 @@ class TestAdvancedPartitionOperations:
         update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
-            assignments={"created_at": Literal(dialect, "2026-02-15")},
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+            assignments={"created_at": Parameter(dialect, "2026-02-15")},
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
         )
         postgres_backend.execute(*update.to_sql())
         row = postgres_backend.fetch_one(
@@ -450,8 +450,8 @@ class TestAdvancedPartitionOperations:
         invalid_update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
-            assignments={"created_at": Literal(dialect, "2026-03-15")},
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+            assignments={"created_at": Parameter(dialect, "2026-03-15")},
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
         )
         with pytest.raises(Exception):
             postgres_backend.execute(*invalid_update.to_sql())
@@ -478,8 +478,8 @@ class TestAdvancedPartitionOperations:
             where=LogicalPredicate(
                 dialect,
                 "AND",
-                ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Literal(dialect, "2026-02-01")),
-                ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Literal(dialect, "2026-03-01")),
+                ComparisonPredicate(dialect, ">=", Column(dialect, "created_at"), Parameter(dialect, "2026-02-01")),
+                ComparisonPredicate(dialect, "<", Column(dialect, "created_at"), Parameter(dialect, "2026-03-01")),
             ),
         )
         rows = postgres_backend.fetch_all(*_json_explain_sql(dialect, query))
@@ -562,8 +562,8 @@ class TestAsyncAdvancedPartitionOperations:
         update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, RANGE_PARENT),
-            assignments={"created_at": Literal(dialect, "2026-02-15")},
-            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 1)),
+            assignments={"created_at": Parameter(dialect, "2026-02-15")},
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Parameter(dialect, 1)),
         )
         await async_postgres_backend.execute(*update.to_sql())
         row = await async_postgres_backend.fetch_one(

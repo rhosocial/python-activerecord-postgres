@@ -313,14 +313,16 @@ def test_the_complex_families_are_named_by_this_backend(dialect):
     """PostGIS, range and vector spellings belong to PostgreSQL-named classes.
 
     The core classes stay the shared floor; the names that carry this server's
-    own operations live in ``impl.postgres.column_types`` and are reachable
-    with ``UseColumnType``.
+    own operations live in this backend's expression namespace and are reachable
+    with ``UseColumnType``. Every one of them carries the backend's name: a
+    prefix that names an extension (``Postgis``) would read as another owner
+    wherever only the class name survives.
     """
-    from rhosocial.activerecord.backend.impl.postgres import column_types as pg
+    from rhosocial.activerecord.backend.impl.postgres.expression import column_types as pg
 
     for column_class in dialect.suggest_extra_column_types().table.values():
         assert column_class.__module__ == pg.__name__
-        assert column_class.__name__.startswith(("Postgres", "Postgis"))
+        assert column_class.__name__.startswith("Postgres")
 
 
 def test_a_postgres_named_class_is_usable_through_use_column_type(dialect):
@@ -331,7 +333,7 @@ def test_a_postgres_named_class_is_usable_through_use_column_type(dialect):
     the same annotation can hold.
     """
     from rhosocial.activerecord.base.fields import UseColumnType
-    from rhosocial.activerecord.backend.impl.postgres.column_types import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.column_types import (
         PostgresGeometryColumn,
     )
     from rhosocial.activerecord.backend.impl.postgres.type_values import Point

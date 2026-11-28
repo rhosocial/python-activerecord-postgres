@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.postgis_raster import (
     st_rast_from_hexwkb,
     st_value,
@@ -57,24 +57,24 @@ def _make_empty_raster(dialect, width=10, height=10, srid=4326):
     # ST_MakeEmptyRaster(width, height, upperleftx, upperlefty, scalex, scaley, skewx, skewy, srid)
     empty_rast = FunctionCall(
         dialect, "ST_MakeEmptyRaster",
-        Literal(dialect, width),
-        Literal(dialect, height),
-        Literal(dialect, 0.0),
-        Literal(dialect, 0.0),
-        Literal(dialect, 1.0),
-        Literal(dialect, 1.0),
-        Literal(dialect, 0.0),
-        Literal(dialect, 0.0),
-        Literal(dialect, srid),
+        Parameter(dialect, width),
+        Parameter(dialect, height),
+        Parameter(dialect, 0.0),
+        Parameter(dialect, 0.0),
+        Parameter(dialect, 1.0),
+        Parameter(dialect, 1.0),
+        Parameter(dialect, 0.0),
+        Parameter(dialect, 0.0),
+        Parameter(dialect, srid),
     )
     # ST_AddBand(rast, index, pixeltype, initialvalue, nodatavalue)
     rast_with_band = FunctionCall(
         dialect, "ST_AddBand",
         empty_rast,
-        Literal(dialect, 1),
-        Literal(dialect, "8BUI"),
-        Literal(dialect, 0),
-        Literal(dialect, 0),
+        Parameter(dialect, 1),
+        Parameter(dialect, "8BUI"),
+        Parameter(dialect, 0),
+        Parameter(dialect, 0),
     )
     return rast_with_band
 
@@ -117,7 +117,7 @@ def raster_env(postgres_backend_single):
             dialect,
             [
                 [
-                    Literal(dialect, "test_empty_raster"),
+                    Parameter(dialect, "test_empty_raster"),
                     rast_expr,
                 ],
             ],
@@ -170,8 +170,8 @@ class TestPostgisRasterIntegration:
         value_func = st_value(
             dialect,
             Column(dialect, "rast"),
-            Literal(dialect, 1),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -236,7 +236,7 @@ async def async_raster_env(async_postgres_backend_single):
             dialect,
             [
                 [
-                    Literal(dialect, "test_empty_raster"),
+                    Parameter(dialect, "test_empty_raster"),
                     rast_expr,
                 ],
             ],
@@ -291,8 +291,8 @@ class TestAsyncPostgisRasterIntegration:
         value_func = st_value(
             dialect,
             Column(dialect, "rast"),
-            Literal(dialect, 1),
-            Literal(dialect, 1),
+            Parameter(dialect, 1),
+            Parameter(dialect, 1),
         )
         query = QueryStatement(
             dialect=dialect,

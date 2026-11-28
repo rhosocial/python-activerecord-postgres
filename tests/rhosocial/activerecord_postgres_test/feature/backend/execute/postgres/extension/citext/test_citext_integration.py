@@ -34,7 +34,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
 from rhosocial.activerecord.backend.expression.predicates import (
     LikeOperator,
     ComparisonPredicate,
@@ -82,7 +82,7 @@ def _setup_citext_table(backend, dialect, table):
         columns=["name"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "Hello World")]],
+            [[Parameter(dialect, "Hello World")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -122,7 +122,7 @@ def _setup_citext_unique_table(backend, dialect, table):
         columns=["email"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "User@Example.COM")]],
+            [[Parameter(dialect, "User@Example.COM")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -157,8 +157,8 @@ def _setup_citext_like_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Alice Johnson")],
-                [Literal(dialect, "Bob Smith")],
+                [Parameter(dialect, "Alice Johnson")],
+                [Parameter(dialect, "Bob Smith")],
             ],
         ),
     )
@@ -193,7 +193,7 @@ def _setup_citext_users_table(backend, dialect, table):
         columns=["username"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "Admin")]],
+            [[Parameter(dialect, "Admin")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -228,7 +228,7 @@ def _setup_citext_roles_table(backend, dialect, table):
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "admin"), Literal(dialect, "superuser")]],
+            [[Parameter(dialect, "admin"), Parameter(dialect, "superuser")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -273,7 +273,7 @@ async def _async_setup_citext_table(backend, dialect, table):
         columns=["name"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "Hello World")]],
+            [[Parameter(dialect, "Hello World")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -313,7 +313,7 @@ async def _async_setup_citext_unique_table(backend, dialect, table):
         columns=["email"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "User@Example.COM")]],
+            [[Parameter(dialect, "User@Example.COM")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -348,8 +348,8 @@ async def _async_setup_citext_like_table(backend, dialect, table):
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, "Alice Johnson")],
-                [Literal(dialect, "Bob Smith")],
+                [Parameter(dialect, "Alice Johnson")],
+                [Parameter(dialect, "Bob Smith")],
             ],
         ),
     )
@@ -384,7 +384,7 @@ async def _async_setup_citext_users_table(backend, dialect, table):
         columns=["username"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "Admin")]],
+            [[Parameter(dialect, "Admin")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -419,7 +419,7 @@ async def _async_setup_citext_roles_table(backend, dialect, table):
         columns=["username", "role"],
         source=ValuesSource(
             dialect,
-            [[Literal(dialect, "admin"), Literal(dialect, "superuser")]],
+            [[Parameter(dialect, "admin"), Parameter(dialect, "superuser")]],
         ),
     )
     sql, params = insert_expr.to_sql()
@@ -492,7 +492,7 @@ class TestCitextIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "name"),
-            Literal(dialect, "hello world"),
+            Parameter(dialect, "hello world"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -510,7 +510,7 @@ class TestCitextIntegration:
         where_pred2 = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "name"),
-            Literal(dialect, "HELLO WORLD"),
+            Parameter(dialect, "HELLO WORLD"),
         )
         query2 = QueryStatement(
             dialect=dialect,
@@ -530,7 +530,7 @@ class TestCitextIntegration:
         where_pred3 = ComparisonPredicate(
             dialect, "=",
             cast_func,
-            Literal(dialect, "hello world"),
+            Parameter(dialect, "hello world"),
         )
         query3 = QueryStatement(
             dialect=dialect,
@@ -555,7 +555,7 @@ class TestCitextIntegration:
             columns=["email"],
             source=ValuesSource(
                 dialect,
-                [[Literal(dialect, "user@example.com")]],
+                [[Parameter(dialect, "user@example.com")]],
             ),
         )
         sql, params = insert_expr.to_sql()
@@ -571,7 +571,7 @@ class TestCitextIntegration:
         where_pred = LikePredicate(
             dialect, LikeOperator.LIKE,
             Column(dialect, "name"),
-            Literal(dialect, "alice%"),
+            Parameter(dialect, "alice%"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -611,7 +611,7 @@ class TestCitextIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "username"),
-            Literal(dialect, username),
+            Parameter(dialect, username),
         )
         query_role = QueryStatement(
             dialect=dialect,
@@ -667,7 +667,7 @@ class TestAsyncCitextIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "name"),
-            Literal(dialect, "hello world"),
+            Parameter(dialect, "hello world"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -685,7 +685,7 @@ class TestAsyncCitextIntegration:
         where_pred2 = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "name"),
-            Literal(dialect, "HELLO WORLD"),
+            Parameter(dialect, "HELLO WORLD"),
         )
         query2 = QueryStatement(
             dialect=dialect,
@@ -703,7 +703,7 @@ class TestAsyncCitextIntegration:
         where_pred3 = ComparisonPredicate(
             dialect, "=",
             cast_func,
-            Literal(dialect, "hello world"),
+            Parameter(dialect, "hello world"),
         )
         query3 = QueryStatement(
             dialect=dialect,
@@ -727,7 +727,7 @@ class TestAsyncCitextIntegration:
             columns=["email"],
             source=ValuesSource(
                 dialect,
-                [[Literal(dialect, "user@example.com")]],
+                [[Parameter(dialect, "user@example.com")]],
             ),
         )
         sql, params = insert_expr.to_sql()
@@ -743,7 +743,7 @@ class TestAsyncCitextIntegration:
         where_pred = LikePredicate(
             dialect, LikeOperator.LIKE,
             Column(dialect, "name"),
-            Literal(dialect, "alice%"),
+            Parameter(dialect, "alice%"),
         )
         query = QueryStatement(
             dialect=dialect,
@@ -779,7 +779,7 @@ class TestAsyncCitextIntegration:
         where_pred = ComparisonPredicate(
             dialect, "=",
             Column(dialect, "username"),
-            Literal(dialect, username),
+            Parameter(dialect, username),
         )
         query_role = QueryStatement(
             dialect=dialect,

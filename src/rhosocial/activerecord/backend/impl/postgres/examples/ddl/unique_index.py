@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
+from rhosocial.activerecord.backend.expression.core import Parameter, AllColumnsWildcard
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -120,7 +120,7 @@ if __name__ == "__main__":
         into=Table(dialect, 'users'),
         columns=['email', 'username'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice')],
+            [Parameter(dialect, 'alice@example.com'), Parameter(dialect, 'alice')],
         ]),
     )
     sql, params = insert_expr.to_sql()
@@ -134,7 +134,7 @@ if __name__ == "__main__":
             into=Table(dialect, 'users'),
             columns=['email', 'username'],
             source=ValuesSource(dialect, [
-                [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice2')],
+                [Parameter(dialect, 'alice@example.com'), Parameter(dialect, 'alice2')],
             ]),
         )
         sql, params = duplicate_insert.to_sql()

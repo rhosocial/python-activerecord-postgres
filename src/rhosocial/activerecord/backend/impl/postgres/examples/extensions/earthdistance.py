@@ -55,7 +55,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Table  # noqa: F811
-    from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal, Subquery
+    from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter, Subquery
     from rhosocial.activerecord.backend.expression.functions import RoundFunction
     from rhosocial.activerecord.backend.expression.operators import BinaryExpression
     from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
@@ -160,11 +160,11 @@ if __name__ == "__main__":
             source=ValuesSource(
                 dialect,
                 [
-                    [Literal(dialect, "New York"), Literal(dialect, 40.7128), Literal(dialect, -74.0060)],
-                    [Literal(dialect, "Los Angeles"), Literal(dialect, 34.0522), Literal(dialect, -118.2437)],
-                    [Literal(dialect, "Chicago"), Literal(dialect, 41.8781), Literal(dialect, -87.6298)],
-                    [Literal(dialect, "Houston"), Literal(dialect, 29.7604), Literal(dialect, -95.3698)],
-                    [Literal(dialect, "Philadelphia"), Literal(dialect, 39.9526), Literal(dialect, -75.1652)],
+                    [Parameter(dialect, "New York"), Parameter(dialect, 40.7128), Parameter(dialect, -74.0060)],
+                    [Parameter(dialect, "Los Angeles"), Parameter(dialect, 34.0522), Parameter(dialect, -118.2437)],
+                    [Parameter(dialect, "Chicago"), Parameter(dialect, 41.8781), Parameter(dialect, -87.6298)],
+                    [Parameter(dialect, "Houston"), Parameter(dialect, 29.7604), Parameter(dialect, -95.3698)],
+                    [Parameter(dialect, "Philadelphia"), Parameter(dialect, 39.9526), Parameter(dialect, -75.1652)],
                 ],
             ),
         )
@@ -179,11 +179,11 @@ if __name__ == "__main__":
         # Returns distance in meters (on earth surface)
         ny_point = FunctionCall(
             dialect, "ll_to_earth",
-            Literal(dialect, 40.7128), Literal(dialect, -74.0060),
+            Parameter(dialect, 40.7128), Parameter(dialect, -74.0060),
         )
         la_point = FunctionCall(
             dialect, "ll_to_earth",
-            Literal(dialect, 34.0522), Literal(dialect, -118.2437),
+            Parameter(dialect, 34.0522), Parameter(dialect, -118.2437),
         )
         distance_func = FunctionCall(dialect, "earth_distance", ny_point, la_point)
 
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         # The @> operator checks if the bounding box contains the city point
         ny_point = FunctionCall(
             dialect, "ll_to_earth",
-            Literal(dialect, 40.7128), Literal(dialect, -74.0060),
+            Parameter(dialect, 40.7128), Parameter(dialect, -74.0060),
         )
         city_point = FunctionCall(
             dialect, "ll_to_earth",
@@ -215,13 +215,13 @@ if __name__ == "__main__":
         distance_func = FunctionCall(dialect, "earth_distance", ny_point, city_point)
         box_func = FunctionCall(
             dialect, "earth_box",
-            ny_point, Literal(dialect, 500000),
+            ny_point, Parameter(dialect, 500000),
         )
 
         # Build distance_km expression: earth_distance(...) / 1000.0
         # BinaryExpression lacks AliasableMixin, so wrap with Subquery to add alias
         distance_km_expr = BinaryExpression(
-            dialect, "/", distance_func, Literal(dialect, 1000.0),
+            dialect, "/", distance_func, Parameter(dialect, 1000.0),
         )
         distance_km_aliased = Subquery(dialect, distance_km_expr).as_("distance_km")
 
@@ -252,7 +252,7 @@ if __name__ == "__main__":
         # Find cities within 1500km of Chicago using earth_distance directly
         chicago_point = FunctionCall(
             dialect, "ll_to_earth",
-            Literal(dialect, 41.8781), Literal(dialect, -87.6298),
+            Parameter(dialect, 41.8781), Parameter(dialect, -87.6298),
         )
         city_point = FunctionCall(
             dialect, "ll_to_earth",
@@ -262,13 +262,13 @@ if __name__ == "__main__":
 
         # ROUND(earth_distance(...) / 1000.0) AS distance_km
         distance_km_expr = BinaryExpression(
-            dialect, "/", distance_func, Literal(dialect, 1000.0),
+            dialect, "/", distance_func, Parameter(dialect, 1000.0),
         )
         round_distance = RoundFunction(dialect, distance_km_expr)
 
         # WHERE: earth_distance(...) < 1500000
         within_radius_pred = BinaryExpression(
-            dialect, "<", distance_func, Literal(dialect, 1500000),
+            dialect, "<", distance_func, Parameter(dialect, 1500000),
         )
 
         query = QueryStatement(

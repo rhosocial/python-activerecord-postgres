@@ -42,13 +42,13 @@ def geometry_expr(
     """
     if isinstance(value, PostgresGeometry):
         if value.geometry_type == "geography":
-            return st_geog_from_text(dialect, core.Literal(dialect, value.wkt))
+            return st_geog_from_text(dialect, core.Parameter(dialect, value.wkt))
         return st_geom_from_text(
             dialect,
-            core.Literal(dialect, value.wkt),
-            core.Literal(dialect, value.srid) if value.srid is not None else None,
+            core.Parameter(dialect, value.wkt),
+            core.Parameter(dialect, value.srid) if value.srid is not None else None,
         )
-    return core.Literal(dialect, value)
+    return core.Parameter(dialect, value)
 
 
 # === Geometry Construction ===
@@ -239,7 +239,7 @@ def st_dwithin(
         distance,
     ]
     if use_spheroid:
-        args.append(core.Literal(dialect, True))
+        args.append(core.Parameter(dialect, True))
     return core.FunctionCall(dialect, "ST_DWithin", *args)
 
 
@@ -306,7 +306,7 @@ def st_distance(
         geom2,
     ]
     if use_spheroid:
-        args.append(core.Literal(dialect, True))
+        args.append(core.Parameter(dialect, True))
     return core.FunctionCall(dialect, "ST_Distance", *args)
 
 
@@ -327,7 +327,7 @@ def st_area(
     """
     args = [geom]
     if use_spheroid:
-        args.append(core.Literal(dialect, True))
+        args.append(core.Parameter(dialect, True))
     return core.FunctionCall(dialect, "ST_Area", *args)
 
 
@@ -343,7 +343,7 @@ def st_length(
     """
     args = [geom]
     if use_spheroid:
-        args.append(core.Literal(dialect, True))
+        args.append(core.Parameter(dialect, True))
     return core.FunctionCall(dialect, "ST_Length", *args)
 
 

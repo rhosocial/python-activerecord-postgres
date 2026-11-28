@@ -72,14 +72,14 @@ def cron_schedule(
     if comment is not None:
         return core.FunctionCall(
             dialect, "cron.schedule",
-            schedule if isinstance(schedule, bases.BaseExpression) else core.Literal(dialect, schedule),
-            command if isinstance(command, bases.BaseExpression) else core.Literal(dialect, command),
-            comment if isinstance(comment, bases.BaseExpression) else core.Literal(dialect, comment),
+            schedule if isinstance(schedule, bases.BaseExpression) else core.Parameter(dialect, schedule),
+            command if isinstance(command, bases.BaseExpression) else core.Parameter(dialect, command),
+            comment if isinstance(comment, bases.BaseExpression) else core.Parameter(dialect, comment),
         )
     return core.FunctionCall(
         dialect, "cron.schedule",
-        schedule if isinstance(schedule, bases.BaseExpression) else core.Literal(dialect, schedule),
-        command if isinstance(command, bases.BaseExpression) else core.Literal(dialect, command),
+        schedule if isinstance(schedule, bases.BaseExpression) else core.Parameter(dialect, schedule),
+        command if isinstance(command, bases.BaseExpression) else core.Parameter(dialect, command),
     )
 
 
@@ -105,7 +105,7 @@ def cron_unschedule(
     """
     return core.FunctionCall(
         dialect, "cron.unschedule",
-        job_id if isinstance(job_id, bases.BaseExpression) else core.Literal(dialect, job_id),
+        job_id if isinstance(job_id, bases.BaseExpression) else core.Parameter(dialect, job_id),
     )
 
 
@@ -132,7 +132,7 @@ def cron_run(
     """
     return core.FunctionCall(
         dialect, "cron.run",
-        job_id if isinstance(job_id, bases.BaseExpression) else core.Literal(dialect, job_id),
+        job_id if isinstance(job_id, bases.BaseExpression) else core.Parameter(dialect, job_id),
     )
 
 

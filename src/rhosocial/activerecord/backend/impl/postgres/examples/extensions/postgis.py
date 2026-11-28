@@ -54,7 +54,7 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.core import (
-        Literal,
+        Parameter,
         FunctionCall,
         Subquery,
     )
@@ -140,39 +140,39 @@ if __name__ == "__main__":
                 dialect,
                 [
                     [
-                        Literal(dialect, "New York"),
+                        Parameter(dialect, "New York"),
                         FunctionCall(
                             dialect, "ST_SetSRID",
                             FunctionCall(
                                 dialect, "ST_MakePoint",
-                                Literal(dialect, -74.006),
-                                Literal(dialect, 40.7128),
+                                Parameter(dialect, -74.006),
+                                Parameter(dialect, 40.7128),
                             ),
-                            Literal(dialect, 4326),
+                            Parameter(dialect, 4326),
                         ),
                     ],
                     [
-                        Literal(dialect, "Los Angeles"),
+                        Parameter(dialect, "Los Angeles"),
                         FunctionCall(
                             dialect, "ST_SetSRID",
                             FunctionCall(
                                 dialect, "ST_MakePoint",
-                                Literal(dialect, -118.2437),
-                                Literal(dialect, 34.0522),
+                                Parameter(dialect, -118.2437),
+                                Parameter(dialect, 34.0522),
                             ),
-                            Literal(dialect, 4326),
+                            Parameter(dialect, 4326),
                         ),
                     ],
                     [
-                        Literal(dialect, "Chicago"),
+                        Parameter(dialect, "Chicago"),
                         FunctionCall(
                             dialect, "ST_SetSRID",
                             FunctionCall(
                                 dialect, "ST_MakePoint",
-                                Literal(dialect, -87.6298),
-                                Literal(dialect, 41.8781),
+                                Parameter(dialect, -87.6298),
+                                Parameter(dialect, 41.8781),
                             ),
-                            Literal(dialect, 4326),
+                            Parameter(dialect, 4326),
                         ),
                     ],
                 ],
@@ -196,7 +196,7 @@ if __name__ == "__main__":
                 where=ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "name"),
-                    Literal(dialect, "New York"),
+                    Parameter(dialect, "New York"),
                 ),
             ),
         )
@@ -210,7 +210,7 @@ if __name__ == "__main__":
                 where=ComparisonPredicate(
                     dialect, "=",
                     Column(dialect, "name"),
-                    Literal(dialect, "Los Angeles"),
+                    Parameter(dialect, "Los Angeles"),
                 ),
             ),
         )
@@ -249,12 +249,12 @@ if __name__ == "__main__":
                     dialect, "ST_SetSRID",
                     FunctionCall(
                         dialect, "ST_MakePoint",
-                        Literal(dialect, -74.006),
-                        Literal(dialect, 40.7128),
+                        Parameter(dialect, -74.006),
+                        Parameter(dialect, 40.7128),
                     ),
-                    Literal(dialect, 4326),
+                    Parameter(dialect, 4326),
                 ).cast(PostgresGeographyType(dialect)),
-                Literal(dialect, 500000),
+                Parameter(dialect, 500000),
             ),
         )
         sql, params = dwithin_query.to_sql()

@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.core import Literal
+from rhosocial.activerecord.backend.expression.core import Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -70,9 +70,9 @@ if __name__ == "__main__":
         source=ValuesSource(
             dialect,
             [
-                [Literal(dialect, 'Alice'), Literal(dialect, '{85,90,78}')],
-                [Literal(dialect, 'Bob'), Literal(dialect, '{92,88,95}')],
-                [Literal(dialect, 'Charlie'), Literal(dialect, '{70,75,80}')],
+                [Parameter(dialect, 'Alice'), Parameter(dialect, '{85,90,78}')],
+                [Parameter(dialect, 'Bob'), Parameter(dialect, '{92,88,95}')],
+                [Parameter(dialect, 'Charlie'), Parameter(dialect, '{70,75,80}')],
             ],
         ),
     )
