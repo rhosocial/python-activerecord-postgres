@@ -1,22 +1,134 @@
-# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/__init__.py
+# rhosocial/activerecord/backend/impl/postgres/expression/statements/__init__.py
 """Expression namespace: statements."""
 
 import importlib
 
-_MODULES = ('copy', 'ddl', 'enum_', 'hinted_statements', 'load_library', 'pg_stat', 'status', 'tablefunc', 'transaction')
+# Public name -> defining module. Private names here stay reachable
+# through this package but are not part of __all__.
+_EXPORTS = {
+    'Any': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'BaseExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'ColumnDefinition': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'CopyColumnSelection': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'CopyHeader': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'CreateTableAsStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'DeleteStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'Dict': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'Enum': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'ExplainOptions': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'ExplainStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'ForUpdateClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'FromSourceType': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'GroupByHavingClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'HintList': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'InsertDataSource': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'InsertStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'LimitOffsetClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'List': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'Mapping': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'OnConflictClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'Optional': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'OrderByClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresCitextColumnExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.extension_index',
+    'PostgresConnectbyFullStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.tablefunc',
+    'PostgresCopyFormat': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'PostgresCopyFromStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'PostgresCopyLogVerbosity': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'PostgresCopyOnError': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'PostgresCopyToStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'PostgresCreateTableAsStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresCrosstabWithDefinitionStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.tablefunc',
+    'PostgresDeleteStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresEnumType': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.enum_',
+    'PostgresExplainStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresInsertStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresLoadLibraryExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.load_library',
+    'PostgresLtreeIndexExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.extension_index',
+    'PostgresPgStatStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.pg_stat',
+    'PostgresQueryStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'PostgresSetConstraintsStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.transaction',
+    'PostgresShowStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.status',
+    'PostgresSpatialIndexExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.extension_index',
+    'PostgresTrgmIndexExpression': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.extension_index',
+    'PostgresUpdateStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'QualifyClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'QueryStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'ReturningClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'SelectModifier': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'Sequence': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'TYPE_CHECKING': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'Tuple': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'Union': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'UpdateStatement': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    'WhereClause': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+    '_copy_columns': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    '_copy_force_columns': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    '_enum_value': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.copy',
+    'normalise_hints': 'rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements',
+}
+
+__all__ = [
+    'Any',
+    'BaseExpression',
+    'ColumnDefinition',
+    'CopyColumnSelection',
+    'CopyHeader',
+    'CreateTableAsStatement',
+    'DeleteStatement',
+    'Dict',
+    'Enum',
+    'ExplainOptions',
+    'ExplainStatement',
+    'ForUpdateClause',
+    'FromSourceType',
+    'GroupByHavingClause',
+    'HintList',
+    'InsertDataSource',
+    'InsertStatement',
+    'LimitOffsetClause',
+    'List',
+    'Mapping',
+    'OnConflictClause',
+    'Optional',
+    'OrderByClause',
+    'PostgresConnectbyFullStatement',
+    'PostgresCopyFormat',
+    'PostgresCopyFromStatement',
+    'PostgresCopyLogVerbosity',
+    'PostgresCopyOnError',
+    'PostgresCopyToStatement',
+    'PostgresCreateTableAsStatement',
+    'PostgresCrosstabWithDefinitionStatement',
+    'PostgresDeleteStatement',
+    'PostgresEnumType',
+    'PostgresExplainStatement',
+    'PostgresInsertStatement',
+    'PostgresLoadLibraryExpression',
+    'PostgresPgStatStatement',
+    'PostgresQueryStatement',
+    'PostgresSetConstraintsStatement',
+    'PostgresShowStatement',
+    'PostgresUpdateStatement',
+    'QualifyClause',
+    'QueryStatement',
+    'ReturningClause',
+    'SelectModifier',
+    'Sequence',
+    'TYPE_CHECKING',
+    'Tuple',
+    'Union',
+    'UpdateStatement',
+    'WhereClause',
+    'normalise_hints',
+]
 
 
 def __getattr__(name):
     """Resolve a public name from this namespace lazily (no import cycles)."""
-    for module_name in _MODULES:
-        module = importlib.import_module(f'.{module_name}', __name__)
-        namespace = vars(module)
-        if name in namespace:
-            return namespace[name]
-        nested = namespace.get('__getattr__')
-        if nested is not None:
-            try:
-                return nested(name)
-            except AttributeError:
-                continue
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name = _EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(module_name)
+    value = vars(module)[name]
+    globals()[name] = value
+    return value

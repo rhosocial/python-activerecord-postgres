@@ -1,22 +1,151 @@
-# src/rhosocial/activerecord/backend/impl/postgres/expression/types/__init__.py
+# rhosocial/activerecord/backend/impl/postgres/expression/types/__init__.py
 """Expression namespace: types (PostgreSQL DataType subclasses)."""
 
 import importlib
 
-_MODULES = ('types',)
+# Public name -> defining module. Private names here stay reachable
+# through this package but are not part of __all__.
+_EXPORTS = {
+    'ArrayType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'BigIntType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'DataType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'EnumType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'IntegerType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'Optional': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresArrayType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresBigSerialType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresBitType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresBoxType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresCIDType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresCidrType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresCircleType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresCitextType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresCubeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresDateMultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresDateRangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresEnumColumnType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresGeographyType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresGeometryType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresHalfvecType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresHstoreType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresInetType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresInt4MultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresInt4RangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresInt8MultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresInt8RangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresJsonPathType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresLineSegmentType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresLineType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresLqueryType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresLtreeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresLtxtqueryType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresMacAddr8Type': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresMacAddrType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresMoneyType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresNumMultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresNumRangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresOIDType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresPathType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresPgLSNType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresPointType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresPolygonType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresRasterType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresRegClassType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresRegTypeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresSerialType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresSmallSerialType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresSparsevecType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTIDType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTSQueryType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTSVectorType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTsMultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTsRangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTsTzMultirangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresTsTzRangeType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresVarBitType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresVectorType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresXID8Type': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'PostgresXIDType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'SmallIntType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'TYPE_CHECKING': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'TextType': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+    'annotations': 'rhosocial.activerecord.backend.impl.postgres.expression.types.types',
+}
+
+__all__ = [
+    'ArrayType',
+    'BigIntType',
+    'DataType',
+    'EnumType',
+    'IntegerType',
+    'Optional',
+    'PostgresArrayType',
+    'PostgresBigSerialType',
+    'PostgresBitType',
+    'PostgresBoxType',
+    'PostgresCIDType',
+    'PostgresCidrType',
+    'PostgresCircleType',
+    'PostgresCitextType',
+    'PostgresCubeType',
+    'PostgresDateMultirangeType',
+    'PostgresDateRangeType',
+    'PostgresEnumColumnType',
+    'PostgresGeographyType',
+    'PostgresGeometryType',
+    'PostgresHalfvecType',
+    'PostgresHstoreType',
+    'PostgresInetType',
+    'PostgresInt4MultirangeType',
+    'PostgresInt4RangeType',
+    'PostgresInt8MultirangeType',
+    'PostgresInt8RangeType',
+    'PostgresJsonPathType',
+    'PostgresLineSegmentType',
+    'PostgresLineType',
+    'PostgresLqueryType',
+    'PostgresLtreeType',
+    'PostgresLtxtqueryType',
+    'PostgresMacAddr8Type',
+    'PostgresMacAddrType',
+    'PostgresMoneyType',
+    'PostgresNumMultirangeType',
+    'PostgresNumRangeType',
+    'PostgresOIDType',
+    'PostgresPathType',
+    'PostgresPgLSNType',
+    'PostgresPointType',
+    'PostgresPolygonType',
+    'PostgresRasterType',
+    'PostgresRegClassType',
+    'PostgresRegTypeType',
+    'PostgresSerialType',
+    'PostgresSmallSerialType',
+    'PostgresSparsevecType',
+    'PostgresTIDType',
+    'PostgresTSQueryType',
+    'PostgresTSVectorType',
+    'PostgresTsMultirangeType',
+    'PostgresTsRangeType',
+    'PostgresTsTzMultirangeType',
+    'PostgresTsTzRangeType',
+    'PostgresVarBitType',
+    'PostgresVectorType',
+    'PostgresXID8Type',
+    'PostgresXIDType',
+    'SmallIntType',
+    'TYPE_CHECKING',
+    'TextType',
+    'annotations',
+]
 
 
 def __getattr__(name):
     """Resolve a public name from this namespace lazily (no import cycles)."""
-    for module_name in _MODULES:
-        module = importlib.import_module(f'.{module_name}', __name__)
-        namespace = vars(module)
-        if name in namespace:
-            return namespace[name]
-        nested = namespace.get('__getattr__')
-        if nested is not None:
-            try:
-                return nested(name)
-            except AttributeError:
-                continue
-    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module_name = _EXPORTS.get(name)
+    if module_name is None:
+        raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+    module = importlib.import_module(module_name)
+    value = vars(module)[name]
+    globals()[name] = value
+    return value
