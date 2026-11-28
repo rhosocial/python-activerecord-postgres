@@ -1,7 +1,12 @@
 # src/rhosocial/activerecord/backend/impl/postgres/mixins/collation.py
 """PostgreSQL collation feature support implementation."""
 
+from typing import TYPE_CHECKING
+
 from rhosocial.activerecord.backend.expression.objects import SchemaObject
+
+if TYPE_CHECKING:  # pragma: no cover
+    from rhosocial.activerecord.backend.expression.functions import CollateFunction
 
 
 class PostgresCollationMixin:
@@ -13,8 +18,8 @@ class PostgresCollationMixin:
     def supports_collate_expression(self) -> bool:
         return True
 
-    def validate_collation_name(self, expr) -> str:
-        """Validate PostgreSQL collation names and return their SQL representation.
+    def validate_collation_name(self, expr: "CollateFunction") -> bool:
+        """One check: a PostgreSQL ``CollateFunction`` has an acceptable name.
 
         The only option any backend reads is the schema qualifier, and core's
         ``CollateFunction`` declares it as ``schema`` -- there is no options bag
@@ -30,6 +35,10 @@ class PostgresCollationMixin:
                 self.name, f"COLLATE schema: {type(schema).__name__}"
             )
         validate_postgres_collation_name(expr.collation_name, self.version)
+        return True
+
+    def format_collation_name(self, expr: "CollateFunction") -> str:
+        """Spell a validated PostgreSQL collation name, with schema qualifier."""
         return self._format_schema_object_name(
-            SchemaObject(self, expr.collation_name, schema_name=schema)
+            SchemaObject(self, expr.collation_name, schema_name=expr.schema)
         )
