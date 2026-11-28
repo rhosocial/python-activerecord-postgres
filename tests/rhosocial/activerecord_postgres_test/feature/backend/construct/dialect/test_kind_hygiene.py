@@ -159,6 +159,17 @@ FAMILY_FORMATTERS = {
     "PostgresNetworkValue": "renders the FunctionCall it wraps, deliberately verbatim",
     "rhosocial.activerecord.backend.impl.postgres.expression.value_types.values."
     "PostgresRangeValue": "renders the FunctionCall it wraps, deliberately verbatim",
+    # A column class is an operation surface, not a statement: every column,
+    # including a subclass of a backend column, renders through core's shared
+    # ``format_column`` entry rather than a ``format_<kind>`` of its own.
+    "rhosocial.activerecord.backend.impl.postgres.expression.column_types."
+    "column_types.PostgresAreaGeometryColumn": (
+        "a column class renders through core's shared format_column entry"
+    ),
+    "rhosocial.activerecord.backend.impl.postgres.expression.column_types."
+    "column_types.PostgresPostgisGeometryColumn": (
+        "a column class renders through core's shared format_column entry"
+    ),
 }
 
 
