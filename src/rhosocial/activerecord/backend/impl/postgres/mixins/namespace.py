@@ -66,14 +66,14 @@ class PostgresNamespaceMixin(NamespaceMixin):
         """
         return True
 
-    def validate_catalog_name(self, expr: "SchemaObject") -> None:
+    def validate_catalog_name(self, expr: "SchemaObject") -> bool:
         """Accept any non-empty database name.
 
         The base schema object has already rejected empty and non-string slots,
         and PostgreSQL imposes no further database-name restriction that a schema
         object cannot express, so there is nothing left to refuse here.
         """
-        return None
+        return True
 
     def format_qualified_name(self, expr: "SchemaObject") -> Tuple[str, tuple]:
         """Build ``[database.][schema.]name``, each level quoted separately.
