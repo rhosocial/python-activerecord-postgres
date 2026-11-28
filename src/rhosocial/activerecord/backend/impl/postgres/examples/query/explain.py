@@ -34,161 +34,162 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.expression.statements.explain import ExplainOptions
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
-
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('email', 'VARCHAR(200)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
-
-create_index = CreateIndexStatement(
-    dialect=dialect,
-    index=Index(dialect, 'idx_users_email'),
-    table=Table(dialect, 'users'),
-    columns=['email'],
-    if_not_exists=True,
-)
-sql, params = create_index.to_sql()
-backend.execute(sql, params)
-
-users = [
-    ('Alice', 'alice@example.com'),
-    ('Bob', 'bob@example.com'),
-    ('Charlie', 'charlie@example.com'),
-]
-for name, email in users:
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'users'),
-        columns=['name', 'email'],
-        source=ValuesSource(dialect, [[Literal(dialect, name), Literal(dialect, email)]]),
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
     )
-    sql, params = insert_expr.to_sql()
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
+
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
     backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('name', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('email', 'VARCHAR(200)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
 
-# 1. EXPLAIN for table scan (no index on name column)
-query1 = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, '*')],
-    from_=Table(dialect, 'users'),
-    where=ComparisonPredicate(
-        dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice'),
-    ),
-)
-explain_scan = ExplainStatement(
-    dialect=dialect,
-    statement=query1,
-    options=ExplainOptions(),
-)
-sql, params = explain_scan.to_sql()
-print("1. EXPLAIN (no index on name):")
-print(f"SQL: {sql}")
-result = backend.execute(sql, params)
-for row in result.data:
-    print(f"  {row}")
+    create_index = CreateIndexStatement(
+        dialect=dialect,
+        index=Index(dialect, 'idx_users_email'),
+        table=Table(dialect, 'users'),
+        columns=['email'],
+        if_not_exists=True,
+    )
+    sql, params = create_index.to_sql()
+    backend.execute(sql, params)
 
-# 2. EXPLAIN for index scan (email has index)
-query2 = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, '*')],
-    from_=Table(dialect, 'users'),
-    where=ComparisonPredicate(
-        dialect, '=', Column(dialect, 'email'), Literal(dialect, 'alice@example.com'),
-    ),
-)
-explain_search = ExplainStatement(
-    dialect=dialect,
-    statement=query2,
-    options=ExplainOptions(),
-)
-sql, params = explain_search.to_sql()
-print("\n2. EXPLAIN (using idx_users_email):")
-print(f"SQL: {sql}")
-result = backend.execute(sql, params)
-for row in result.data:
-    print(f"  {row}")
+    users = [
+        ('Alice', 'alice@example.com'),
+        ('Bob', 'bob@example.com'),
+        ('Charlie', 'charlie@example.com'),
+    ]
+    for name, email in users:
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'users'),
+            columns=['name', 'email'],
+            source=ValuesSource(dialect, [[Literal(dialect, name), Literal(dialect, email)]]),
+        )
+        sql, params = insert_expr.to_sql()
+        backend.execute(sql, params)
 
-# 3. EXPLAIN ANALYZE for actual execution time (executes the query)
-explain_analyze = ExplainStatement(
-    dialect=dialect,
-    statement=query2,
-    options=ExplainOptions(analyze=True, timing=True, costs=True),
-)
-sql, params = explain_analyze.to_sql()
-print("\n3. EXPLAIN ANALYZE (actual execution):")
-print(f"SQL: {sql}")
-result = backend.execute(sql, params)
-for row in result.data:
-    print(f"  {row}")
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
 
-# 4. EXPLAIN with FORMAT JSON
-explain_json = ExplainStatement(
-    dialect=dialect,
-    statement=query2,
-    options=ExplainOptions(format='JSON'),
-)
-sql, params = explain_json.to_sql()
-print("\n4. EXPLAIN FORMAT JSON:")
-print(f"SQL: {sql}")
-result = backend.execute(sql, params)
-for row in result.data:
-    print(f"  {row}")
+    # 1. EXPLAIN for table scan (no index on name column)
+    query1 = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, '*')],
+        from_=Table(dialect, 'users'),
+        where=ComparisonPredicate(
+            dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice'),
+        ),
+    )
+    explain_scan = ExplainStatement(
+        dialect=dialect,
+        statement=query1,
+        options=ExplainOptions(),
+    )
+    sql, params = explain_scan.to_sql()
+    print("1. EXPLAIN (no index on name):")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params)
+    for row in result.data:
+        print(f"  {row}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # 2. EXPLAIN for index scan (email has index)
+    query2 = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, '*')],
+        from_=Table(dialect, 'users'),
+        where=ComparisonPredicate(
+            dialect, '=', Column(dialect, 'email'), Literal(dialect, 'alice@example.com'),
+        ),
+    )
+    explain_search = ExplainStatement(
+        dialect=dialect,
+        statement=query2,
+        options=ExplainOptions(),
+    )
+    sql, params = explain_search.to_sql()
+    print("\n2. EXPLAIN (using idx_users_email):")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params)
+    for row in result.data:
+        print(f"  {row}")
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. EXPLAIN shows estimated query plan without executing
-# 2. EXPLAIN ANALYZE executes the query and shows actual times
-# 3. "cost" shows estimated startup and total cost
-# 4. "rows" shows estimated rows
-# 5. "actual time" shows actual execution time (ms)
-# 6. FORMAT JSON provides detailed structured output
+    # 3. EXPLAIN ANALYZE for actual execution time (executes the query)
+    explain_analyze = ExplainStatement(
+        dialect=dialect,
+        statement=query2,
+        options=ExplainOptions(analyze=True, timing=True, costs=True),
+    )
+    sql, params = explain_analyze.to_sql()
+    print("\n3. EXPLAIN ANALYZE (actual execution):")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params)
+    for row in result.data:
+        print(f"  {row}")
+
+    # 4. EXPLAIN with FORMAT JSON
+    explain_json = ExplainStatement(
+        dialect=dialect,
+        statement=query2,
+        options=ExplainOptions(format='JSON'),
+    )
+    sql, params = explain_json.to_sql()
+    print("\n4. EXPLAIN FORMAT JSON:")
+    print(f"SQL: {sql}")
+    result = backend.execute(sql, params)
+    for row in result.data:
+        print(f"  {row}")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
+
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. EXPLAIN shows estimated query plan without executing
+    # 2. EXPLAIN ANALYZE executes the query and shows actual times
+    # 3. "cost" shows estimated startup and total cost
+    # 4. "rows" shows estimated rows
+    # 5. "actual time" shows actual execution time (ms)
+    # 6. FORMAT JSON provides detailed structured output

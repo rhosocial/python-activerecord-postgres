@@ -41,298 +41,299 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'employees'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'employees'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'employees'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            'name',
-            'VARCHAR(100)',
-            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
-        ),
-        ColumnDefinition('department', 'VARCHAR(50)'),
-        ColumnDefinition('salary', 'NUMERIC(10,2)'),
-        ColumnDefinition('manager_id', 'INTEGER'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
-
-insert = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'employees'),
-    columns=['name', 'department', 'salary', 'manager_id'],
-    source=ValuesSource(
-        dialect,
-        [
-            [
-                Literal(dialect, 'Alice Smith'),
-                Literal(dialect, 'Engineering'),
-                Literal(dialect, 95000.00),
-                Literal(dialect, None),
-            ],
-            [
-                Literal(dialect, 'Bob Johnson'),
-                Literal(dialect, 'Engineering'),
-                Literal(dialect, 85000.00),
-                Literal(dialect, 1),
-            ],
-            [
-                Literal(dialect, 'Charlie Brown'),
-                Literal(dialect, 'Sales'),
-                Literal(dialect, 72000.00),
-                Literal(dialect, None),
-            ],
-            [
-                Literal(dialect, 'Diana Prince'),
-                Literal(dialect, 'Marketing'),
-                Literal(dialect, 88000.00),
-                Literal(dialect, None),
-            ],
-            [
-                Literal(dialect, 'Eve Williams'),
-                Literal(dialect, 'Sales'),
-                Literal(dialect, 68000.00),
-                Literal(dialect, 3),
-            ],
-            [
-                Literal(dialect, 'Frank Miller'),
-                Literal(dialect, 'Engineering'),
-                Literal(dialect, 105000.00),
-                Literal(dialect, 1),
-            ],
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'employees'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                'name',
+                'VARCHAR(100)',
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition('department', 'VARCHAR(50)'),
+            ColumnDefinition('salary', 'NUMERIC(10,2)'),
+            ColumnDefinition('manager_id', 'INTEGER'),
         ],
-    ),
-)
-sql, params = insert.to_sql()
-backend.execute(sql, params)
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-
-# 1. LIKE predicate - find employees whose name starts with 'A'
-like_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'department'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=LikePredicate(
+    insert = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'employees'),
+        columns=['name', 'department', 'salary', 'manager_id'],
+        source=ValuesSource(
             dialect,
-            LikeOperator.LIKE,
+            [
+                [
+                    Literal(dialect, 'Alice Smith'),
+                    Literal(dialect, 'Engineering'),
+                    Literal(dialect, 95000.00),
+                    Literal(dialect, None),
+                ],
+                [
+                    Literal(dialect, 'Bob Johnson'),
+                    Literal(dialect, 'Engineering'),
+                    Literal(dialect, 85000.00),
+                    Literal(dialect, 1),
+                ],
+                [
+                    Literal(dialect, 'Charlie Brown'),
+                    Literal(dialect, 'Sales'),
+                    Literal(dialect, 72000.00),
+                    Literal(dialect, None),
+                ],
+                [
+                    Literal(dialect, 'Diana Prince'),
+                    Literal(dialect, 'Marketing'),
+                    Literal(dialect, 88000.00),
+                    Literal(dialect, None),
+                ],
+                [
+                    Literal(dialect, 'Eve Williams'),
+                    Literal(dialect, 'Sales'),
+                    Literal(dialect, 68000.00),
+                    Literal(dialect, 3),
+                ],
+                [
+                    Literal(dialect, 'Frank Miller'),
+                    Literal(dialect, 'Engineering'),
+                    Literal(dialect, 105000.00),
+                    Literal(dialect, 1),
+                ],
+            ],
+        ),
+    )
+    sql, params = insert.to_sql()
+    backend.execute(sql, params)
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+
+    # 1. LIKE predicate - find employees whose name starts with 'A'
+    like_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
             Column(dialect, 'name'),
-            Literal(dialect, 'A%'),
-        ),
-    ),
-)
-sql, params = like_query.to_sql()
-print(f"LIKE SQL: {sql}")
-print(f"Params: {params}")
-
-# 2. IN predicate - find employees in specific departments
-in_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'department'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=InPredicate(
-            dialect,
             Column(dialect, 'department'),
-            Literal(dialect, ['Engineering', 'Sales']),
-        ),
-    ),
-)
-sql, params = in_query.to_sql()
-print(f"IN SQL: {sql}")
-print(f"Params: {params}")
-
-# 3. BETWEEN predicate - find employees with salary in a range
-between_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'salary'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=BetweenPredicate(
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
             dialect,
-            Column(dialect, 'salary'),
-            Literal(dialect, 70000.00),
-            Literal(dialect, 90000.00),
-        ),
-    ),
-)
-sql, params = between_query.to_sql()
-print(f"BETWEEN SQL: {sql}")
-print(f"Params: {params}")
-
-# 4. IS NULL / IS NOT NULL predicates - find employees with/without managers
-is_null_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'manager_id'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=IsNullPredicate(
-            dialect,
-            Column(dialect, 'manager_id'),
-            is_not=False,
-        ),
-    ),
-)
-sql, params = is_null_query.to_sql()
-print(f"IS NULL SQL: {sql}")
-print(f"Params: {params}")
-
-is_not_null_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'manager_id'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=IsNullPredicate(
-            dialect,
-            Column(dialect, 'manager_id'),
-            is_not=True,
-        ),
-    ),
-)
-sql, params = is_not_null_query.to_sql()
-print(f"IS NOT NULL SQL: {sql}")
-print(f"Params: {params}")
-
-# 5. Combined predicates - AND with LIKE and BETWEEN
-combined_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'department'),
-        Column(dialect, 'salary'),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=WhereClause(
-        dialect,
-        condition=LogicalPredicate(
-            dialect,
-            'AND',
-            LikePredicate(
+            condition=LikePredicate(
                 dialect,
                 LikeOperator.LIKE,
                 Column(dialect, 'name'),
-                Literal(dialect, '%e%'),
+                Literal(dialect, 'A%'),
             ),
-            BetweenPredicate(
+        ),
+    )
+    sql, params = like_query.to_sql()
+    print(f"LIKE SQL: {sql}")
+    print(f"Params: {params}")
+
+    # 2. IN predicate - find employees in specific departments
+    in_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'department'),
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
+            dialect,
+            condition=InPredicate(
+                dialect,
+                Column(dialect, 'department'),
+                Literal(dialect, ['Engineering', 'Sales']),
+            ),
+        ),
+    )
+    sql, params = in_query.to_sql()
+    print(f"IN SQL: {sql}")
+    print(f"Params: {params}")
+
+    # 3. BETWEEN predicate - find employees with salary in a range
+    between_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'salary'),
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
+            dialect,
+            condition=BetweenPredicate(
                 dialect,
                 Column(dialect, 'salary'),
                 Literal(dialect, 70000.00),
-                Literal(dialect, 100000.00),
+                Literal(dialect, 90000.00),
             ),
         ),
-    ),
-)
-sql, params = combined_query.to_sql()
-print(f"Combined SQL: {sql}")
-print(f"Params: {params}")
+    )
+    sql, params = between_query.to_sql()
+    print(f"BETWEEN SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-options = ExecutionOptions(stmt_type=StatementType.DQL)
+    # 4. IS NULL / IS NOT NULL predicates - find employees with/without managers
+    is_null_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'manager_id'),
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
+            dialect,
+            condition=IsNullPredicate(
+                dialect,
+                Column(dialect, 'manager_id'),
+                is_not=False,
+            ),
+        ),
+    )
+    sql, params = is_null_query.to_sql()
+    print(f"IS NULL SQL: {sql}")
+    print(f"Params: {params}")
 
-print("\n--- LIKE predicate results ---")
-sql, params = like_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    is_not_null_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'manager_id'),
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
+            dialect,
+            condition=IsNullPredicate(
+                dialect,
+                Column(dialect, 'manager_id'),
+                is_not=True,
+            ),
+        ),
+    )
+    sql, params = is_not_null_query.to_sql()
+    print(f"IS NOT NULL SQL: {sql}")
+    print(f"Params: {params}")
 
-print("\n--- IN predicate results ---")
-sql, params = in_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    # 5. Combined predicates - AND with LIKE and BETWEEN
+    combined_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'department'),
+            Column(dialect, 'salary'),
+        ],
+        from_=Table(dialect, 'employees'),
+        where=WhereClause(
+            dialect,
+            condition=LogicalPredicate(
+                dialect,
+                'AND',
+                LikePredicate(
+                    dialect,
+                    LikeOperator.LIKE,
+                    Column(dialect, 'name'),
+                    Literal(dialect, '%e%'),
+                ),
+                BetweenPredicate(
+                    dialect,
+                    Column(dialect, 'salary'),
+                    Literal(dialect, 70000.00),
+                    Literal(dialect, 100000.00),
+                ),
+            ),
+        ),
+    )
+    sql, params = combined_query.to_sql()
+    print(f"Combined SQL: {sql}")
+    print(f"Params: {params}")
 
-print("\n--- BETWEEN predicate results ---")
-sql, params = between_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-print("\n--- IS NULL predicate results ---")
-sql, params = is_null_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    print("\n--- LIKE predicate results ---")
+    sql, params = like_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-print("\n--- IS NOT NULL predicate results ---")
-sql, params = is_not_null_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    print("\n--- IN predicate results ---")
+    sql, params = in_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-print("\n--- Combined predicates results ---")
-sql, params = combined_query.to_sql()
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    print("\n--- BETWEEN predicate results ---")
+    sql, params = between_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    print("\n--- IS NULL predicate results ---")
+    sql, params = is_null_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
+
+    print("\n--- IS NOT NULL predicate results ---")
+    sql, params = is_not_null_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
+
+    print("\n--- Combined predicates results ---")
+    sql, params = combined_query.to_sql()
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

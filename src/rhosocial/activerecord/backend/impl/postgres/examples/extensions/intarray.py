@@ -19,239 +19,240 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    CreateIndexStatement,
-    QueryStatement,
-    Column,
-    OrderByClause,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import CastExpression, FunctionCall, Literal
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.expression.operators import (
-    BinaryExpression,
-)
-from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertStatement,
-)
-from rhosocial.activerecord.backend.expression.statements import (
-    ValuesSource,
-)
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-from rhosocial.activerecord.backend.expression.types import IntegerType
-
-# Check if intarray extension is available
-available = dialect.is_extension_available("intarray")
-installed = dialect.is_extension_installed("intarray")
-print(f"Extension check: intarray available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="intarray",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    # Re-detect extensions after creation
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("intarray")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with integer array column
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="name",
-            data_type="VARCHAR(100)",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="tag_ids",
-            data_type="INTEGER[]",
-        ),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'tags'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert integer array data
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'tags'),
-        columns=["name", "tag_ids"],
-        source=ValuesSource(
-            dialect,
-            [
-                [Literal(dialect, "Article A"), Literal(dialect, "{1,2,3}")],
-                [Literal(dialect, "Article B"), Literal(dialect, "{2,3,4}")],
-                [Literal(dialect, "Article C"), Literal(dialect, "{5,6,7}")],
-                [Literal(dialect, "Article D"), Literal(dialect, "{1,3,5,7}")],
-                [Literal(dialect, "Article E"), Literal(dialect, "{2,4,6}")],
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        CreateIndexStatement,
+        QueryStatement,
+        Column,
+        OrderByClause,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.core import CastExpression, FunctionCall, Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.expression.operators import (
+        BinaryExpression,
+    )
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        InsertStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements import (
+        ValuesSource,
+    )
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+    from rhosocial.activerecord.backend.expression.types import IntegerType
+
+    # Check if intarray extension is available
+    available = dialect.is_extension_available("intarray")
+    installed = dialect.is_extension_installed("intarray")
+    print(f"Extension check: intarray available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="intarray",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        # Re-detect extensions after creation
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("intarray")
+
+    if installed:
+        # Example 1: Create table with integer array column
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="name",
+                data_type="VARCHAR(100)",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="tag_ids",
+                data_type="INTEGER[]",
+            ),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'tags'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert integer array data
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'tags'),
+            columns=["name", "tag_ids"],
+            source=ValuesSource(
+                dialect,
+                [
+                    [Literal(dialect, "Article A"), Literal(dialect, "{1,2,3}")],
+                    [Literal(dialect, "Article B"), Literal(dialect, "{2,3,4}")],
+                    [Literal(dialect, "Article C"), Literal(dialect, "{5,6,7}")],
+                    [Literal(dialect, "Article D"), Literal(dialect, "{1,3,5,7}")],
+                    [Literal(dialect, "Article E"), Literal(dialect, "{2,4,6}")],
+                ],
+            ),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT integer array data ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        backend.execute(sql, params)
+
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+
+        # Example 3: Contains operator (@>)
+        # Find articles that contain ALL of the specified tag IDs
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
+            from_=Table(dialect, "tags"),
+            where=BinaryExpression(
+                dialect, "@>",
+                Column(dialect, "tag_ids"),
+                CastExpression(dialect, Literal(dialect, "{1,3}"), IntegerType(dialect)),
+            ),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Contains operator (@>) ---")
+        print("Find articles with BOTH tag 1 AND 3:")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 4: Overlap operator (&&)
+        # Find articles that have ANY of the specified tag IDs
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
+            from_=Table(dialect, "tags"),
+            where=BinaryExpression(
+                dialect, "&&",
+                Column(dialect, "tag_ids"),
+                CastExpression(dialect, Literal(dialect, "{1,6}"), IntegerType(dialect)),
+            ),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Overlap operator (&&) ---")
+        print("Find articles with tag 1 OR tag 6:")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 5: idx() function - find position of element in array
+        # idx(array, element) returns 0 if not found (1-based index)
+        idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Literal(dialect, 3)).as_("pos_of_3")
+
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), idx_func],
+            from_=Table(dialect, "tags"),
+            order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- idx() function ---")
+        print("Position of element 3 in each array:")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 6: sort() and uniq() functions
+        # sort() sorts the array, uniq() removes duplicates (works on sorted arrays)
+        sort_func = FunctionCall(dialect, "sort", Column(dialect, "tag_ids")).as_("sorted")
+        unique_sorted_func = FunctionCall(
+            dialect, "uniq", FunctionCall(dialect, "sort", Column(dialect, "tag_ids"))
+        ).as_("unique_sorted")
+
+        query = QueryStatement(
+            dialect=dialect,
+            select=[
+                Column(dialect, "name"),
+                sort_func,
+                unique_sorted_func,
             ],
-        ),
-    )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT integer array data ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
+            from_=Table(dialect, "tags"),
+            where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 4)),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- sort() and uniq() functions ---")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 7: Create GiST index for fast intarray queries
+        # gist__int_ops operator class enables fast @>, &&, = queries
+        create_idx = CreateIndexStatement(
+            dialect=dialect,
+            index=Index(dialect, 'idx_tags_tag_ids'),
+            table=Table(dialect, 'tags'),
+            columns=["tag_ids"],
+            index_type="GIST",
+            if_not_exists=True,
+        )
+        sql, params = create_idx.to_sql()
+        print("\n--- CREATE GIST INDEX ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("GiST index created: idx_tags_tag_ids")
+
+    else:
+        print("\nSkipping execution - intarray not available on this server")
+        print("To enable intarray, run: CREATE EXTENSION intarray;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-
-    # Example 3: Contains operator (@>)
-    # Find articles that contain ALL of the specified tag IDs
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
-        from_=Table(dialect, "tags"),
-        where=BinaryExpression(
-            dialect, "@>",
-            Column(dialect, "tag_ids"),
-            CastExpression(dialect, Literal(dialect, "{1,3}"), IntegerType(dialect)),
-        ),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Contains operator (@>) ---")
-    print("Find articles with BOTH tag 1 AND 3:")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 4: Overlap operator (&&)
-    # Find articles that have ANY of the specified tag IDs
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "tag_ids")],
-        from_=Table(dialect, "tags"),
-        where=BinaryExpression(
-            dialect, "&&",
-            Column(dialect, "tag_ids"),
-            CastExpression(dialect, Literal(dialect, "{1,6}"), IntegerType(dialect)),
-        ),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Overlap operator (&&) ---")
-    print("Find articles with tag 1 OR tag 6:")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 5: idx() function - find position of element in array
-    # idx(array, element) returns 0 if not found (1-based index)
-    idx_func = FunctionCall(dialect, "idx", Column(dialect, "tag_ids"), Literal(dialect, 3)).as_("pos_of_3")
-
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), idx_func],
-        from_=Table(dialect, "tags"),
-        order_by=OrderByClause(dialect, expressions=[Column(dialect, "name")]),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- idx() function ---")
-    print("Position of element 3 in each array:")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 6: sort() and uniq() functions
-    # sort() sorts the array, uniq() removes duplicates (works on sorted arrays)
-    sort_func = FunctionCall(dialect, "sort", Column(dialect, "tag_ids")).as_("sorted")
-    unique_sorted_func = FunctionCall(
-        dialect, "uniq", FunctionCall(dialect, "sort", Column(dialect, "tag_ids"))
-    ).as_("unique_sorted")
-
-    query = QueryStatement(
-        dialect=dialect,
-        select=[
-            Column(dialect, "name"),
-            sort_func,
-            unique_sorted_func,
-        ],
-        from_=Table(dialect, "tags"),
-        where=ComparisonPredicate(dialect, "=", Column(dialect, "id"), Literal(dialect, 4)),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- sort() and uniq() functions ---")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 7: Create GiST index for fast intarray queries
-    # gist__int_ops operator class enables fast @>, &&, = queries
-    create_idx = CreateIndexStatement(
-        dialect=dialect,
-        index=Index(dialect, 'idx_tags_tag_ids'),
-        table=Table(dialect, 'tags'),
-        columns=["tag_ids"],
-        index_type="GIST",
-        if_not_exists=True,
-    )
-    sql, params = create_idx.to_sql()
-    print("\n--- CREATE GIST INDEX ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("GiST index created: idx_tags_tag_ids")
-
-else:
-    print("\nSkipping execution - intarray not available on this server")
-    print("To enable intarray, run: CREATE EXTENSION intarray;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'tags'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()

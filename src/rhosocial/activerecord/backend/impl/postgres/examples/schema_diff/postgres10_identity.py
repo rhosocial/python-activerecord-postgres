@@ -35,89 +35,90 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("POSTGRES_HOST", "localhost"),
-    port=int(os.getenv("POSTGRES_PORT", "5432")),
-    database=os.getenv("POSTGRES_DATABASE", "test"),
-    username=os.getenv("POSTGRES_USER", "postgres"),
-    password=os.getenv("POSTGRES_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=os.getenv("POSTGRES_DATABASE", "test"),
+        username=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-drop_pg9 = DropTableStatement(dialect, Table(dialect, 'pg9_style'), if_exists=True, cascade=True)
-drop_pg10 = DropTableStatement(dialect, Table(dialect, 'pg10_style'), if_exists=True, cascade=True)
-sql, params = drop_pg9.to_sql()
-backend.execute(sql, params)
-sql, params = drop_pg10.to_sql()
-backend.execute(sql, params)
+    drop_pg9 = DropTableStatement(dialect, Table(dialect, 'pg9_style'), if_exists=True, cascade=True)
+    drop_pg10 = DropTableStatement(dialect, Table(dialect, 'pg10_style'), if_exists=True, cascade=True)
+    sql, params = drop_pg9.to_sql()
+    backend.execute(sql, params)
+    sql, params = drop_pg10.to_sql()
+    backend.execute(sql, params)
 
-# PostgreSQL 9-compatible: SERIAL shorthand
-pg9_table = CreateTableStatement(
-    dialect=dialect, table=Table(dialect, 'pg9_style'), columns=[
-        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
-        ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
-    ]
-)
-sql, params = pg9_table.to_sql()
-backend.execute(sql, params)
-
-# PostgreSQL 10+: GENERATED AS IDENTITY
-# Note: IdentityAttribute(generation='ALWAYS') triggers
-# GENERATED ALWAYS AS IDENTITY through the dialect's gated identity formatter;
-# on PostgreSQL 9 that formatter refuses instead of rendering a clause the
-# server rejects, and the SERIAL path above stays the PG9-compatible one.
-try:
-    pg10_table = CreateTableStatement(
-        dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
-            ColumnDefinition(dialect, "id", IntegerType(dialect),
-                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())],
-                attributes=[IdentityAttribute(generation="ALWAYS")]),
+    # PostgreSQL 9-compatible: SERIAL shorthand
+    pg9_table = CreateTableStatement(
+        dialect=dialect, table=Table(dialect, 'pg9_style'), columns=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
             ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
         ]
     )
-    sql, params = pg10_table.to_sql()
+    sql, params = pg9_table.to_sql()
     backend.execute(sql, params)
-except Exception as e:
-    print(f"(GENERATED AS IDENTITY not available on this server: {e})")
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.schema import (  # noqa: E402
-    SyncSchemaSnapshotBuilder,
-)
+    # PostgreSQL 10+: GENERATED AS IDENTITY
+    # Note: IdentityAttribute(generation='ALWAYS') triggers
+    # GENERATED ALWAYS AS IDENTITY through the dialect's gated identity formatter;
+    # on PostgreSQL 9 that formatter refuses instead of rendering a clause the
+    # server rejects, and the SERIAL path above stays the PG9-compatible one.
+    try:
+        pg10_table = CreateTableStatement(
+            dialect=dialect, table=Table(dialect, 'pg10_style'), columns=[
+                ColumnDefinition(dialect, "id", IntegerType(dialect),
+                    constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())],
+                    attributes=[IdentityAttribute(generation="ALWAYS")]),
+                ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
+            ]
+        )
+        sql, params = pg10_table.to_sql()
+        backend.execute(sql, params)
+    except Exception as e:
+        print(f"(GENERATED AS IDENTITY not available on this server: {e})")
 
-builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
-snapshot = builder.build(schema="public")
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.schema import (  # noqa: E402
+        SyncSchemaSnapshotBuilder,
+    )
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-for tbl_name in ("pg9_style", "pg10_style"):
-    if tbl_name in snapshot.tables:
-        tbl = snapshot.tables[tbl_name]
-        for col in tbl.columns:
-            if col.is_auto_increment or col.is_primary_key:
-                print(f"{tbl_name}.{col.name}:")
-                print(f"  data_type:       {col.data_type}")
-                print(f"  is_auto_increment:{col.is_auto_increment}")
-                print(f"  is_generated:    {col.is_generated}")
-                print(f"  default_value:   {col.default_value}")
-                print(f"  generated_expr:  {col.generated_expression}")
+    builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
+    snapshot = builder.build(schema="public")
 
-print()
-print("Note: SERIAL vs IDENTITY columns produce different metadata.")
-print("When diff-ing PG9 vs PG10+ snapshots, these differences will appear.")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    for tbl_name in ("pg9_style", "pg10_style"):
+        if tbl_name in snapshot.tables:
+            tbl = snapshot.tables[tbl_name]
+            for col in tbl.columns:
+                if col.is_auto_increment or col.is_primary_key:
+                    print(f"{tbl_name}.{col.name}:")
+                    print(f"  data_type:       {col.data_type}")
+                    print(f"  is_auto_increment:{col.is_auto_increment}")
+                    print(f"  is_generated:    {col.is_generated}")
+                    print(f"  default_value:   {col.default_value}")
+                    print(f"  generated_expr:  {col.generated_expression}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-sql, params = drop_pg9.to_sql()
-backend.execute(sql, params)
-sql, params = drop_pg10.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    print()
+    print("Note: SERIAL vs IDENTITY columns produce different metadata.")
+    print("When diff-ing PG9 vs PG10+ snapshots, these differences will appear.")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    sql, params = drop_pg9.to_sql()
+    backend.execute(sql, params)
+    sql, params = drop_pg10.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()

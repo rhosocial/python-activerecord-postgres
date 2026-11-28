@@ -28,64 +28,65 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table  # noqa: E402
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-    sslmode=os.getenv("PG_SSLMODE"),
-    sslrootcert=os.getenv("PG_SSLROOTCERT"),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.functions import trgm_index  # noqa: E402
-
-if dialect.is_extension_available("pg_trgm") and not dialect.is_extension_installed("pg_trgm"):
-    backend.execute(*PostgresCreateExtensionStatement(
-        dialect=dialect, name="pg_trgm"
-    ).to_sql())
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
+        sslmode=os.getenv("PG_SSLMODE"),
+        sslrootcert=os.getenv("PG_SSLROOTCERT"),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-expressions = []
-if dialect.supports_pg_trgm_index():
-    for method, name in (
-        ("gin", "idx_products_title_gin"),
-        ("gist", "idx_products_title_gist"),
-    ):
-        statement = trgm_index(dialect, "products", ["title"], name, index_type=method)
-        print(f"SQL: {statement.to_sql()[0]}")
-        expressions.append(statement)
-else:
-    print("pg_trgm index is not available on this server")
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.functions import trgm_index  # noqa: E402
 
-# ============================================================
-# SECTION: Execution (run the expressions)
-# ============================================================
-if expressions:
-    backend.execute(*DropTableStatement(
-        dialect=dialect, table=Table(dialect, "products"), if_exists=True
-    ).to_sql())
-    backend.execute(*CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, "products"),
-        columns=[
-            ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ]),
-            ColumnDefinition(dialect, "title", TextType()),
-        ],
-    ).to_sql())
-    for statement in expressions:
-        backend.execute(*statement.to_sql())
+    if dialect.is_extension_available("pg_trgm") and not dialect.is_extension_installed("pg_trgm"):
+        backend.execute(*PostgresCreateExtensionStatement(
+            dialect=dialect, name="pg_trgm"
+        ).to_sql())
+        backend.introspect_and_adapt()
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    expressions = []
+    if dialect.supports_pg_trgm_index():
+        for method, name in (
+            ("gin", "idx_products_title_gin"),
+            ("gist", "idx_products_title_gist"),
+        ):
+            statement = trgm_index(dialect, "products", ["title"], name, index_type=method)
+            print(f"SQL: {statement.to_sql()[0]}")
+            expressions.append(statement)
+    else:
+        print("pg_trgm index is not available on this server")
+
+    # ============================================================
+    # SECTION: Execution (run the expressions)
+    # ============================================================
+    if expressions:
+        backend.execute(*DropTableStatement(
+            dialect=dialect, table=Table(dialect, "products"), if_exists=True
+        ).to_sql())
+        backend.execute(*CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, "products"),
+            columns=[
+                ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ]),
+                ColumnDefinition(dialect, "title", TextType()),
+            ],
+        ).to_sql())
+        for statement in expressions:
+            backend.execute(*statement.to_sql())
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

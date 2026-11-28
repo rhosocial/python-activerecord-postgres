@@ -9,109 +9,110 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Column, FunctionCall
-from rhosocial.activerecord.backend.expression.advanced_functions import (
-    WindowSpecification,
-    WindowFrameSpecification,
-)
-from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Column, FunctionCall
+    from rhosocial.activerecord.backend.expression.advanced_functions import (
+        WindowSpecification,
+        WindowFrameSpecification,
+    )
+    from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-# ROW_NUMBER() - sequential rank without gaps
-row_number = FunctionCall(
-    dialect=dialect,
-    func_name='ROW_NUMBER',
-    window_spec=WindowSpecification(
+    # ROW_NUMBER() - sequential rank without gaps
+    row_number = FunctionCall(
         dialect=dialect,
-        partition_by=[Column(dialect, 'department')],
-        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
-        frame=WindowFrameSpecification(
+        func_name='ROW_NUMBER',
+        window_spec=WindowSpecification(
             dialect=dialect,
-            frame_type='ROWS',
-            start_frame='UNBOUNDED PRECEDING',
-            end_frame='CURRENT ROW',
+            partition_by=[Column(dialect, 'department')],
+            order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
+            frame=WindowFrameSpecification(
+                dialect=dialect,
+                frame_type='ROWS',
+                start_frame='UNBOUNDED PRECEDING',
+                end_frame='CURRENT ROW',
+            ),
         ),
-    ),
-    alias='row_number',
-)
+        alias='row_number',
+    )
 
-# RANK() - rank with gaps (same values get same rank, skip ranks)
-rank = FunctionCall(
-    dialect=dialect,
-    func_name='RANK',
-    window_spec=WindowSpecification(
+    # RANK() - rank with gaps (same values get same rank, skip ranks)
+    rank = FunctionCall(
         dialect=dialect,
-        partition_by=[Column(dialect, 'department')],
-        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
-    ),
-    alias='rank',
-)
+        func_name='RANK',
+        window_spec=WindowSpecification(
+            dialect=dialect,
+            partition_by=[Column(dialect, 'department')],
+            order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
+        ),
+        alias='rank',
+    )
 
-# DENSE_RANK() - rank without gaps
-dense_rank = FunctionCall(
-    dialect=dialect,
-    func_name='DENSE_RANK',
-    window_spec=WindowSpecification(
+    # DENSE_RANK() - rank without gaps
+    dense_rank = FunctionCall(
         dialect=dialect,
-        partition_by=[Column(dialect, 'department')],
-        order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
-    ),
-    alias='dense_rank',
-)
+        func_name='DENSE_RANK',
+        window_spec=WindowSpecification(
+            dialect=dialect,
+            partition_by=[Column(dialect, 'department')],
+            order_by=OrderByClause(dialect, [Column(dialect, 'salary')]),
+        ),
+        alias='dense_rank',
+    )
 
-# Generate SQL
-sql, params = row_number.to_sql()
-print(f"ROW_NUMBER: {sql}")
-print(f"Params: {params}")
+    # Generate SQL
+    sql, params = row_number.to_sql()
+    print(f"ROW_NUMBER: {sql}")
+    print(f"Params: {params}")
 
-sql, params = rank.to_sql()
-print(f"RANK: {sql}")
+    sql, params = rank.to_sql()
+    print(f"RANK: {sql}")
 
-sql, params = dense_rank.to_sql()
-print(f"DENSE_RANK: {sql}")
+    sql, params = dense_rank.to_sql()
+    print(f"DENSE_RANK: {sql}")
 
-# ============================================================
-# SECTION: Full Query Example
-# ============================================================
-# Using window functions in a SELECT query
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'department'),
-        Column(dialect, 'salary'),
-        row_number,
-    ],
-    from_=Table(dialect, 'employees'),
-)
+    # ============================================================
+    # SECTION: Full Query Example
+    # ============================================================
+    # Using window functions in a SELECT query
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'department'),
+            Column(dialect, 'salary'),
+            row_number,
+        ],
+        from_=Table(dialect, 'employees'),
+    )
 
-sql, params = query.to_sql()
-print(f"Full query SQL: {sql}")
-print(f"Params: {params}")
+    sql, params = query.to_sql()
+    print(f"Full query SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Output (reference)
-# ============================================================
-# Expected output:
-# ROW_NUMBER: ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary
-#    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS row_number
-# RANK: RANK() OVER (PARTITION BY department ORDER BY salary) AS rank
-# DENSE_RANK: DENSE_RANK() OVER (PARTITION BY department ORDER BY salary) AS dense_rank
+    # ============================================================
+    # SECTION: Output (reference)
+    # ============================================================
+    # Expected output:
+    # ROW_NUMBER: ROW_NUMBER() OVER (PARTITION BY department ORDER BY salary
+    #    ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) AS row_number
+    # RANK: RANK() OVER (PARTITION BY department ORDER BY salary) AS rank
+    # DENSE_RANK: DENSE_RANK() OVER (PARTITION BY department ORDER BY salary) AS dense_rank

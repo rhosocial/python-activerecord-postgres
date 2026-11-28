@@ -31,84 +31,85 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresSerialType,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("POSTGRES_HOST", "localhost"),
-    port=int(os.getenv("POSTGRES_PORT", "5432")),
-    database=os.getenv("POSTGRES_DATABASE", "test"),
-    username=os.getenv("POSTGRES_USER", "postgres"),
-    password=os.getenv("POSTGRES_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=os.getenv("POSTGRES_DATABASE", "test"),
+        username=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-drop_users = DropTableStatement(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
-drop_orders = DropTableStatement(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
-sql, params = drop_users.to_sql()
-backend.execute(sql, params)
-sql, params = drop_orders.to_sql()
-backend.execute(sql, params)
+    drop_users = DropTableStatement(dialect, Table(dialect, 'users'), if_exists=True, cascade=True)
+    drop_orders = DropTableStatement(dialect, Table(dialect, 'orders'), if_exists=True, cascade=True)
+    sql, params = drop_users.to_sql()
+    backend.execute(sql, params)
+    sql, params = drop_orders.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.schema import (  # noqa: E402
-    SyncSchemaSnapshotBuilder,
-)
-from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
-    PostgresSchemaDiffer,
-)
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.schema import (  # noqa: E402
+        SyncSchemaSnapshotBuilder,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
+        PostgresSchemaDiffer,
+    )
 
-builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
-snapshot_before = builder.build(schema="public")
+    builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
+    snapshot_before = builder.build(schema="public")
 
-users_table = CreateTableStatement(
-    dialect=dialect, table=Table(dialect, 'users'), columns=[
-        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
-        ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
-            constraints=[ColumnConstraint(branch=ColumnNotNullConstraint())]),
-    ]
-)
-sql, params = users_table.to_sql()
-backend.execute(sql, params)
+    users_table = CreateTableStatement(
+        dialect=dialect, table=Table(dialect, 'users'), columns=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
+            ColumnDefinition(dialect, "name", VarCharType(dialect, length=100),
+                constraints=[ColumnConstraint(branch=ColumnNotNullConstraint())]),
+        ]
+    )
+    sql, params = users_table.to_sql()
+    backend.execute(sql, params)
 
-orders_table = CreateTableStatement(
-    dialect=dialect, table=Table(dialect, 'orders'), columns=[
-        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
-        ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
-        ColumnDefinition(dialect, "amount", DecimalType(dialect, precision=10, scale=2)),
-    ],
-    table_constraints=[
-        TableConstraint(
-            dialect,
-            branch=TableForeignKeyConstraint(dialect, ["user_id"], (Table(dialect, "users"), ["id"])),
-        )
-    ]
-)
-sql, params = orders_table.to_sql()
-backend.execute(sql, params)
+    orders_table = CreateTableStatement(
+        dialect=dialect, table=Table(dialect, 'orders'), columns=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
+            ColumnDefinition(dialect, "user_id", IntegerType(dialect)),
+            ColumnDefinition(dialect, "amount", DecimalType(dialect, precision=10, scale=2)),
+        ],
+        table_constraints=[
+            TableConstraint(
+                dialect,
+                branch=TableForeignKeyConstraint(dialect, ["user_id"], (Table(dialect, "users"), ["id"])),
+            )
+        ]
+    )
+    sql, params = orders_table.to_sql()
+    backend.execute(sql, params)
 
-snapshot_after = builder.build(schema="public")
+    snapshot_after = builder.build(schema="public")
 
-differ = PostgresSchemaDiffer()
-diff = differ.compare(snapshot_before, snapshot_after)
+    differ = PostgresSchemaDiffer()
+    diff = differ.compare(snapshot_before, snapshot_after)
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-print(f"Added tables:   {diff.added_tables}")
-print(f"Removed tables: {diff.removed_tables}")
-print(f"Modified tables:{diff.modified_tables}")
-print(f"Diff is empty:  {diff.is_empty}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    print(f"Added tables:   {diff.added_tables}")
+    print(f"Removed tables: {diff.removed_tables}")
+    print(f"Modified tables:{diff.modified_tables}")
+    print(f"Diff is empty:  {diff.is_empty}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-sql, params = drop_users.to_sql()
-backend.execute(sql, params)
-sql, params = drop_orders.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    sql, params = drop_users.to_sql()
+    backend.execute(sql, params)
+    sql, params = drop_orders.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()

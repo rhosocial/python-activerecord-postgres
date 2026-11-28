@@ -24,102 +24,103 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'documents'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'documents'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'documents'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'documents'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('data', 'JSONB'),
+        ],
+    )
+    backend.execute(*create_table.to_sql())
+
+    import json
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'documents'),
+        columns=['data'],
+        source=ValuesSource(
+            dialect,
+            [
+                [Literal(dialect, json.dumps({'name': 'Alice', 'age': 30, 'tags': ['a', 'b']}))],
+                [Literal(dialect, json.dumps({'name': 'Bob', 'age': 25, 'tags': ['c']}))],
             ],
         ),
-        ColumnDefinition('data', 'JSONB'),
-    ],
-)
-backend.execute(*create_table.to_sql())
+    )
+    backend.execute(*insert_expr.to_sql())
 
-import json
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'documents'),
-    columns=['data'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, json.dumps({'name': 'Alice', 'age': 30, 'tags': ['a', 'b']}))],
-            [Literal(dialect, json.dumps({'name': 'Bob', 'age': 25, 'tags': ['c']}))],
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement, Column,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.impl.postgres.functions.json import (
+        jsonb_path_query,
+        json_path_root,
+        json_path_key,
+    )
+
+    # Note: json_path_root and json_path_key build PostgresJsonPath objects,
+    # while jsonb_path_query generates SQL string fragments.
+    path = json_path_key(json_path_root(), 'name')
+    print(f"JSON path for $.name: {path}")
+
+    path_sql = jsonb_path_query(dialect, 'data', path)
+    print(f"jsonb_path_query SQL: {path_sql}")
+
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'data'),
         ],
-    ),
-)
-backend.execute(*insert_expr.to_sql())
+        from_=Table(dialect, 'documents'),
+    )
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement, Column,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.impl.postgres.functions.json import (
-    jsonb_path_query,
-    json_path_root,
-    json_path_key,
-)
+    sql, params = query.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# Note: json_path_root and json_path_key build PostgresJsonPath objects,
-# while jsonb_path_query generates SQL string fragments.
-path = json_path_key(json_path_root(), 'name')
-print(f"JSON path for $.name: {path}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-path_sql = jsonb_path_query(dialect, 'data', path)
-print(f"jsonb_path_query SQL: {path_sql}")
-
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'data'),
-    ],
-    from_=Table(dialect, 'documents'),
-)
-
-sql, params = query.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
-
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

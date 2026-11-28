@@ -35,193 +35,194 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
-
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
-dml_options = ExecutionOptions(stmt_type=StatementType.DML)
-
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'accounts'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'accounts'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('balance', 'DECIMAL(10,2)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
-
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'accounts'),
-    columns=['name', 'balance'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, 'Alice'), Literal(dialect, '1000')],
-            [Literal(dialect, 'Bob'), Literal(dialect, '500')],
-        ],
-    ),
-)
-sql, params = insert_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: SELECT FOR UPDATE
-# ============================================================
-# Lock rows to prevent concurrent modifications
-
-with backend.transaction():
-    # Lock Alice's row using ForUpdateClause
-    lock_query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=Table(dialect, 'accounts'),
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
-        for_update=ForUpdateClause(dialect),
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
     )
-    sql, params = lock_query.to_sql()
-    result = backend.execute(sql, params, options=dql_options)
-    print(f"Locked row: {result.data}")
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-    # Update the balance
-    update_expr = UpdateStatement(
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dml_options = ExecutionOptions(stmt_type=StatementType.DML)
+
+    drop_table = DropTableStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
-        assignments={'balance': Literal(dialect, 900)},
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+        if_exists=True,
+        cascade=True,
     )
-    sql, params = update_expr.to_sql()
-    backend.execute(sql, params, options=dml_options)
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-# The lock is released after commit
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'accounts'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('name', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('balance', 'DECIMAL(10,2)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: FOR UPDATE with WHERE Conditions
-# ============================================================
-# Lock specific rows based on conditions
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'accounts'),
+        columns=['name', 'balance'],
+        source=ValuesSource(
+            dialect,
+            [
+                [Literal(dialect, 'Alice'), Literal(dialect, '1000')],
+                [Literal(dialect, 'Bob'), Literal(dialect, '500')],
+            ],
+        ),
+    )
+    sql, params = insert_expr.to_sql()
+    backend.execute(sql, params)
 
-with backend.transaction():
-    lock_query = QueryStatement(
+    # ============================================================
+    # SECTION: SELECT FOR UPDATE
+    # ============================================================
+    # Lock rows to prevent concurrent modifications
+
+    with backend.transaction():
+        # Lock Alice's row using ForUpdateClause
+        lock_query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
+            from_=Table(dialect, 'accounts'),
+            where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+            for_update=ForUpdateClause(dialect),
+        )
+        sql, params = lock_query.to_sql()
+        result = backend.execute(sql, params, options=dql_options)
+        print(f"Locked row: {result.data}")
+
+        # Update the balance
+        update_expr = UpdateStatement(
+            dialect=dialect,
+            table=Table(dialect, 'accounts'),
+            assignments={'balance': Literal(dialect, 900)},
+            where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+        )
+        sql, params = update_expr.to_sql()
+        backend.execute(sql, params, options=dml_options)
+
+    # The lock is released after commit
+
+    # ============================================================
+    # SECTION: FOR UPDATE with WHERE Conditions
+    # ============================================================
+    # Lock specific rows based on conditions
+
+    with backend.transaction():
+        lock_query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
+            from_=Table(dialect, 'accounts'),
+            where=ComparisonPredicate(dialect, '>', Column(dialect, 'balance'), Literal(dialect, 500)),
+            for_update=ForUpdateClause(dialect),
+        )
+        sql, params = lock_query.to_sql()
+        result = backend.execute(sql, params, options=dql_options)
+        print(f"Locked high balance accounts: {len(result.data)} rows")
+
+    # ============================================================
+    # SECTION: SKIP LOCKED (PostgreSQL 8.4+)
+    # ============================================================
+    # Skip locked rows instead of waiting
+
+    skip_query = QueryStatement(
         dialect=dialect,
         select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
         from_=Table(dialect, 'accounts'),
-        where=ComparisonPredicate(dialect, '>', Column(dialect, 'balance'), Literal(dialect, 500)),
-        for_update=ForUpdateClause(dialect),
+        for_update=ForUpdateClause(dialect, skip_locked=True),
     )
-    sql, params = lock_query.to_sql()
+    sql, params = skip_query.to_sql()
+    print(f"SKIP LOCKED SQL: {sql}")
     result = backend.execute(sql, params, options=dql_options)
-    print(f"Locked high balance accounts: {len(result.data)} rows")
+    print(f"SKIP LOCKED result: {result.data}")
 
-# ============================================================
-# SECTION: SKIP LOCKED (PostgreSQL 8.4+)
-# ============================================================
-# Skip locked rows instead of waiting
+    # ============================================================
+    # SECTION: NOWAIT
+    # ============================================================
+    # Fail immediately if rows are locked
 
-skip_query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=Table(dialect, 'accounts'),
-    for_update=ForUpdateClause(dialect, skip_locked=True),
-)
-sql, params = skip_query.to_sql()
-print(f"SKIP LOCKED SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"SKIP LOCKED result: {result.data}")
+    try:
+        nowait_query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
+            from_=Table(dialect, 'accounts'),
+            where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+            for_update=ForUpdateClause(dialect, nowait=True),
+        )
+        sql, params = nowait_query.to_sql()
+        result = backend.execute(sql, params, options=dql_options)
+        print(f"NOWAIT result: {result.data}")
+    except Exception as e:
+        print(f"NOWAIT failed (expected if locked): {e}")
 
-# ============================================================
-# SECTION: NOWAIT
-# ============================================================
-# Fail immediately if rows are locked
+    # ============================================================
+    # SECTION: Lock Modes
+    # ============================================================
+    # FOR UPDATE - exclusive lock (write lock)
+    # FOR UPDATE OF table_name - lock specific table
+    # FOR SHARE - shared lock (read lock)
+    # FOR KEY SHARE - for foreign key detection
 
-try:
-    nowait_query = QueryStatement(
+    # Use the generic ForUpdateClause with LockStrength.SHARE for FOR SHARE
+    from rhosocial.activerecord.backend.expression import (  # noqa: E402
+        ForUpdateClause,
+        LockStrength,
+    )
+
+    with backend.transaction():
+        # Shared lock - allows other transactions to also read
+        share_query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
+            from_=Table(dialect, 'accounts'),
+            for_update=ForUpdateClause(dialect, strength=LockStrength.SHARE),
+        )
+        sql, params = share_query.to_sql()
+        result = backend.execute(sql, params, options=dql_options)
+        print(f"FOR SHARE result: {len(result.data)} rows")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
         dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=Table(dialect, 'accounts'),
-        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
-        for_update=ForUpdateClause(dialect, nowait=True),
+        table=Table(dialect, 'accounts'),
+        if_exists=True,
+        cascade=True,
     )
-    sql, params = nowait_query.to_sql()
-    result = backend.execute(sql, params, options=dql_options)
-    print(f"NOWAIT result: {result.data}")
-except Exception as e:
-    print(f"NOWAIT failed (expected if locked): {e}")
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Lock Modes
-# ============================================================
-# FOR UPDATE - exclusive lock (write lock)
-# FOR UPDATE OF table_name - lock specific table
-# FOR SHARE - shared lock (read lock)
-# FOR KEY SHARE - for foreign key detection
-
-# Use the generic ForUpdateClause with LockStrength.SHARE for FOR SHARE
-from rhosocial.activerecord.backend.expression import (  # noqa: E402
-    ForUpdateClause,
-    LockStrength,
-)
-
-with backend.transaction():
-    # Shared lock - allows other transactions to also read
-    share_query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'balance')],
-        from_=Table(dialect, 'accounts'),
-        for_update=ForUpdateClause(dialect, strength=LockStrength.SHARE),
-    )
-    sql, params = share_query.to_sql()
-    result = backend.execute(sql, params, options=dql_options)
-    print(f"FOR SHARE result: {len(result.data)} rows")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'accounts'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
-
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use ForUpdateClause with QueryStatement for SELECT ... FOR UPDATE
-# 2. ForUpdateClause(dialect, skip_locked=True) for SKIP LOCKED
-# 3. ForUpdateClause(dialect, nowait=True) for NOWAIT
-# 4. Use ForUpdateClause with LockStrength.SHARE for FOR SHARE
-# 5. Locks released on COMMIT/ROLLBACK
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use ForUpdateClause with QueryStatement for SELECT ... FOR UPDATE
+    # 2. ForUpdateClause(dialect, skip_locked=True) for SKIP LOCKED
+    # 3. ForUpdateClause(dialect, nowait=True) for NOWAIT
+    # 4. Use ForUpdateClause with LockStrength.SHARE for FOR SHARE
+    # 5. Locks released on COMMIT/ROLLBACK

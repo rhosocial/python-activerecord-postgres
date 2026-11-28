@@ -33,124 +33,125 @@ from rhosocial.activerecord.backend.impl.postgres.functions.uuid import uuid_def
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-# Use uuid_default_generator() for version-aware UUID default
-# - PostgreSQL 13+: automatically selects gen_random_uuid() (built-in)
-# - PostgreSQL < 13: automatically selects uuid_generate_v4() (uuid-ossp extension)
-uuid_func = uuid_default_generator(dialect)
+    # Use uuid_default_generator() for version-aware UUID default
+    # - PostgreSQL 13+: automatically selects gen_random_uuid() (built-in)
+    # - PostgreSQL < 13: automatically selects uuid_generate_v4() (uuid-ossp extension)
+    uuid_func = uuid_default_generator(dialect)
 
-server_version = backend.get_server_version()
-print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
+    server_version = backend.get_server_version()
+    print(f"PostgreSQL version: {'.'.join(str(v) for v in server_version)}")
 
-# Clean up
-for table in ['events_v13', 'events_legacy']:
-    drop = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True, cascade=True)
-    sql, params = drop.to_sql()
+    # Clean up
+    for table in ['events_v13', 'events_legacy']:
+        drop = DropTableStatement(dialect=dialect, table=Table(dialect, table), if_exists=True, cascade=True)
+        sql, params = drop.to_sql()
+        backend.execute(sql, params)
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+
+    # 1. CREATE TABLE with UUID column and auto-generated DEFAULT
+    # uuid_default_generator(dialect) automatically picks the right function:
+    #   PostgreSQL 13+: gen_random_uuid() (built-in, no extension)
+    #   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'events'),
+        columns=[
+            ColumnDefinition('id', 'UUID', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, uuid_func)),
+            ]),
+            ColumnDefinition('name', 'VARCHAR(200)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('payload', 'JSONB'),
+        ],
+        if_not_exists=True,
+    )
+
+    sql, params = create_table.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
     backend.execute(sql, params)
+    print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-
-# 1. CREATE TABLE with UUID column and auto-generated DEFAULT
-# uuid_default_generator(dialect) automatically picks the right function:
-#   PostgreSQL 13+: gen_random_uuid() (built-in, no extension)
-#   PostgreSQL < 13: uuid_generate_v4() (requires uuid-ossp extension)
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'events'),
-    columns=[
-        ColumnDefinition('id', 'UUID', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, uuid_func)),
+    # 2. INSERT with auto-generated UUID (using DEFAULT)
+    insert_default = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'events'),
+        columns=['name'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'user_created')],
+            [Literal(dialect, 'order_placed')],
         ]),
-        ColumnDefinition('name', 'VARCHAR(200)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    )
+    sql, params = insert_default.to_sql()
+    backend.execute(sql, params)
+    print("Inserted rows with auto-generated UUIDs")
+
+    # 3. INSERT with explicit UUID value
+    insert_explicit = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'events'),
+        columns=['id', 'name'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, '550e8400-e29b-41d4-a716-446655440000'), Literal(dialect, 'explicit_uuid')],
         ]),
-        ColumnDefinition('payload', 'JSONB'),
-    ],
-    if_not_exists=True,
-)
+    )
+    sql, params = insert_explicit.to_sql()
+    backend.execute(sql, params)
+    print("Inserted row with explicit UUID")
 
-sql, params = create_table.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    # 4. Verify data
+    verify_query = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'id'), Column(dialect, 'name')],
+        from_=Table(dialect, 'events'),
+    )
+    sql, params = verify_query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Events: {result.data}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-backend.execute(sql, params)
-print("Table created: events (with UUID primary key, auto-generated DEFAULT)")
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'events'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# 2. INSERT with auto-generated UUID (using DEFAULT)
-insert_default = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'events'),
-    columns=['name'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'user_created')],
-        [Literal(dialect, 'order_placed')],
-    ]),
-)
-sql, params = insert_default.to_sql()
-backend.execute(sql, params)
-print("Inserted rows with auto-generated UUIDs")
-
-# 3. INSERT with explicit UUID value
-insert_explicit = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'events'),
-    columns=['id', 'name'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, '550e8400-e29b-41d4-a716-446655440000'), Literal(dialect, 'explicit_uuid')],
-    ]),
-)
-sql, params = insert_explicit.to_sql()
-backend.execute(sql, params)
-print("Inserted row with explicit UUID")
-
-# 4. Verify data
-verify_query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'id'), Column(dialect, 'name')],
-    from_=Table(dialect, 'events'),
-)
-sql, params = verify_query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"Events: {result.data}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'events'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
-
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. PostgreSQL has native UUID type (no need for VARCHAR storage)
-# 2. Use uuid_default_generator(dialect) for DDL column defaults:
-#    - PostgreSQL 13+: gen_random_uuid() (built-in, no extension required)
-#    - PostgreSQL < 13: uuid_generate_v4() (uuid-ossp extension)
-# 3. Explicit UUID values can be inserted as string literals
-# 4. UUID type provides validation and efficient storage (16 bytes vs 36 chars)
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. PostgreSQL has native UUID type (no need for VARCHAR storage)
+    # 2. Use uuid_default_generator(dialect) for DDL column defaults:
+    #    - PostgreSQL 13+: gen_random_uuid() (built-in, no extension required)
+    #    - PostgreSQL < 13: uuid_generate_v4() (uuid-ossp extension)
+    # 3. Explicit UUID values can be inserted as string literals
+    # 4. UUID type provides validation and efficient storage (16 bytes vs 36 chars)

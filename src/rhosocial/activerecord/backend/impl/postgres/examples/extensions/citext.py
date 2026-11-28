@@ -17,158 +17,159 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo using DropTableStatement
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertStatement,
-)
-from rhosocial.activerecord.backend.expression.statements import (
-    ValuesSource,
-)
-from rhosocial.activerecord.backend.expression import (
-    Column, QueryStatement,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-
-# Check if citext extension is available
-available = dialect.is_extension_available("citext")
-installed = dialect.is_extension_installed("citext")
-print(f"Extension check: citext available = {available}, installed = {installed}")
-
-# Create extension using expression
-if not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="citext",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    # Re-detect extensions after creation
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Example 1: Create table with CITEXT column
-columns = [
-    ColumnDefinition(
-        name="id",
-        data_type="SERIAL",
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-        ],
-    ),
-    ColumnDefinition(
-        name="email",
-        data_type="CITEXT",
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ],
-    ),
-    ColumnDefinition(
-        name="username",
-        data_type="VARCHAR(100)",
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ],
-    ),
-]
+    # Clean up for demo using DropTableStatement
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-create_expr = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=columns,
-    if_not_exists=True,
-)
-
-sql, params = create_expr.to_sql()
-print("\n--- CREATE TABLE ---")
-print(f"SQL: {sql}")
-
-# Only execute if extension is available
-if available:
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert with case-insensitive data
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'users'),
-        columns=["email", "username"],
-        source=ValuesSource(
-            dialect,
-            [
-                [Literal(dialect, "Test@Example.COM"), Literal(dialect, "testuser")],
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        InsertStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements import (
+        ValuesSource,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        Column, QueryStatement,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+
+    # Check if citext extension is available
+    available = dialect.is_extension_available("citext")
+    installed = dialect.is_extension_installed("citext")
+    print(f"Extension check: citext available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="citext",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        # Re-detect extensions after creation
+        backend.introspect_and_adapt()
+
+    # Example 1: Create table with CITEXT column
+    columns = [
+        ColumnDefinition(
+            name="id",
+            data_type="SERIAL",
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
             ],
         ),
-    )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
-    backend.execute(sql, params)
-
-    # Example 3: Case-insensitive query
-    # CITEXT automatically handles case-insensitive comparison
-    query = QueryStatement(
-        dialect=dialect,
-        select=[
-            Column(dialect, "id"),
-            Column(dialect, "email"),
-        ],
-        from_=Table(dialect, "users"),
-        where=ComparisonPredicate(
-            dialect, "=", Column(dialect, "email", table="users"), Literal(dialect, "test@example.com")
+        ColumnDefinition(
+            name="email",
+            data_type="CITEXT",
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ],
         ),
+        ColumnDefinition(
+            name="username",
+            data_type="VARCHAR(100)",
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ],
+        ),
+    ]
+
+    create_expr = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=columns,
+        if_not_exists=True,
     )
-    sql, params = query.to_sql()
-    print("\n--- SELECT (case-insensitive) ---")
+
+    sql, params = create_expr.to_sql()
+    print("\n--- CREATE TABLE ---")
     print(f"SQL: {sql}")
-    print(f"Params: {params}")
+
+    # Only execute if extension is available
+    if available:
+        backend.execute(sql, params)
+
+        # Example 2: Insert with case-insensitive data
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'users'),
+            columns=["email", "username"],
+            source=ValuesSource(
+                dialect,
+                [
+                    [Literal(dialect, "Test@Example.COM"), Literal(dialect, "testuser")],
+                ],
+            ),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        backend.execute(sql, params)
+
+        # Example 3: Case-insensitive query
+        # CITEXT automatically handles case-insensitive comparison
+        query = QueryStatement(
+            dialect=dialect,
+            select=[
+                Column(dialect, "id"),
+                Column(dialect, "email"),
+            ],
+            from_=Table(dialect, "users"),
+            where=ComparisonPredicate(
+                dialect, "=", Column(dialect, "email", table="users"), Literal(dialect, "test@example.com")
+            ),
+        )
+        sql, params = query.to_sql()
+        print("\n--- SELECT (case-insensitive) ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+
+        # ============================================================
+        # SECTION: Execution (run the expression)
+        # ============================================================
+        result = backend.execute(sql, params)
+        print(f"\nResult: {result}")
+    else:
+        print("\nSkipping execution - citext not available on this server")
+        print("To enable citext, run: CREATE EXTENSION citext;")
 
     # ============================================================
-    # SECTION: Execution (run the expression)
+    # SECTION: Teardown (necessary for execution, reference only)
     # ============================================================
-    result = backend.execute(sql, params)
-    print(f"\nResult: {result}")
-else:
-    print("\nSkipping execution - citext not available on this server")
-    print("To enable citext, run: CREATE EXTENSION citext;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+    sql, params = drop_expr.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()

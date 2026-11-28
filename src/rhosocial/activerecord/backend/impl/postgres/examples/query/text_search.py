@@ -24,104 +24,105 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'articles'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'articles'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'articles'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'articles'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('title', 'VARCHAR(200)'),
+            ColumnDefinition('content', 'TEXT'),
+        ],
+    )
+    backend.execute(*create_table.to_sql())
+
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'articles'),
+        columns=['title', 'content'],
+        source=ValuesSource(
+            dialect,
+            [
+                [Literal(dialect, 'PostgreSQL Tutorial'),
+                 Literal(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
+                [Literal(dialect, 'MySQL Guide'), Literal(dialect, 'Learn MySQL from beginner to advanced level.')],
+                [Literal(dialect, 'Database Design'),
+                 Literal(dialect, 'Best practices for designing relational databases.')],
             ],
         ),
-        ColumnDefinition('title', 'VARCHAR(200)'),
-        ColumnDefinition('content', 'TEXT'),
-    ],
-)
-backend.execute(*create_table.to_sql())
+    )
+    backend.execute(*insert_expr.to_sql())
 
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'articles'),
-    columns=['title', 'content'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, 'PostgreSQL Tutorial'),
-             Literal(dialect, 'This tutorial covers PostgreSQL database basics and advanced features.')],
-            [Literal(dialect, 'MySQL Guide'), Literal(dialect, 'Learn MySQL from beginner to advanced level.')],
-            [Literal(dialect, 'Database Design'),
-             Literal(dialect, 'Best practices for designing relational databases.')],
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement, Column,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+
+    search_term = 'PostgreSQL'
+
+    # Build to_tsvector and plainto_tsquery using FunctionCall
+    tsvector_expr = FunctionCall(dialect, 'to_tsvector', Literal(dialect, 'english'), Column(dialect, 'content'))
+    tsquery_expr = FunctionCall(dialect, 'plainto_tsquery', Literal(dialect, 'english'), Literal(dialect, search_term))
+
+    # Use @@ operator via ComparisonPredicate
+    match_pred = ComparisonPredicate(dialect, '@@', tsvector_expr, tsquery_expr)
+
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'title'),
         ],
-    ),
-)
-backend.execute(*insert_expr.to_sql())
+        from_=Table(dialect, 'articles'),
+        where=match_pred,
+    )
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement, Column,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, FunctionCall
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    sql, params = query.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-search_term = 'PostgreSQL'
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-# Build to_tsvector and plainto_tsquery using FunctionCall
-tsvector_expr = FunctionCall(dialect, 'to_tsvector', Literal(dialect, 'english'), Column(dialect, 'content'))
-tsquery_expr = FunctionCall(dialect, 'plainto_tsquery', Literal(dialect, 'english'), Literal(dialect, search_term))
-
-# Use @@ operator via ComparisonPredicate
-match_pred = ComparisonPredicate(dialect, '@@', tsvector_expr, tsquery_expr)
-
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'title'),
-    ],
-    from_=Table(dialect, 'articles'),
-    where=match_pred,
-)
-
-sql, params = query.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
-
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

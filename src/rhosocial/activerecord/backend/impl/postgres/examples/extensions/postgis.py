@@ -19,273 +19,274 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    CreateIndexStatement,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.core import (
-    Literal,
-    FunctionCall,
-    Subquery,
-)
-from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertStatement,
-)
-from rhosocial.activerecord.backend.expression.statements import (
-    ValuesSource,
-)
-from rhosocial.activerecord.backend.expression import (
-    Column, QueryStatement,
-)
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-from rhosocial.activerecord.backend.impl.postgres.expression.types import (
-    PostgresGeographyType,
-)
-
-# Check if postgis extension is available
-available = dialect.is_extension_available("postgis")
-installed = dialect.is_extension_installed("postgis")
-print(f"Extension check: postgis available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="postgis",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    # Re-detect extensions after creation
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("postgis")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with geometry column
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="name",
-            data_type="VARCHAR(100)",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="geom",
-            data_type="GEOMETRY(Point, 4326)",
-        ),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'locations'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert spatial data (point)
-    # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'locations'),
-        columns=["name", "geom"],
-        source=ValuesSource(
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        CreateIndexStatement,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.core import (
+        Literal,
+        FunctionCall,
+        Subquery,
+    )
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        InsertStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements import (
+        ValuesSource,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        Column, QueryStatement,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+    from rhosocial.activerecord.backend.impl.postgres.expression.types import (
+        PostgresGeographyType,
+    )
+
+    # Check if postgis extension is available
+    available = dialect.is_extension_available("postgis")
+    installed = dialect.is_extension_installed("postgis")
+    print(f"Extension check: postgis available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="postgis",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        # Re-detect extensions after creation
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("postgis")
+
+    if installed:
+        # Example 1: Create table with geometry column
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="name",
+                data_type="VARCHAR(100)",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="geom",
+                data_type="GEOMETRY(Point, 4326)",
+            ),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'locations'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert spatial data (point)
+        # Use FunctionCall to compose ST_SetSRID(ST_MakePoint(lng, lat), 4326) for WGS84 points
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'locations'),
+            columns=["name", "geom"],
+            source=ValuesSource(
+                dialect,
+                [
+                    [
+                        Literal(dialect, "New York"),
+                        FunctionCall(
+                            dialect, "ST_SetSRID",
+                            FunctionCall(
+                                dialect, "ST_MakePoint",
+                                Literal(dialect, -74.006),
+                                Literal(dialect, 40.7128),
+                            ),
+                            Literal(dialect, 4326),
+                        ),
+                    ],
+                    [
+                        Literal(dialect, "Los Angeles"),
+                        FunctionCall(
+                            dialect, "ST_SetSRID",
+                            FunctionCall(
+                                dialect, "ST_MakePoint",
+                                Literal(dialect, -118.2437),
+                                Literal(dialect, 34.0522),
+                            ),
+                            Literal(dialect, 4326),
+                        ),
+                    ],
+                    [
+                        Literal(dialect, "Chicago"),
+                        FunctionCall(
+                            dialect, "ST_SetSRID",
+                            FunctionCall(
+                                dialect, "ST_MakePoint",
+                                Literal(dialect, -87.6298),
+                                Literal(dialect, 41.8781),
+                            ),
+                            Literal(dialect, 4326),
+                        ),
+                    ],
+                ],
+            ),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT spatial data ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        backend.execute(sql, params)
+
+        # Example 3: Spatial query - ST_Distance
+        # Calculate distance between New York and Los Angeles (in degrees)
+        # Build subqueries for each city's geom
+        ny_geom = Subquery(
             dialect,
-            [
-                [
+            QueryStatement(
+                dialect=dialect,
+                select=[Column(dialect, "geom")],
+                from_=Table(dialect, "locations"),
+                where=ComparisonPredicate(
+                    dialect, "=",
+                    Column(dialect, "name"),
                     Literal(dialect, "New York"),
-                    FunctionCall(
-                        dialect, "ST_SetSRID",
-                        FunctionCall(
-                            dialect, "ST_MakePoint",
-                            Literal(dialect, -74.006),
-                            Literal(dialect, 40.7128),
-                        ),
-                        Literal(dialect, 4326),
-                    ),
-                ],
-                [
-                    Literal(dialect, "Los Angeles"),
-                    FunctionCall(
-                        dialect, "ST_SetSRID",
-                        FunctionCall(
-                            dialect, "ST_MakePoint",
-                            Literal(dialect, -118.2437),
-                            Literal(dialect, 34.0522),
-                        ),
-                        Literal(dialect, 4326),
-                    ),
-                ],
-                [
-                    Literal(dialect, "Chicago"),
-                    FunctionCall(
-                        dialect, "ST_SetSRID",
-                        FunctionCall(
-                            dialect, "ST_MakePoint",
-                            Literal(dialect, -87.6298),
-                            Literal(dialect, 41.8781),
-                        ),
-                        Literal(dialect, 4326),
-                    ),
-                ],
-            ],
-        ),
-    )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT spatial data ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
-    backend.execute(sql, params)
-
-    # Example 3: Spatial query - ST_Distance
-    # Calculate distance between New York and Los Angeles (in degrees)
-    # Build subqueries for each city's geom
-    ny_geom = Subquery(
-        dialect,
-        QueryStatement(
-            dialect=dialect,
-            select=[Column(dialect, "geom")],
-            from_=Table(dialect, "locations"),
-            where=ComparisonPredicate(
-                dialect, "=",
-                Column(dialect, "name"),
-                Literal(dialect, "New York"),
-            ),
-        ),
-    )
-
-    la_geom = Subquery(
-        dialect,
-        QueryStatement(
-            dialect=dialect,
-            select=[Column(dialect, "geom")],
-            from_=Table(dialect, "locations"),
-            where=ComparisonPredicate(
-                dialect, "=",
-                Column(dialect, "name"),
-                Literal(dialect, "Los Angeles"),
-            ),
-        ),
-    )
-
-    distance_query = QueryStatement(
-        dialect=dialect,
-        select=[
-            FunctionCall(
-                dialect, "ST_Distance", ny_geom, la_geom,
-            ).as_("distance_degrees"),
-        ],
-    )
-    sql, params = distance_query.to_sql()
-    print("\n--- ST_Distance query ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    result = backend.execute(sql, params, options=opts)
-    print(f"Distance (degrees): {result.data}")
-
-    # Example 4: Spatial query - ST_DWithin
-    # Find locations within a bounding area
-    dwithin_query = QueryStatement(
-        dialect=dialect,
-        select=[
-            Column(dialect, "name"),
-            FunctionCall(
-                dialect, "ST_AsText", Column(dialect, "geom"),
-            ).as_("point"),
-        ],
-        from_=Table(dialect, "locations"),
-        where=FunctionCall(
-            dialect, "ST_DWithin",
-            Column(dialect, "geom"),
-            FunctionCall(
-                dialect, "ST_SetSRID",
-                FunctionCall(
-                    dialect, "ST_MakePoint",
-                    Literal(dialect, -74.006),
-                    Literal(dialect, 40.7128),
                 ),
-                Literal(dialect, 4326),
-            ).cast(PostgresGeographyType(dialect)),
-            Literal(dialect, 500000),
-        ),
-    )
-    sql, params = dwithin_query.to_sql()
-    print("\n--- ST_DWithin query (within 500km of New York) ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
-    result = backend.execute(sql, params, options=opts)
-    print(f"Results: {result.data}")
+            ),
+        )
 
-    # Example 5: Create GIST spatial index
-    create_idx = CreateIndexStatement(
-        dialect=dialect,
-        index=Index(dialect, 'idx_locations_geom'),
-        table=Table(dialect, 'locations'),
-        columns=["geom"],
-        index_type="GIST",
-        if_not_exists=True,
-    )
-    sql, params = create_idx.to_sql()
-    print("\n--- CREATE GIST INDEX ---")
-    print(f"SQL: {sql}")
+        la_geom = Subquery(
+            dialect,
+            QueryStatement(
+                dialect=dialect,
+                select=[Column(dialect, "geom")],
+                from_=Table(dialect, "locations"),
+                where=ComparisonPredicate(
+                    dialect, "=",
+                    Column(dialect, "name"),
+                    Literal(dialect, "Los Angeles"),
+                ),
+            ),
+        )
+
+        distance_query = QueryStatement(
+            dialect=dialect,
+            select=[
+                FunctionCall(
+                    dialect, "ST_Distance", ny_geom, la_geom,
+                ).as_("distance_degrees"),
+            ],
+        )
+        sql, params = distance_query.to_sql()
+        print("\n--- ST_Distance query ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+        result = backend.execute(sql, params, options=opts)
+        print(f"Distance (degrees): {result.data}")
+
+        # Example 4: Spatial query - ST_DWithin
+        # Find locations within a bounding area
+        dwithin_query = QueryStatement(
+            dialect=dialect,
+            select=[
+                Column(dialect, "name"),
+                FunctionCall(
+                    dialect, "ST_AsText", Column(dialect, "geom"),
+                ).as_("point"),
+            ],
+            from_=Table(dialect, "locations"),
+            where=FunctionCall(
+                dialect, "ST_DWithin",
+                Column(dialect, "geom"),
+                FunctionCall(
+                    dialect, "ST_SetSRID",
+                    FunctionCall(
+                        dialect, "ST_MakePoint",
+                        Literal(dialect, -74.006),
+                        Literal(dialect, 40.7128),
+                    ),
+                    Literal(dialect, 4326),
+                ).cast(PostgresGeographyType(dialect)),
+                Literal(dialect, 500000),
+            ),
+        )
+        sql, params = dwithin_query.to_sql()
+        print("\n--- ST_DWithin query (within 500km of New York) ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        result = backend.execute(sql, params, options=opts)
+        print(f"Results: {result.data}")
+
+        # Example 5: Create GIST spatial index
+        create_idx = CreateIndexStatement(
+            dialect=dialect,
+            index=Index(dialect, 'idx_locations_geom'),
+            table=Table(dialect, 'locations'),
+            columns=["geom"],
+            index_type="GIST",
+            if_not_exists=True,
+        )
+        sql, params = create_idx.to_sql()
+        print("\n--- CREATE GIST INDEX ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("GIST spatial index created: idx_locations_geom")
+
+    else:
+        print("\nSkipping execution - postgis not available on this server")
+        print("To enable postgis, install PostGIS and run: CREATE EXTENSION postgis;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-    print("GIST spatial index created: idx_locations_geom")
-
-else:
-    print("\nSkipping execution - postgis not available on this server")
-    print("To enable postgis, install PostGIS and run: CREATE EXTENSION postgis;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'locations'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()

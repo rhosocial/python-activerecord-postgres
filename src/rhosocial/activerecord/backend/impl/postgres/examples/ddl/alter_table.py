@@ -28,152 +28,153 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+        ],
+    )
+    backend.execute(*create_table.to_sql())
+
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['name'],
+        source=ValuesSource(
+            dialect,
+            [[Literal(dialect, 'Alice')]],
         ),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-    ],
-)
-backend.execute(*create_table.to_sql())
+    )
+    backend.execute(*insert_expr.to_sql())
 
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['name'],
-    source=ValuesSource(
-        dialect,
-        [[Literal(dialect, 'Alice')]],
-    ),
-)
-backend.execute(*insert_expr.to_sql())
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        AlterTableStatement,
+        ColumnDefinition,
+    )
+    from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
+        AddColumnAction,
+        RenameColumnAction,
+    )
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    AlterTableStatement,
-    ColumnDefinition,
-)
-from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
-    AddColumnAction,
-    RenameColumnAction,
-)
+    # Add a new column
+    add_email_action = AddColumnAction(
+        dialect=dialect,
+        column=ColumnDefinition(
+            name='email',
+            data_type='VARCHAR(100)',
+        ),
+    )
 
-# Add a new column
-add_email_action = AddColumnAction(
-    dialect=dialect,
-    column=ColumnDefinition(
-        name='email',
-        data_type='VARCHAR(100)',
-    ),
-)
+    add_email_expr = AlterTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        action=add_email_action,
+    )
 
-add_email_expr = AlterTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    action=add_email_action,
-)
+    sql, params = add_email_expr.to_sql()
+    print(f"SQL (Add Column): {sql}")
+    print(f"Params: {params}")
 
-sql, params = add_email_expr.to_sql()
-print(f"SQL (Add Column): {sql}")
-print(f"Params: {params}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    backend.execute(sql, params)
+    print("Column added successfully")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-backend.execute(sql, params)
-print("Column added successfully")
+    # Add another column without default (PostgreSQL ALTER TABLE doesn't support parameterized DEFAULT well)
+    add_age_action = AddColumnAction(
+        dialect=dialect,
+        column=ColumnDefinition(
+            'age',
+            'INT',
+        ),
+    )
 
-# Add another column without default (PostgreSQL ALTER TABLE doesn't support parameterized DEFAULT well)
-add_age_action = AddColumnAction(
-    dialect=dialect,
-    column=ColumnDefinition(
-        'age',
-        'INT',
-    ),
-)
+    add_age_expr = AlterTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        action=add_age_action,
+    )
 
-add_age_expr = AlterTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    action=add_age_action,
-)
+    sql, params = add_age_expr.to_sql()
+    backend.execute(sql, params)
+    print("Column age added successfully")
 
-sql, params = add_age_expr.to_sql()
-backend.execute(sql, params)
-print("Column age added successfully")
+    # Rename a column
+    rename_action = RenameColumnAction(
+        dialect=dialect,
+        old_name='name',
+        new_name='full_name',
+    )
 
-# Rename a column
-rename_action = RenameColumnAction(
-    dialect=dialect,
-    old_name='name',
-    new_name='full_name',
-)
+    rename_expr = AlterTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        action=rename_action,
+    )
 
-rename_expr = AlterTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    action=rename_action,
-)
+    sql, params = rename_expr.to_sql()
+    print(f"SQL (Rename Column): {sql}")
+    backend.execute(sql, params)
+    print("Column renamed successfully")
 
-sql, params = rename_expr.to_sql()
-print(f"SQL (Rename Column): {sql}")
-backend.execute(sql, params)
-print("Column renamed successfully")
+    # Verify table structure
+    from rhosocial.activerecord.backend.expression import QueryStatement
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Column
+    from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 
-# Verify table structure
-from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Column
-from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
+    verify_expr = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'column_name'),
+            Column(dialect, 'data_type'),
+            Column(dialect, 'is_nullable'),
+        ],
+        from_=Table(dialect, 'columns', schema_name='information_schema'),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, 'table_name'), Literal(dialect, 'users')),
+        order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
+    )
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(*verify_expr.to_sql(), options=options)
+    print("Table structure after alterations:")
+    for row in result.data or []:
+        print(f" {row}")
 
-verify_expr = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'column_name'),
-        Column(dialect, 'data_type'),
-        Column(dialect, 'is_nullable'),
-    ],
-    from_=Table(dialect, 'columns', schema_name='information_schema'),
-    where=ComparisonPredicate(dialect, "=", Column(dialect, 'table_name'), Literal(dialect, 'users')),
-    order_by=OrderByClause(dialect, [Column(dialect, 'ordinal_position')]),
-)
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(*verify_expr.to_sql(), options=options)
-print("Table structure after alterations:")
-for row in result.data or []:
-    print(f" {row}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

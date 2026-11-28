@@ -28,69 +28,70 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import Table  # noqa: E402
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-    sslmode=os.getenv("PG_SSLMODE"),
-    sslrootcert=os.getenv("PG_SSLROOTCERT"),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.functions import (  # noqa: E402
-    spatial_index,
-)
-
-if dialect.is_extension_available("postgis") and not dialect.is_extension_installed("postgis"):
-    backend.execute(*PostgresCreateExtensionStatement(
-        dialect=dialect, name="postgis"
-    ).to_sql())
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
+        sslmode=os.getenv("PG_SSLMODE"),
+        sslrootcert=os.getenv("PG_SSLROOTCERT"),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-expressions = []
-if dialect.supports_postgis_spatial_index():
-    for method, name in (
-        ("gist", "idx_zones_geom_gist"),
-        ("spgist", "idx_zones_geom_spgist"),
-        ("brin", "idx_zones_geom_brin"),
-    ):
-        statement = spatial_index(
-            dialect, "delivery_zones", ["geom"], name, index_type=method
-        )
-        print(f"SQL: {statement.to_sql()[0]}")
-        expressions.append(statement)
-else:
-    print("PostGIS spatial index is not available on this server")
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.functions import (  # noqa: E402
+        spatial_index,
+    )
 
-# ============================================================
-# SECTION: Execution (run the expressions)
-# ============================================================
-if expressions:
-    backend.execute(*DropTableStatement(
-        dialect=dialect, table=Table(dialect, "delivery_zones"), if_exists=True
-    ).to_sql())
-    backend.execute(*CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, "delivery_zones"),
-        columns=[
-            ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ]),
-            ColumnDefinition(dialect, "geom", PostgresGeometryType()),
-        ],
-    ).to_sql())
-    for statement in expressions:
-        backend.execute(*statement.to_sql())
+    if dialect.is_extension_available("postgis") and not dialect.is_extension_installed("postgis"):
+        backend.execute(*PostgresCreateExtensionStatement(
+            dialect=dialect, name="postgis"
+        ).to_sql())
+        backend.introspect_and_adapt()
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    expressions = []
+    if dialect.supports_postgis_spatial_index():
+        for method, name in (
+            ("gist", "idx_zones_geom_gist"),
+            ("spgist", "idx_zones_geom_spgist"),
+            ("brin", "idx_zones_geom_brin"),
+        ):
+            statement = spatial_index(
+                dialect, "delivery_zones", ["geom"], name, index_type=method
+            )
+            print(f"SQL: {statement.to_sql()[0]}")
+            expressions.append(statement)
+    else:
+        print("PostGIS spatial index is not available on this server")
+
+    # ============================================================
+    # SECTION: Execution (run the expressions)
+    # ============================================================
+    if expressions:
+        backend.execute(*DropTableStatement(
+            dialect=dialect, table=Table(dialect, "delivery_zones"), if_exists=True
+        ).to_sql())
+        backend.execute(*CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, "delivery_zones"),
+            columns=[
+                ColumnDefinition(dialect, "id", PostgresSerialType(), constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ]),
+                ColumnDefinition(dialect, "geom", PostgresGeometryType()),
+            ],
+        ).to_sql())
+        for statement in expressions:
+            backend.execute(*statement.to_sql())
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

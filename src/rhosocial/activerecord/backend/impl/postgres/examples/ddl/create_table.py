@@ -36,113 +36,114 @@ from rhosocial.activerecord.backend.expression.statements.ddl_table import (
     IndexDefinition,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-# Drop if exists for clean setup
-drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
-sql, params = drop.to_sql()
-backend.execute(sql, params)
+    # Drop if exists for clean setup
+    drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+    sql, params = drop.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-# Column data types are built by constructing expression types directly.
-columns = [
-    ColumnDefinition(
-        name='id',
-        data_type=PostgresSerialType(),
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-        ],
-    ),
-    ColumnDefinition(
-        name='name',
-        data_type=VarCharType(length=200),
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ],
-    ),
-    ColumnDefinition(
-        name='price',
-        data_type=DecimalType(precision=10, scale=2),
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ],
-    ),
-    ColumnDefinition(
-        name='category',
-        data_type=VarCharType(length=100),
-    ),
-    ColumnDefinition(
-        name='is_active',
-        data_type=BooleanType(),
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True)),
-        ],
-    ),
-    ColumnDefinition(
-        name='created_at',
-        data_type=TimestampType(),
-        constraints=[
-            ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, F.current_timestamp(dialect))),
-        ],
-    ),
-]
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    # Column data types are built by constructing expression types directly.
+    columns = [
+        ColumnDefinition(
+            name='id',
+            data_type=PostgresSerialType(),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+            ],
+        ),
+        ColumnDefinition(
+            name='name',
+            data_type=VarCharType(length=200),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ],
+        ),
+        ColumnDefinition(
+            name='price',
+            data_type=DecimalType(precision=10, scale=2),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ],
+        ),
+        ColumnDefinition(
+            name='category',
+            data_type=VarCharType(length=100),
+        ),
+        ColumnDefinition(
+            name='is_active',
+            data_type=BooleanType(),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, True)),
+            ],
+        ),
+        ColumnDefinition(
+            name='created_at',
+            data_type=TimestampType(),
+            constraints=[
+                ColumnConstraint(dialect, branch=ColumnDefaultConstraint(dialect, F.current_timestamp(dialect))),
+            ],
+        ),
+    ]
 
-indexes = [
-    IndexDefinition(
-        name='idx_products_category',
-        columns=['category'],
-    ),
-]
+    indexes = [
+        IndexDefinition(
+            name='idx_products_category',
+            columns=['category'],
+        ),
+    ]
 
-create_expr = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'products'),
-    columns=columns,
-    indexes=indexes,
-    if_not_exists=True,
-)
+    create_expr = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'products'),
+        columns=columns,
+        indexes=indexes,
+        if_not_exists=True,
+    )
 
-sql, params = create_expr.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    sql, params = create_expr.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-result = backend.execute(sql, params)
-print("Table created: products")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    result = backend.execute(sql, params)
+    print("Table created: products")
 
-# Verify table structure using introspector
-columns_info = backend.introspector.list_columns('products')
-print("Columns in 'products':")
-for col in columns_info:
-    print(f"  {col}")
+    # Verify table structure using introspector
+    columns_info = backend.introspector.list_columns('products')
+    print("Columns in 'products':")
+    for col in columns_info:
+        print(f"  {col}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'products'), if_exists=True)
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. PostgreSQL uses SERIAL for auto-increment (not AUTO_INCREMENT)
-# 2. NUMERIC(p,s) for precise decimal columns
-# 3. BOOLEAN type for true/false values
-# 4. DEFAULT values use PostgreSQL syntax (TRUE, CURRENT_TIMESTAMP)
-# 5. Use introspector.list_columns() to verify table structure
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. PostgreSQL uses SERIAL for auto-increment (not AUTO_INCREMENT)
+    # 2. NUMERIC(p,s) for precise decimal columns
+    # 3. BOOLEAN type for true/false values
+    # 4. DEFAULT values use PostgreSQL syntax (TRUE, CURRENT_TIMESTAMP)
+    # 5. Use introspector.list_columns() to verify table structure

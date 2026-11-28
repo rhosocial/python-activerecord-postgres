@@ -14,189 +14,190 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    InsertStatement,
-    ValuesSource,
-    DropTableStatement,
-    QueryStatement,
-    CTEClause,
-    WithStatement,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate, IsNullPredicate
-from rhosocial.activerecord.backend.expression.statements import (
-    ColumnDefinition,
-    ColumnConstraint,
-)
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        InsertStatement,
+        ValuesSource,
+        DropTableStatement,
+        QueryStatement,
+        CTEClause,
+        WithStatement,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate, IsNullPredicate
+    from rhosocial.activerecord.backend.expression.statements import (
+        ColumnDefinition,
+        ColumnConstraint,
+    )
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
 
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-# Drop table first for clean setup
-drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
-sql, params = drop.to_sql()
-backend.execute(sql, params)
+    # Drop table first for clean setup
+    drop = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
+    sql, params = drop.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'employees'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'employees'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+            ColumnDefinition('manager_id', 'INT'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
+
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'employees'),
+        columns=['name', 'manager_id'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'CEO'), Literal(dialect, None)],
+            [Literal(dialect, 'VP Sales'), Literal(dialect, 1)],
+            [Literal(dialect, 'VP Engineering'), Literal(dialect, 1)],
+            [Literal(dialect, 'Sales Manager'), Literal(dialect, 2)],
+            [Literal(dialect, 'Engineer'), Literal(dialect, 3)],
         ]),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-        ColumnDefinition('manager_id', 'INT'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
+    )
+    sql, params = insert_expr.to_sql()
+    backend.execute(sql, params)
 
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'employees'),
-    columns=['name', 'manager_id'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'CEO'), Literal(dialect, None)],
-        [Literal(dialect, 'VP Sales'), Literal(dialect, 1)],
-        [Literal(dialect, 'VP Engineering'), Literal(dialect, 1)],
-        [Literal(dialect, 'Sales Manager'), Literal(dialect, 2)],
-        [Literal(dialect, 'Engineer'), Literal(dialect, 3)],
-    ]),
-)
-sql, params = insert_expr.to_sql()
-backend.execute(sql, params)
+    # ============================================================
+    # SECTION: Basic CTE
+    # ============================================================
+    # CTE simplifies complex queries by defining temporary named result sets
 
-# ============================================================
-# SECTION: Basic CTE
-# ============================================================
-# CTE simplifies complex queries by defining temporary named result sets
-
-high_earners_cte = CTEClause(
-    dialect=dialect,
-    name='high_earners',
-    query=QueryStatement(
+    high_earners_cte = CTEClause(
         dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name')],
+        name='high_earners',
+        query=QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name')],
+            from_=Table(dialect, 'employees'),
+            where=ComparisonPredicate(dialect, '>', Column(dialect, 'id'), Literal(dialect, 2)),
+        ),
+    )
+
+    cte_query = WithStatement(
+        dialect=dialect,
+        ctes=[high_earners_cte],
+        query=QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name')],
+            from_=Table(dialect, 'high_earners'),
+        ),
+    )
+    sql, params = cte_query.to_sql()
+    print(f"Basic CTE SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Basic CTE result: {result.data}")
+
+    # ============================================================
+    # SECTION: Recursive CTE
+    # ============================================================
+    # Recursive CTE for hierarchical data (organizational chart)
+
+    # Base case: top-level employees
+    base_query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'),
+            Column(dialect, 'name'),
+            Column(dialect, 'manager_id'),
+            Literal(dialect, 1),
+        ],
         from_=Table(dialect, 'employees'),
-        where=ComparisonPredicate(dialect, '>', Column(dialect, 'id'), Literal(dialect, 2)),
-    ),
-)
+        where=IsNullPredicate(dialect, Column(dialect, 'manager_id')),
+    )
 
-cte_query = WithStatement(
-    dialect=dialect,
-    ctes=[high_earners_cte],
-    query=QueryStatement(
+    org_cte = CTEClause(
         dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name')],
-        from_=Table(dialect, 'high_earners'),
-    ),
-)
-sql, params = cte_query.to_sql()
-print(f"Basic CTE SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Basic CTE result: {result.data}")
+        name='org_chart',
+        query=base_query,
+        columns=['id', 'name', 'manager_id', 'level'],
+    )
 
-# ============================================================
-# SECTION: Recursive CTE
-# ============================================================
-# Recursive CTE for hierarchical data (organizational chart)
-
-# Base case: top-level employees
-base_query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'),
-        Column(dialect, 'name'),
-        Column(dialect, 'manager_id'),
-        Literal(dialect, 1),
-    ],
-    from_=Table(dialect, 'employees'),
-    where=IsNullPredicate(dialect, Column(dialect, 'manager_id')),
-)
-
-org_cte = CTEClause(
-    dialect=dialect,
-    name='org_chart',
-    query=base_query,
-    columns=['id', 'name', 'manager_id', 'level'],
-)
-
-recursive_query = WithStatement(
-    dialect=dialect,
-    ctes=[org_cte],
-    query=QueryStatement(
+    recursive_query = WithStatement(
         dialect=dialect,
-        select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'manager_id')],
-        from_=Table(dialect, 'org_chart'),
-    ),
-    recursive=True,
-)
-sql, params = recursive_query.to_sql()
-print(f"Recursive CTE SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print("Recursive CTE result:")
-for row in result.data or []:
-    print(f"  {row}")
+        ctes=[org_cte],
+        query=QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'id'), Column(dialect, 'name'), Column(dialect, 'manager_id')],
+            from_=Table(dialect, 'org_chart'),
+        ),
+        recursive=True,
+    )
+    sql, params = recursive_query.to_sql()
+    print(f"Recursive CTE SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print("Recursive CTE result:")
+    for row in result.data or []:
+        print(f"  {row}")
 
-# ============================================================
-# SECTION: CTE with MATERIALIZED hint (PostgreSQL 12+)
-# ============================================================
-# Control whether CTE is inlined or materialized
+    # ============================================================
+    # SECTION: CTE with MATERIALIZED hint (PostgreSQL 12+)
+    # ============================================================
+    # Control whether CTE is inlined or materialized
 
-materialized_cte = CTEClause(
-    dialect=dialect,
-    name='dept_stats',
-    query=QueryStatement(
+    materialized_cte = CTEClause(
         dialect=dialect,
-        select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
-        from_=Table(dialect, 'employees'),
-    ),
-    materialized=False,  # NOT MATERIALIZED - allows inlining
-)
+        name='dept_stats',
+        query=QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
+            from_=Table(dialect, 'employees'),
+        ),
+        materialized=False,  # NOT MATERIALIZED - allows inlining
+    )
 
-materialized_query = WithStatement(
-    dialect=dialect,
-    ctes=[materialized_cte],
-    query=QueryStatement(
+    materialized_query = WithStatement(
         dialect=dialect,
-        select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
-        from_=Table(dialect, 'dept_stats'),
-    ),
-)
-sql, params = materialized_query.to_sql()
-print(f"MATERIALIZED hint CTE SQL: {sql}")
+        ctes=[materialized_cte],
+        query=QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, 'manager_id'), Column(dialect, 'name')],
+            from_=Table(dialect, 'dept_stats'),
+        ),
+    )
+    sql, params = materialized_query.to_sql()
+    print(f"MATERIALIZED hint CTE SQL: {sql}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True, cascade=True)
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use CTEClause to define CTEs
-# 2. Use WithStatement to combine CTEs with a main query
-# 3. Set recursive=True for recursive CTEs (hierarchical queries)
-# 4. PostgreSQL 12+ supports materialized hint (CTEClause(materialized=False))
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use CTEClause to define CTEs
+    # 2. Use WithStatement to combine CTEs with a main query
+    # 3. Set recursive=True for recursive CTEs (hierarchical queries)
+    # 4. PostgreSQL 12+ supports materialized hint (CTEClause(materialized=False))

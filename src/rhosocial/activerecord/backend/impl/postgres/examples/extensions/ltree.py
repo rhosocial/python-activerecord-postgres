@@ -20,244 +20,245 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    CreateIndexStatement,
-    QueryStatement,
-    Column,
-    OrderByClause,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.operators import BinaryExpression
-from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertStatement,
-)
-from rhosocial.activerecord.backend.expression.statements import (
-    ValuesSource,
-)
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-
-# Check if ltree extension is available
-available = dialect.is_extension_available("ltree")
-installed = dialect.is_extension_installed("ltree")
-print(f"Extension check: ltree available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="ltree",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    # Re-detect extensions after creation
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("ltree")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with ltree column
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="name",
-            data_type="VARCHAR(100)",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="path",
-            data_type="LTREE",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'categories'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert hierarchical path data
-    # ltree paths use dot-separated labels (only alphanumeric and underscore)
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'categories'),
-        columns=["name", "path"],
-        source=ValuesSource(
-            dialect,
-            [
-                [Literal(dialect, "Electronics"), Literal(dialect, "electronics")],
-                [Literal(dialect, "Computers"), Literal(dialect, "electronics.computers")],
-                [Literal(dialect, "Laptops"), Literal(dialect, "electronics.computers.laptops")],
-                [Literal(dialect, "Desktops"), Literal(dialect, "electronics.computers.desktops")],
-                [Literal(dialect, "Phones"), Literal(dialect, "electronics.phones")],
-                [Literal(dialect, "Smartphones"), Literal(dialect, "electronics.phones.smartphones")],
-                [Literal(dialect, "Clothing"), Literal(dialect, "clothing")],
-                [Literal(dialect, "Men"), Literal(dialect, "clothing.men")],
-                [Literal(dialect, "Shirts"), Literal(dialect, "clothing.men.shirts")],
-            ],
-        ),
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
     )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT hierarchical data ---")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        CreateIndexStatement,
+        QueryStatement,
+        Column,
+        OrderByClause,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.operators import BinaryExpression
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        InsertStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements import (
+        ValuesSource,
+    )
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+
+    # Check if ltree extension is available
+    available = dialect.is_extension_available("ltree")
+    installed = dialect.is_extension_installed("ltree")
+    print(f"Extension check: ltree available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="ltree",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        # Re-detect extensions after creation
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("ltree")
+
+    if installed:
+        # Example 1: Create table with ltree column
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="name",
+                data_type="VARCHAR(100)",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="path",
+                data_type="LTREE",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'categories'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert hierarchical path data
+        # ltree paths use dot-separated labels (only alphanumeric and underscore)
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'categories'),
+            columns=["name", "path"],
+            source=ValuesSource(
+                dialect,
+                [
+                    [Literal(dialect, "Electronics"), Literal(dialect, "electronics")],
+                    [Literal(dialect, "Computers"), Literal(dialect, "electronics.computers")],
+                    [Literal(dialect, "Laptops"), Literal(dialect, "electronics.computers.laptops")],
+                    [Literal(dialect, "Desktops"), Literal(dialect, "electronics.computers.desktops")],
+                    [Literal(dialect, "Phones"), Literal(dialect, "electronics.phones")],
+                    [Literal(dialect, "Smartphones"), Literal(dialect, "electronics.phones.smartphones")],
+                    [Literal(dialect, "Clothing"), Literal(dialect, "clothing")],
+                    [Literal(dialect, "Men"), Literal(dialect, "clothing.men")],
+                    [Literal(dialect, "Shirts"), Literal(dialect, "clothing.men.shirts")],
+                ],
+            ),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT hierarchical data ---")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        backend.execute(sql, params)
+
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+
+        # Example 3: Ancestor query - find all descendants of 'electronics.computers'
+        # @> means "is ancestor of" (left is ancestor of right)
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "path")],
+            from_=Table(dialect, "categories"),
+            where=BinaryExpression(
+                dialect, "@>",
+                Literal(dialect, "electronics.computers"),
+                Column(dialect, "path"),
+            ),
+            order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Ancestor query (@>) ---")
+        print("Find descendants of 'electronics.computers':")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 4: Descendant query - find all ancestors of 'electronics.computers.laptops'
+        # <@ means "is descendant of" (left is descendant of right)
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "path")],
+            from_=Table(dialect, "categories"),
+            where=BinaryExpression(
+                dialect, "<@",
+                Column(dialect, "path"),
+                Literal(dialect, "electronics.computers.laptops"),
+            ),
+            order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Descendant query (<@) ---")
+        print("Find ancestors of 'electronics.computers.laptops':")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 5: Pattern matching query (~)
+        # Find categories matching a lquery pattern
+        # '*' matches any single label, '*{,2}' matches up to 2 labels
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "path")],
+            from_=Table(dialect, "categories"),
+            where=BinaryExpression(
+                dialect, "~",
+                Column(dialect, "path"),
+                Literal(dialect, "electronics.*{1}"),
+            ),
+            order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Pattern matching query (~) ---")
+        print("Pattern: 'electronics.*{1}' (direct children of electronics):")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 6: Search for any path under electronics at any depth
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "path")],
+            from_=Table(dialect, "categories"),
+            where=BinaryExpression(
+                dialect, "~",
+                Column(dialect, "path"),
+                Literal(dialect, "electronics.*"),
+            ),
+            order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- Pattern matching (any depth) ---")
+        print("Pattern: 'electronics.*' (all under electronics):")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+        # Example 7: Create GiST index for fast path queries
+        create_idx = CreateIndexStatement(
+            dialect=dialect,
+            index=Index(dialect, 'idx_categories_path'),
+            table=Table(dialect, 'categories'),
+            columns=["path"],
+            index_type="GIST",
+            if_not_exists=True,
+        )
+        sql, params = create_idx.to_sql()
+        print("\n--- CREATE GIST INDEX ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("GiST index created: idx_categories_path")
+
+    else:
+        print("\nSkipping execution - ltree not available on this server")
+        print("To enable ltree, run: CREATE EXTENSION ltree;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-
-    # Example 3: Ancestor query - find all descendants of 'electronics.computers'
-    # @> means "is ancestor of" (left is ancestor of right)
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=Table(dialect, "categories"),
-        where=BinaryExpression(
-            dialect, "@>",
-            Literal(dialect, "electronics.computers"),
-            Column(dialect, "path"),
-        ),
-        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Ancestor query (@>) ---")
-    print("Find descendants of 'electronics.computers':")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 4: Descendant query - find all ancestors of 'electronics.computers.laptops'
-    # <@ means "is descendant of" (left is descendant of right)
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=Table(dialect, "categories"),
-        where=BinaryExpression(
-            dialect, "<@",
-            Column(dialect, "path"),
-            Literal(dialect, "electronics.computers.laptops"),
-        ),
-        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Descendant query (<@) ---")
-    print("Find ancestors of 'electronics.computers.laptops':")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 5: Pattern matching query (~)
-    # Find categories matching a lquery pattern
-    # '*' matches any single label, '*{,2}' matches up to 2 labels
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=Table(dialect, "categories"),
-        where=BinaryExpression(
-            dialect, "~",
-            Column(dialect, "path"),
-            Literal(dialect, "electronics.*{1}"),
-        ),
-        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Pattern matching query (~) ---")
-    print("Pattern: 'electronics.*{1}' (direct children of electronics):")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 6: Search for any path under electronics at any depth
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "path")],
-        from_=Table(dialect, "categories"),
-        where=BinaryExpression(
-            dialect, "~",
-            Column(dialect, "path"),
-            Literal(dialect, "electronics.*"),
-        ),
-        order_by=OrderByClause(dialect, expressions=[Column(dialect, "path")]),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- Pattern matching (any depth) ---")
-    print("Pattern: 'electronics.*' (all under electronics):")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-    # Example 7: Create GiST index for fast path queries
-    create_idx = CreateIndexStatement(
-        dialect=dialect,
-        index=Index(dialect, 'idx_categories_path'),
-        table=Table(dialect, 'categories'),
-        columns=["path"],
-        index_type="GIST",
-        if_not_exists=True,
-    )
-    sql, params = create_idx.to_sql()
-    print("\n--- CREATE GIST INDEX ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("GiST index created: idx_categories_path")
-
-else:
-    print("\nSkipping execution - ltree not available on this server")
-    print("To enable ltree, run: CREATE EXTENSION ltree;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'categories'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()

@@ -21,133 +21,134 @@ from rhosocial.activerecord.backend.expression.core import FunctionCall, Literal
 from rhosocial.activerecord.backend.expression import functions as F
 from rhosocial.activerecord.backend.expression import functions as F
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-# ============================================================
-# SECTION: SELECT CURRENT_TIMESTAMP
-# ============================================================
-# Use factory functions for SQL statement-level constants.
-# F.current_timestamp(dialect) generates CURRENT_TIMESTAMP (no parentheses)
-# which is the SQL:2003 standard niladic form, valid in both DDL DEFAULT
-# and SELECT contexts.
+    # ============================================================
+    # SECTION: SELECT CURRENT_TIMESTAMP
+    # ============================================================
+    # Use factory functions for SQL statement-level constants.
+    # F.current_timestamp(dialect) generates CURRENT_TIMESTAMP (no parentheses)
+    # which is the SQL:2003 standard niladic form, valid in both DDL DEFAULT
+    # and SELECT contexts.
 
-query_ts = QueryStatement(
-    dialect=dialect,
-    select=[F.current_timestamp(dialect)],
-)
-sql, params = query_ts.to_sql()
-print(f"CURRENT_TIMESTAMP SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    query_ts = QueryStatement(
+        dialect=dialect,
+        select=[F.current_timestamp(dialect)],
+    )
+    sql, params = query_ts.to_sql()
+    print(f"CURRENT_TIMESTAMP SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT NOW()
-# ============================================================
-query_now = QueryStatement(
-    dialect=dialect,
-    select=[F.now(dialect)],
-)
-sql, params = query_now.to_sql()
-print(f"NOW() SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: SELECT NOW()
+    # ============================================================
+    query_now = QueryStatement(
+        dialect=dialect,
+        select=[F.now(dialect)],
+    )
+    sql, params = query_now.to_sql()
+    print(f"NOW() SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT CURRENT_DATE, CURRENT_TIME
-# ============================================================
-query_date = QueryStatement(
-    dialect=dialect,
-    select=[
-        F.current_date(dialect),
-        F.current_time(dialect),
-    ],
-)
-sql, params = query_date.to_sql()
-print(f"CURRENT_DATE/CURRENT_TIME SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: SELECT CURRENT_DATE, CURRENT_TIME
+    # ============================================================
+    query_date = QueryStatement(
+        dialect=dialect,
+        select=[
+            F.current_date(dialect),
+            F.current_time(dialect),
+        ],
+    )
+    sql, params = query_date.to_sql()
+    print(f"CURRENT_DATE/CURRENT_TIME SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT with multiple functions
-# ============================================================
-query_multi = QueryStatement(
-    dialect=dialect,
-    select=[
-        F.now(dialect).as_('current_time'),
-        F.current_date(dialect).as_('current_date'),
-        F.current_user(dialect).as_('current_user'),
-        F.session_user(dialect).as_('session_user'),
-    ],
-)
-sql, params = query_multi.to_sql()
-print(f"Multi-function SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: SELECT with multiple functions
+    # ============================================================
+    query_multi = QueryStatement(
+        dialect=dialect,
+        select=[
+            F.now(dialect).as_('current_time'),
+            F.current_date(dialect).as_('current_date'),
+            F.current_user(dialect).as_('current_user'),
+            F.session_user(dialect).as_('session_user'),
+        ],
+    )
+    sql, params = query_multi.to_sql()
+    print(f"Multi-function SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT with function arguments
-# ============================================================
-# FunctionCall supports arguments, e.g., date_part, to_char
+    # ============================================================
+    # SECTION: SELECT with function arguments
+    # ============================================================
+    # FunctionCall supports arguments, e.g., date_part, to_char
 
-query_format = QueryStatement(
-    dialect=dialect,
-    select=[
-        FunctionCall(dialect, 'TO_CHAR', F.now(dialect), Literal(dialect, 'YYYY-MM-DD')).as_('formatted_date'),
-    ],
-)
-sql, params = query_format.to_sql()
-print(f"TO_CHAR SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    query_format = QueryStatement(
+        dialect=dialect,
+        select=[
+            FunctionCall(dialect, 'TO_CHAR', F.now(dialect), Literal(dialect, 'YYYY-MM-DD')).as_('formatted_date'),
+        ],
+    )
+    sql, params = query_format.to_sql()
+    print(f"TO_CHAR SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT LOCALTIMESTAMP
-# ============================================================
-query_localts = QueryStatement(
-    dialect=dialect,
-    select=[F.localtimestamp(dialect)],
-)
-sql, params = query_localts.to_sql()
-print(f"LOCALTIMESTAMP SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: SELECT LOCALTIMESTAMP
+    # ============================================================
+    query_localts = QueryStatement(
+        dialect=dialect,
+        select=[F.localtimestamp(dialect)],
+    )
+    sql, params = query_localts.to_sql()
+    print(f"LOCALTIMESTAMP SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: SELECT version()
-# ============================================================
-query_version = QueryStatement(
-    dialect=dialect,
-    select=[FunctionCall(dialect, 'VERSION').as_('db_version')],
-)
-sql, params = query_version.to_sql()
-print(f"VERSION() SQL: {sql}")
-result = backend.execute(sql, params, options=dql_options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: SELECT version()
+    # ============================================================
+    query_version = QueryStatement(
+        dialect=dialect,
+        select=[FunctionCall(dialect, 'VERSION').as_('db_version')],
+    )
+    sql, params = query_version.to_sql()
+    print(f"VERSION() SQL: {sql}")
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use factory functions (current_timestamp, now, current_date, etc.) for SQL niladic functions
-# 2. QueryStatement without from_ clause generates "SELECT ..." without FROM
-# 3. Use FunctionCall(dialect, 'FUNC', arg1, arg2) for regular functions with arguments
-# 4. Use .as_('alias') for column aliases in SELECT
-# 5. SQL:2003 niladic functions (CURRENT_TIMESTAMP, CURRENT_DATE, etc.) omit parentheses
-# 6. PostgreSQL supports CURRENT_USER, SESSION_USER as niladic functions
-# 7. Common PostgreSQL info functions: VERSION, CURRENT_QUERY, PG_BACKEND_PID
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use factory functions (current_timestamp, now, current_date, etc.) for SQL niladic functions
+    # 2. QueryStatement without from_ clause generates "SELECT ..." without FROM
+    # 3. Use FunctionCall(dialect, 'FUNC', arg1, arg2) for regular functions with arguments
+    # 4. Use .as_('alias') for column aliases in SELECT
+    # 5. SQL:2003 niladic functions (CURRENT_TIMESTAMP, CURRENT_DATE, etc.) omit parentheses
+    # 6. PostgreSQL supports CURRENT_USER, SESSION_USER as niladic functions
+    # 7. Common PostgreSQL info functions: VERSION, CURRENT_QUERY, PG_BACKEND_PID

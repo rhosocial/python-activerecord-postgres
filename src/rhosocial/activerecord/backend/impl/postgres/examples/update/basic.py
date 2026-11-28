@@ -16,108 +16,109 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    InsertStatement,
-    ValuesSource,
-    DropTableStatement,
-    UpdateStatement,
-)
-from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.expression.statements import (
-    ColumnDefinition,
-)
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        InsertStatement,
+        ValuesSource,
+        DropTableStatement,
+        UpdateStatement,
+    )
+    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.expression.statements import (
+        ColumnDefinition,
+    )
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL'),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-        ColumnDefinition('age', 'INT'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-print(f"Create table SQL: {sql}")
-backend.execute(sql, params)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL'),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+            ColumnDefinition('age', 'INT'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    print(f"Create table SQL: {sql}")
+    backend.execute(sql, params)
 
-insert = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['name', 'age'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'Alice'), Literal(dialect, 25)],
-        [Literal(dialect, 'Bob'), Literal(dialect, 30)],
-    ]),
-)
-sql, params = insert.to_sql()
-print(f"Insert SQL: {sql}")
-backend.execute(sql, params)
+    insert = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['name', 'age'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'Alice'), Literal(dialect, 25)],
+            [Literal(dialect, 'Bob'), Literal(dialect, 30)],
+        ]),
+    )
+    sql, params = insert.to_sql()
+    print(f"Insert SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: UPDATE (using UpdateStatement)
-# ============================================================
-update_expr = UpdateStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    assignments={'age': Literal(dialect, 26)},
-    where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
-)
-sql, params = update_expr.to_sql()
-print(f"UPDATE SQL: {sql}")
-print(f"Params: {params}")
+    # ============================================================
+    # SECTION: UPDATE (using UpdateStatement)
+    # ============================================================
+    update_expr = UpdateStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        assignments={'age': Literal(dialect, 26)},
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'name'), Literal(dialect, 'Alice')),
+    )
+    sql, params = update_expr.to_sql()
+    print(f"UPDATE SQL: {sql}")
+    print(f"Params: {params}")
 
-options = ExecutionOptions(stmt_type=StatementType.DML)
-result = backend.execute(sql, params, options=options)
-print(f"Updated rows: {result.affected_rows}")
+    options = ExecutionOptions(stmt_type=StatementType.DML)
+    result = backend.execute(sql, params, options=options)
+    print(f"Updated rows: {result.affected_rows}")
 
-# ============================================================
-# SECTION: UPDATE all rows
-# ============================================================
-update_all = UpdateStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    assignments={'age': Literal(dialect, 99)},
-)
-sql, params = update_all.to_sql()
-print(f"UPDATE all SQL: {sql}")
-result = backend.execute(sql, params, options=options)
-print(f"Updated rows: {result.affected_rows}")
+    # ============================================================
+    # SECTION: UPDATE all rows
+    # ============================================================
+    update_all = UpdateStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        assignments={'age': Literal(dialect, 99)},
+    )
+    sql, params = update_all.to_sql()
+    print(f"UPDATE all SQL: {sql}")
+    result = backend.execute(sql, params, options=options)
+    print(f"Updated rows: {result.affected_rows}")
 
-# ============================================================
-# SECTION: Teardown
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+    sql, params = drop_expr.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use UpdateStatement with assignments dict for SET clause
-# 2. Use ComparisonPredicate for WHERE
-# 3. Omit where to update all rows
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use UpdateStatement with assignments dict for SET clause
+    # 2. Use ComparisonPredicate for WHERE
+    # 3. Omit where to update all rows

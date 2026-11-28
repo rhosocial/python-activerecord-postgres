@@ -24,157 +24,158 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
-
-for table in ['orders', 'customers']:
-    drop_table = DropTableStatement(
-        dialect=dialect,
-        table=Table(dialect, table),
-        if_exists=True,
-        cascade=True,
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
     )
-    sql, params = drop_table.to_sql()
-    backend.execute(sql, params)
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-create_customers = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'customers'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            'name',
-            'VARCHAR(100)',
-            constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
-        ),
-        ColumnDefinition('email', 'VARCHAR(100)'),
-    ],
-)
-backend.execute(*create_customers.to_sql())
+    for table in ['orders', 'customers']:
+        drop_table = DropTableStatement(
+            dialect=dialect,
+            table=Table(dialect, table),
+            if_exists=True,
+            cascade=True,
+        )
+        sql, params = drop_table.to_sql()
+        backend.execute(sql, params)
 
-create_orders = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'orders'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition('customer_id', 'INTEGER'),
-        ColumnDefinition('total', 'DECIMAL(10,2)'),
-        ColumnDefinition('status', 'VARCHAR(20)'),
-    ],
-)
-backend.execute(*create_orders.to_sql())
-
-insert_customers = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'customers'),
-    columns=['name', 'email'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')],
-            [Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')],
+    create_customers = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'customers'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                'name',
+                'VARCHAR(100)',
+                constraints=[ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect))],
+            ),
+            ColumnDefinition('email', 'VARCHAR(100)'),
         ],
-    ),
-)
-backend.execute(*insert_customers.to_sql())
+    )
+    backend.execute(*create_customers.to_sql())
 
-insert_orders = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'orders'),
-    columns=['customer_id', 'total', 'status'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, 1), Literal(dialect, 100.00), Literal(dialect, 'completed')],
-            [Literal(dialect, 1), Literal(dialect, 50.00), Literal(dialect, 'pending')],
-            [Literal(dialect, 2), Literal(dialect, 75.00), Literal(dialect, 'completed')],
+    create_orders = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'orders'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('customer_id', 'INTEGER'),
+            ColumnDefinition('total', 'DECIMAL(10,2)'),
+            ColumnDefinition('status', 'VARCHAR(20)'),
         ],
-    ),
-)
-backend.execute(*insert_orders.to_sql())
+    )
+    backend.execute(*create_orders.to_sql())
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement, Column, WhereClause,
-)
-from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-
-customers = NamedRelationRef(dialect, Table(dialect, 'customers'), alias='c')
-orders = NamedRelationRef(dialect, Table(dialect, 'orders'), alias='o')
-
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'name', table='c'),
-        Column(dialect, 'total', table='o'),
-        Column(dialect, 'status', table='o'),
-    ],
-    from_=[
-        customers,
-        orders,
-    ],
-    where=WhereClause(
-        dialect,
-        condition=ComparisonPredicate(
+    insert_customers = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'customers'),
+        columns=['name', 'email'],
+        source=ValuesSource(
             dialect,
-            'AND',
-            ComparisonPredicate(
+            [
+                [Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')],
+                [Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')],
+            ],
+        ),
+    )
+    backend.execute(*insert_customers.to_sql())
+
+    insert_orders = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'orders'),
+        columns=['customer_id', 'total', 'status'],
+        source=ValuesSource(
+            dialect,
+            [
+                [Literal(dialect, 1), Literal(dialect, 100.00), Literal(dialect, 'completed')],
+                [Literal(dialect, 1), Literal(dialect, 50.00), Literal(dialect, 'pending')],
+                [Literal(dialect, 2), Literal(dialect, 75.00), Literal(dialect, 'completed')],
+            ],
+        ),
+    )
+    backend.execute(*insert_orders.to_sql())
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement, Column, WhereClause,
+    )
+    from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+
+    customers = NamedRelationRef(dialect, Table(dialect, 'customers'), alias='c')
+    orders = NamedRelationRef(dialect, Table(dialect, 'orders'), alias='o')
+
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'name', table='c'),
+            Column(dialect, 'total', table='o'),
+            Column(dialect, 'status', table='o'),
+        ],
+        from_=[
+            customers,
+            orders,
+        ],
+        where=WhereClause(
+            dialect,
+            condition=ComparisonPredicate(
                 dialect,
-                '=',
-                Column(dialect, 'id', table='c'),
-                Column(dialect, 'customer_id', table='o'),
-            ),
-            ComparisonPredicate(
-                dialect,
-                '=',
-                Column(dialect, 'status', table='o'),
-                Literal(dialect, 'completed'),
+                'AND',
+                ComparisonPredicate(
+                    dialect,
+                    '=',
+                    Column(dialect, 'id', table='c'),
+                    Column(dialect, 'customer_id', table='o'),
+                ),
+                ComparisonPredicate(
+                    dialect,
+                    '=',
+                    Column(dialect, 'status', table='o'),
+                    Literal(dialect, 'completed'),
+                ),
             ),
         ),
-    ),
-)
+    )
 
-sql, params = query.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    sql, params = query.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

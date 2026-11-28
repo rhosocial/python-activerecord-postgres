@@ -19,173 +19,174 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-    PostgresCreateIndexExpression,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    CreateIndexStatement,
-    InsertStatement,
-    QueryStatement,
-    Column,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-
-# Check if bloom extension is available
-available = dialect.is_extension_available("bloom")
-installed = dialect.is_extension_installed("bloom")
-print(f"Extension check: bloom available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="bloom",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("bloom")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with multiple text columns
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="email", data_type="TEXT"),
-        ColumnDefinition(name="city", data_type="TEXT"),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'customers'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert sample data
-    rows = [
-        [Literal(dialect, "Alice"), Literal(dialect, "alice@example.com"), Literal(dialect, "New York")],
-        [Literal(dialect, "Bob"), Literal(dialect, "bob@example.com"), Literal(dialect, "Los Angeles")],
-        [Literal(dialect, "Charlie"), Literal(dialect, "charlie@example.com"), Literal(dialect, "Chicago")],
-        [Literal(dialect, "Diana"), Literal(dialect, "diana@example.com"), Literal(dialect, "New York")],
-        [Literal(dialect, "Eve"), Literal(dialect, "eve@example.com"), Literal(dialect, "Boston")],
-    ]
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'customers'),
-        columns=["name", "email", "city"],
-        source=ValuesSource(dialect, rows),
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+        PostgresCreateIndexExpression,
     )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT data ---")
-    print(f"SQL: {sql}")
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        CreateIndexStatement,
+        InsertStatement,
+        QueryStatement,
+        Column,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.statements import ValuesSource
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+
+    # Check if bloom extension is available
+    available = dialect.is_extension_available("bloom")
+    installed = dialect.is_extension_installed("bloom")
+    print(f"Extension check: bloom available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="bloom",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("bloom")
+
+    if installed:
+        # Example 1: Create table with multiple text columns
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(name="name", data_type="TEXT"),
+            ColumnDefinition(name="email", data_type="TEXT"),
+            ColumnDefinition(name="city", data_type="TEXT"),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'customers'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert sample data
+        rows = [
+            [Literal(dialect, "Alice"), Literal(dialect, "alice@example.com"), Literal(dialect, "New York")],
+            [Literal(dialect, "Bob"), Literal(dialect, "bob@example.com"), Literal(dialect, "Los Angeles")],
+            [Literal(dialect, "Charlie"), Literal(dialect, "charlie@example.com"), Literal(dialect, "Chicago")],
+            [Literal(dialect, "Diana"), Literal(dialect, "diana@example.com"), Literal(dialect, "New York")],
+            [Literal(dialect, "Eve"), Literal(dialect, "eve@example.com"), Literal(dialect, "Boston")],
+        ]
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'customers'),
+            columns=["name", "email", "city"],
+            source=ValuesSource(dialect, rows),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT data ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 3: Create bloom index on multiple columns
+        # Bloom index is useful for equality searches on multiple columns
+        create_idx = PostgresCreateIndexExpression(
+            dialect=dialect,
+            index=Index(dialect, 'idx_customers_bloom'),
+            table=Table(dialect, 'customers'),
+            columns=["name", "email", "city"],
+            index_type="BLOOM",
+            if_not_exists=True,
+        )
+        sql, params = create_idx.to_sql()
+        print("\n--- CREATE BLOOM INDEX ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("Bloom index created: idx_customers_bloom")
+
+        # Example 4: Query using equality condition (bloom index can help)
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "name"), Column(dialect, "email"), Column(dialect, "city")],
+            from_=Table(dialect, "customers"),
+            where=ComparisonPredicate(
+                Column(dialect, "city"),
+                "=",
+                Literal(dialect, "New York"),
+            ),
+        )
+        sql, params = query.to_sql()
+        print("\n--- Query with equality condition ---")
+        print(f"SQL: {sql}")
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+        result = backend.execute(sql, params, options=opts)
+        print(f"Results: {result.data}")
+
+        # Example 5: Create bloom index with custom options
+        # length=64 (signature size in bits), col1=2 (number of bits for first column)
+        create_idx_opts = PostgresCreateIndexExpression(
+            dialect=dialect,
+            index=Index(dialect, 'idx_customers_bloom_opts'),
+            table=Table(dialect, 'customers'),
+            columns=["name", "email"],
+            index_type="BLOOM",
+            if_not_exists=True,
+            with_options={"length": 64, "col1": 2, "col2": 2},
+        )
+        sql, params = create_idx_opts.to_sql()
+        print("\n--- CREATE BLOOM INDEX WITH OPTIONS ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("Bloom index with custom options created: idx_customers_bloom_opts")
+
+    else:
+        print("\nSkipping execution - bloom extension not available on this server")
+        print("To enable bloom, run: CREATE EXTENSION bloom;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-
-    # Example 3: Create bloom index on multiple columns
-    # Bloom index is useful for equality searches on multiple columns
-    create_idx = PostgresCreateIndexExpression(
-        dialect=dialect,
-        index=Index(dialect, 'idx_customers_bloom'),
-        table=Table(dialect, 'customers'),
-        columns=["name", "email", "city"],
-        index_type="BLOOM",
-        if_not_exists=True,
-    )
-    sql, params = create_idx.to_sql()
-    print("\n--- CREATE BLOOM INDEX ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("Bloom index created: idx_customers_bloom")
-
-    # Example 4: Query using equality condition (bloom index can help)
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "email"), Column(dialect, "city")],
-        from_=Table(dialect, "customers"),
-        where=ComparisonPredicate(
-            Column(dialect, "city"),
-            "=",
-            Literal(dialect, "New York"),
-        ),
-    )
-    sql, params = query.to_sql()
-    print("\n--- Query with equality condition ---")
-    print(f"SQL: {sql}")
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    result = backend.execute(sql, params, options=opts)
-    print(f"Results: {result.data}")
-
-    # Example 5: Create bloom index with custom options
-    # length=64 (signature size in bits), col1=2 (number of bits for first column)
-    create_idx_opts = PostgresCreateIndexExpression(
-        dialect=dialect,
-        index=Index(dialect, 'idx_customers_bloom_opts'),
-        table=Table(dialect, 'customers'),
-        columns=["name", "email"],
-        index_type="BLOOM",
-        if_not_exists=True,
-        with_options={"length": 64, "col1": 2, "col2": 2},
-    )
-    sql, params = create_idx_opts.to_sql()
-    print("\n--- CREATE BLOOM INDEX WITH OPTIONS ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("Bloom index with custom options created: idx_customers_bloom_opts")
-
-else:
-    print("\nSkipping execution - bloom extension not available on this server")
-    print("To enable bloom, run: CREATE EXTENSION bloom;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'customers'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()

@@ -75,6 +75,7 @@ jobs:
 
   benchmark-python-315-postgres-18:
     name: Run benchmarks with Python 3.15 / postgres 18
+    needs: formal-rules-contracts
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -276,6 +277,7 @@ jobs:
 
   test-python-315:
     name: Python ${{ matrix.python-version }}${{ matrix.freethreaded && 't' || '' }} / postgres ${{ matrix.postgres-version }}
+    needs: formal-rules-contracts
     runs-on: ${{ matrix.os }}
     permissions:
       contents: read
@@ -385,6 +387,7 @@ jobs:
 
   test:
     name: Python ${{ matrix.python-version }} / postgres ${{ matrix.postgres-version }}
+    needs: formal-rules-contracts
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -515,6 +518,7 @@ jobs:
 
   test-postgres-19:
     name: Python 3.14 / postgres 19
+    needs: formal-rules-contracts
     runs-on: ubuntu-latest
 
     services:

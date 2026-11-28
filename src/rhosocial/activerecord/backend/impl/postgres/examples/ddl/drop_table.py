@@ -13,64 +13,65 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression import CreateTableStatement
-from rhosocial.activerecord.backend.expression.statements import (
-    ColumnDefinition,
-)
+    from rhosocial.activerecord.backend.expression import CreateTableStatement
+    from rhosocial.activerecord.backend.expression.statements import (
+        ColumnDefinition,
+    )
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'INT'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-print(f"Create table SQL: {sql}")
-backend.execute(sql, params)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'INT'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    print(f"Create table SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: DROP TABLE
-# ============================================================
-from rhosocial.activerecord.backend.expression import DropTableStatement
-from rhosocial.activerecord.backend.expression.objects import Table
+    # ============================================================
+    # SECTION: DROP TABLE
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import DropTableStatement
+    from rhosocial.activerecord.backend.expression.objects import Table
 
-drop_expr = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-)
-sql, params = drop_expr.to_sql()
-print(f"DROP TABLE SQL: {sql}")
-print(f"Params: {params}")
-backend.execute(sql, params)
+    drop_expr = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+    )
+    sql, params = drop_expr.to_sql()
+    print(f"DROP TABLE SQL: {sql}")
+    print(f"Params: {params}")
+    backend.execute(sql, params)
 
-# Already deleted
-drop_expr_exists = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-)
-sql, params = drop_expr_exists.to_sql()
-print(f"DROP TABLE IF EXISTS SQL: {sql}")
-backend.execute(sql, params)
+    # Already deleted
+    drop_expr_exists = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+    )
+    sql, params = drop_expr_exists.to_sql()
+    print(f"DROP TABLE IF EXISTS SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    backend.disconnect()
 
-# Key points:
-# 1. Use DropTableStatement to drop tables
-# 2. if_exists=True prevents error
+    # Key points:
+    # 1. Use DropTableStatement to drop tables
+    # 2. if_exists=True prevents error

@@ -32,101 +32,156 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True, cascade=True)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True, cascade=True)
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'accounts'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-        ]),
-        ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('balance', 'NUMERIC(10,2)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
-
-# Insert initial data
-insert = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'accounts'),
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'Alice'), Literal(dialect, 1000.00)],
-        [Literal(dialect, 'Bob'), Literal(dialect, 500.00)],
-    ]),
-    columns=['name', 'balance'],
-)
-sql, params = insert.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-
-# 1. Transaction with commit
-print("--- Transaction with commit ---")
-with backend.transaction():
-    from rhosocial.activerecord.backend.expression import UpdateStatement
-    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-    from rhosocial.activerecord.backend.expression.core import Column
-
-    update = UpdateStatement(
+    create_table = CreateTableStatement(
         dialect=dialect,
         table=Table(dialect, 'accounts'),
-        assignments={'balance': Literal(dialect, 1500.00)},
+        columns=[
+            ColumnDefinition('id', 'SERIAL', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+            ]),
+            ColumnDefinition('name', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('balance', 'NUMERIC(10,2)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
+
+    # Insert initial data
+    insert = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'accounts'),
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'Alice'), Literal(dialect, 1000.00)],
+            [Literal(dialect, 'Bob'), Literal(dialect, 500.00)],
+        ]),
+        columns=['name', 'balance'],
+    )
+    sql, params = insert.to_sql()
+    backend.execute(sql, params)
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+
+    # 1. Transaction with commit
+    print("--- Transaction with commit ---")
+    with backend.transaction():
+        from rhosocial.activerecord.backend.expression import UpdateStatement
+        from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+        from rhosocial.activerecord.backend.expression.core import Column
+
+        update = UpdateStatement(
+            dialect=dialect,
+            table=Table(dialect, 'accounts'),
+            assignments={'balance': Literal(dialect, 1500.00)},
+            where=ComparisonPredicate(
+                dialect, '=',
+                Column(dialect, 'name'),
+                Literal(dialect, 'Alice'),
+            ),
+        )
+        sql, params = update.to_sql()
+        backend.execute(sql, params)
+        print("Updated Alice's balance within transaction")
+
+    # Verify after commit
+    query = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'name'), Column(dialect, 'balance')],
+        from_=Table(dialect, 'accounts'),
         where=ComparisonPredicate(
             dialect, '=',
             Column(dialect, 'name'),
             Literal(dialect, 'Alice'),
         ),
     )
-    sql, params = update.to_sql()
-    backend.execute(sql, params)
-    print("Updated Alice's balance within transaction")
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"After commit: {result.data}")
 
-# Verify after commit
-query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=Table(dialect, 'accounts'),
-    where=ComparisonPredicate(
-        dialect, '=',
-        Column(dialect, 'name'),
-        Literal(dialect, 'Alice'),
-    ),
-)
-sql, params = query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"After commit: {result.data}")
+    # 2. Transaction with rollback
+    print("\n--- Transaction with rollback ---")
+    try:
+        with backend.transaction():
+            update = UpdateStatement(
+                dialect=dialect,
+                table=Table(dialect, 'accounts'),
+                assignments={'balance': Literal(dialect, 0)},
+                where=ComparisonPredicate(
+                    dialect, '=',
+                    Column(dialect, 'name'),
+                    Literal(dialect, 'Bob'),
+                ),
+            )
+            sql, params = update.to_sql()
+            backend.execute(sql, params)
+            print("Updated Bob's balance (will be rolled back)")
+            raise ValueError("Simulated error - triggering rollback")
+    except ValueError:
+        print("Transaction rolled back due to error")
 
-# 2. Transaction with rollback
-print("\n--- Transaction with rollback ---")
-try:
+    # Verify rollback
+    query = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'name'), Column(dialect, 'balance')],
+        from_=Table(dialect, 'accounts'),
+        where=ComparisonPredicate(
+            dialect, '=',
+            Column(dialect, 'name'),
+            Literal(dialect, 'Bob'),
+        ),
+    )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"After rollback: {result.data}")
+
+    # 3. Savepoints for nested transactions
+    print("\n--- Savepoints (nested transactions) ---")
     with backend.transaction():
+        # First operation
         update = UpdateStatement(
             dialect=dialect,
             table=Table(dialect, 'accounts'),
-            assignments={'balance': Literal(dialect, 0)},
+            assignments={'balance': Literal(dialect, 2000.00)},
+            where=ComparisonPredicate(
+                dialect, '=',
+                Column(dialect, 'name'),
+                Literal(dialect, 'Alice'),
+            ),
+        )
+        sql, params = update.to_sql()
+        backend.execute(sql, params)
+
+        # Create savepoint
+        sp = backend.transaction_manager.savepoint('before_bob_update')
+        print(f"Savepoint created: {sp}")
+
+        # Second operation (within savepoint)
+        update = UpdateStatement(
+            dialect=dialect,
+            table=Table(dialect, 'accounts'),
+            assignments={'balance': Literal(dialect, 9999.00)},
             where=ComparisonPredicate(
                 dialect, '=',
                 Column(dialect, 'name'),
@@ -135,90 +190,36 @@ try:
         )
         sql, params = update.to_sql()
         backend.execute(sql, params)
-        print("Updated Bob's balance (will be rolled back)")
-        raise ValueError("Simulated error - triggering rollback")
-except ValueError:
-    print("Transaction rolled back due to error")
 
-# Verify rollback
-query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=Table(dialect, 'accounts'),
-    where=ComparisonPredicate(
-        dialect, '=',
-        Column(dialect, 'name'),
-        Literal(dialect, 'Bob'),
-    ),
-)
-sql, params = query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"After rollback: {result.data}")
+        # Rollback to savepoint (undo only Bob's update)
+        backend.transaction_manager.rollback_to(sp)
+        print("Rolled back to savepoint (Bob's update undone)")
 
-# 3. Savepoints for nested transactions
-print("\n--- Savepoints (nested transactions) ---")
-with backend.transaction():
-    # First operation
-    update = UpdateStatement(
+    # Verify - Alice updated, Bob unchanged
+    query = QueryStatement(
         dialect=dialect,
-        table=Table(dialect, 'accounts'),
-        assignments={'balance': Literal(dialect, 2000.00)},
-        where=ComparisonPredicate(
-            dialect, '=',
-            Column(dialect, 'name'),
-            Literal(dialect, 'Alice'),
-        ),
+        select=[Column(dialect, 'name'), Column(dialect, 'balance')],
+        from_=Table(dialect, 'accounts'),
+        order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
     )
-    sql, params = update.to_sql()
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"Final state: {result.data}")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True)
+    sql, params = drop_table.to_sql()
     backend.execute(sql, params)
+    backend.disconnect()
 
-    # Create savepoint
-    sp = backend.transaction_manager.savepoint('before_bob_update')
-    print(f"Savepoint created: {sp}")
-
-    # Second operation (within savepoint)
-    update = UpdateStatement(
-        dialect=dialect,
-        table=Table(dialect, 'accounts'),
-        assignments={'balance': Literal(dialect, 9999.00)},
-        where=ComparisonPredicate(
-            dialect, '=',
-            Column(dialect, 'name'),
-            Literal(dialect, 'Bob'),
-        ),
-    )
-    sql, params = update.to_sql()
-    backend.execute(sql, params)
-
-    # Rollback to savepoint (undo only Bob's update)
-    backend.transaction_manager.rollback_to(sp)
-    print("Rolled back to savepoint (Bob's update undone)")
-
-# Verify - Alice updated, Bob unchanged
-query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'name'), Column(dialect, 'balance')],
-    from_=Table(dialect, 'accounts'),
-    order_by=OrderByClause(dialect, [Column(dialect, 'id')]),
-)
-sql, params = query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"Final state: {result.data}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(dialect=dialect, table=Table(dialect, 'accounts'), if_exists=True)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
-
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use backend.transaction() context manager for automatic commit/rollback
-# 2. Exceptions within the context cause automatic rollback
-# 3. Use backend.transaction_manager.savepoint(name) for nested transaction control
-# 4. backend.transaction_manager.rollback_to(sp) undoes operations after the savepoint
-# 5. Outer transaction commits if no exception propagates
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use backend.transaction() context manager for automatic commit/rollback
+    # 2. Exceptions within the context cause automatic rollback
+    # 3. Use backend.transaction_manager.savepoint(name) for nested transaction control
+    # 4. backend.transaction_manager.rollback_to(sp) undoes operations after the savepoint
+    # 5. Outer transaction commits if no exception propagates

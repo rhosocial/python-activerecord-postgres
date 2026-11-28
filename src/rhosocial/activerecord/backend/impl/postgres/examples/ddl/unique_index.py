@@ -30,147 +30,148 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('email', 'VARCHAR(200)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('username', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('email', 'VARCHAR(200)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('username', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
 
-# 1. CREATE UNIQUE INDEX on a single column
-create_email_idx = CreateIndexStatement(
-    dialect=dialect,
-    index=Index(dialect, 'idx_users_email'),
-    table=Table(dialect, 'users'),
-    columns=['email'],
-    unique=True,
-    if_not_exists=True,
-)
-sql, params = create_email_idx.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    # 1. CREATE UNIQUE INDEX on a single column
+    create_email_idx = CreateIndexStatement(
+        dialect=dialect,
+        index=Index(dialect, 'idx_users_email'),
+        table=Table(dialect, 'users'),
+        columns=['email'],
+        unique=True,
+        if_not_exists=True,
+    )
+    sql, params = create_email_idx.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# 2. CREATE UNIQUE INDEX on multiple columns (composite unique)
-create_composite_idx = CreateIndexStatement(
-    dialect=dialect,
-    index=Index(dialect, 'idx_users_username_email'),
-    table=Table(dialect, 'users'),
-    columns=['username', 'email'],
-    unique=True,
-    if_not_exists=True,
-)
-sql, params = create_composite_idx.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    # 2. CREATE UNIQUE INDEX on multiple columns (composite unique)
+    create_composite_idx = CreateIndexStatement(
+        dialect=dialect,
+        index=Index(dialect, 'idx_users_username_email'),
+        table=Table(dialect, 'users'),
+        columns=['username', 'email'],
+        unique=True,
+        if_not_exists=True,
+    )
+    sql, params = create_composite_idx.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
 
-# Create the unique indexes
-sql, params = create_email_idx.to_sql()
-backend.execute(sql, params)
-print("Index created: idx_users_email (UNIQUE on email)")
+    # Create the unique indexes
+    sql, params = create_email_idx.to_sql()
+    backend.execute(sql, params)
+    print("Index created: idx_users_email (UNIQUE on email)")
 
-sql, params = create_composite_idx.to_sql()
-backend.execute(sql, params)
-print("Index created: idx_users_username_email (UNIQUE on username, email)")
+    sql, params = create_composite_idx.to_sql()
+    backend.execute(sql, params)
+    print("Index created: idx_users_username_email (UNIQUE on username, email)")
 
-# Insert initial row
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['email', 'username'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice')],
-    ]),
-)
-sql, params = insert_expr.to_sql()
-backend.execute(sql, params)
-print("Inserted: alice@example.com / alice")
-
-# 3. Verify uniqueness: attempt duplicate email (should fail)
-try:
-    duplicate_insert = InsertStatement(
+    # Insert initial row
+    insert_expr = InsertStatement(
         dialect=dialect,
         into=Table(dialect, 'users'),
         columns=['email', 'username'],
         source=ValuesSource(dialect, [
-            [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice2')],
+            [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice')],
         ]),
     )
-    sql, params = duplicate_insert.to_sql()
+    sql, params = insert_expr.to_sql()
     backend.execute(sql, params)
-    print("ERROR: Duplicate email was accepted (should have been rejected)")
-except Exception as e:
-    print(f"Uniqueness constraint enforced: {e}")
+    print("Inserted: alice@example.com / alice")
 
-# Verify data after failed insert
-verify_query = QueryStatement(
-    dialect=dialect,
-    select=[AllColumnsWildcard(dialect)],
-    from_=Table(dialect, 'users'),
-)
-sql, params = verify_query.to_sql()
-result = backend.execute(sql, params)
-print(f"Rows in users table: {result.data}")
+    # 3. Verify uniqueness: attempt duplicate email (should fail)
+    try:
+        duplicate_insert = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'users'),
+            columns=['email', 'username'],
+            source=ValuesSource(dialect, [
+                [Literal(dialect, 'alice@example.com'), Literal(dialect, 'alice2')],
+            ]),
+        )
+        sql, params = duplicate_insert.to_sql()
+        backend.execute(sql, params)
+        print("ERROR: Duplicate email was accepted (should have been rejected)")
+    except Exception as e:
+        print(f"Uniqueness constraint enforced: {e}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # Verify data after failed insert
+    verify_query = QueryStatement(
+        dialect=dialect,
+        select=[AllColumnsWildcard(dialect)],
+        from_=Table(dialect, 'users'),
+    )
+    sql, params = verify_query.to_sql()
+    result = backend.execute(sql, params)
+    print(f"Rows in users table: {result.data}")
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use CreateIndexStatement with unique=True for UNIQUE indexes
-# 2. Single-column unique index ensures no duplicates in that column
-# 3. Composite unique index ensures no duplicate combination across columns
-# 4. if_not_exists=True prevents errors if index already exists
-# 5. PostgreSQL enforces uniqueness at INSERT/UPDATE time
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
+
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use CreateIndexStatement with unique=True for UNIQUE indexes
+    # 2. Single-column unique index ensures no duplicates in that column
+    # 3. Composite unique index ensures no duplicate combination across columns
+    # 4. if_not_exists=True prevents errors if index already exists
+    # 5. PostgreSQL enforces uniqueness at INSERT/UPDATE time

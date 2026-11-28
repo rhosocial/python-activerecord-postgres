@@ -18,150 +18,151 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-    PostgresCreateIndexExpression,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    InsertStatement,
-    QueryStatement,
-    Column,
-    CreateIndexStatement,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-
-# Check if btree_gin extension is available
-available = dialect.is_extension_available("btree_gin")
-installed = dialect.is_extension_installed("btree_gin")
-print(f"Extension check: btree_gin available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="btree_gin",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("btree_gin")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with employee data
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="department", data_type="TEXT"),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'employees'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert employee data
-    rows = [
-        [Literal(dialect, "Alice"), Literal(dialect, "Engineering")],
-        [Literal(dialect, "Bob"), Literal(dialect, "Marketing")],
-        [Literal(dialect, "Charlie"), Literal(dialect, "Engineering")],
-        [Literal(dialect, "Diana"), Literal(dialect, "Sales")],
-        [Literal(dialect, "Eve"), Literal(dialect, "Engineering")],
-    ]
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'employees'),
-        columns=["name", "department"],
-        source=ValuesSource(dialect, rows),
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+        PostgresCreateIndexExpression,
     )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT data ---")
-    print(f"SQL: {sql}")
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        InsertStatement,
+        QueryStatement,
+        Column,
+        CreateIndexStatement,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.statements import ValuesSource
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+
+    # Check if btree_gin extension is available
+    available = dialect.is_extension_available("btree_gin")
+    installed = dialect.is_extension_installed("btree_gin")
+    print(f"Extension check: btree_gin available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="btree_gin",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("btree_gin")
+
+    if installed:
+        # Example 1: Create table with employee data
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(name="name", data_type="TEXT"),
+            ColumnDefinition(name="department", data_type="TEXT"),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'employees'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert employee data
+        rows = [
+            [Literal(dialect, "Alice"), Literal(dialect, "Engineering")],
+            [Literal(dialect, "Bob"), Literal(dialect, "Marketing")],
+            [Literal(dialect, "Charlie"), Literal(dialect, "Engineering")],
+            [Literal(dialect, "Diana"), Literal(dialect, "Sales")],
+            [Literal(dialect, "Eve"), Literal(dialect, "Engineering")],
+        ]
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'employees'),
+            columns=["name", "department"],
+            source=ValuesSource(dialect, rows),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT data ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 3: Create GIN index with btree_gin operator class
+        # btree_gin allows GIN indexes to support equality checks on scalar types
+        create_idx = PostgresCreateIndexExpression(
+            dialect=dialect,
+            index=Index(dialect, 'idx_employees_name_gin'),
+            table=Table(dialect, 'employees'),
+            columns=["name"],
+            index_type="GIN",
+            if_not_exists=True,
+            opclasses={"name": "int4_ops"},
+        )
+        sql, params = create_idx.to_sql()
+        print("\n--- CREATE GIN INDEX with btree_gin operator class ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("GIN index created: idx_employees_name_gin")
+
+        # Example 4: Query data using the GIN index
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+        query = QueryStatement(
+            dialect=dialect,
+            select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "department")],
+            from_=Table(dialect, "employees"),
+        )
+        sql, params = query.to_sql()
+        result = backend.execute(sql, params, options=opts)
+        print("\n--- QUERY all employees ---")
+        print(f"SQL: {sql}")
+        print(f"Results: {result.data}")
+
+    else:
+        print("\nSkipping execution - btree_gin extension not available on this server")
+        print("To enable btree_gin, run: CREATE EXTENSION btree_gin;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-
-    # Example 3: Create GIN index with btree_gin operator class
-    # btree_gin allows GIN indexes to support equality checks on scalar types
-    create_idx = PostgresCreateIndexExpression(
-        dialect=dialect,
-        index=Index(dialect, 'idx_employees_name_gin'),
-        table=Table(dialect, 'employees'),
-        columns=["name"],
-        index_type="GIN",
-        if_not_exists=True,
-        opclasses={"name": "int4_ops"},
-    )
-    sql, params = create_idx.to_sql()
-    print("\n--- CREATE GIN INDEX with btree_gin operator class ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("GIN index created: idx_employees_name_gin")
-
-    # Example 4: Query data using the GIN index
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "id"), Column(dialect, "name"), Column(dialect, "department")],
-        from_=Table(dialect, "employees"),
-    )
-    sql, params = query.to_sql()
-    result = backend.execute(sql, params, options=opts)
-    print("\n--- QUERY all employees ---")
-    print(f"SQL: {sql}")
-    print(f"Results: {result.data}")
-
-else:
-    print("\nSkipping execution - btree_gin extension not available on this server")
-    print("To enable btree_gin, run: CREATE EXTENSION btree_gin;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'employees'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()

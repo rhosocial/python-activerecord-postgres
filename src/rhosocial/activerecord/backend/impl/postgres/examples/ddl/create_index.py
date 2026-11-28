@@ -21,85 +21,86 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'products'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'products'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'products'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-        ColumnDefinition('category', 'VARCHAR(50)'),
-        ColumnDefinition('price', 'DECIMAL(10,2)'),
-    ],
-)
-backend.execute(*create_table.to_sql())
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'products'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+            ColumnDefinition('category', 'VARCHAR(50)'),
+            ColumnDefinition('price', 'DECIMAL(10,2)'),
+        ],
+    )
+    backend.execute(*create_table.to_sql())
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import CreateIndexStatement
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import CreateIndexStatement
 
-create_idx = CreateIndexStatement(
-    dialect=dialect,
-    index=Index(dialect, 'idx_category_price'),
-    table=Table(dialect, 'products'),
-    columns=['category', 'price'],
-    if_not_exists=True,
-)
+    create_idx = CreateIndexStatement(
+        dialect=dialect,
+        index=Index(dialect, 'idx_category_price'),
+        table=Table(dialect, 'products'),
+        columns=['category', 'price'],
+        if_not_exists=True,
+    )
 
-sql, params = create_idx.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
+    sql, params = create_idx.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-result = backend.execute(sql, params)
-print("Index created: idx_category_price")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    result = backend.execute(sql, params)
+    print("Index created: idx_category_price")
 
-# Verify index creation
-from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.expression.core import Column, Literal
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    # Verify index creation
+    from rhosocial.activerecord.backend.expression import QueryStatement
+    from rhosocial.activerecord.backend.expression.objects import Index, Table
+    from rhosocial.activerecord.backend.expression.core import Column, Literal
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
-verify_expr = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'indexname')],
-    from_=Table(dialect, 'pg_indexes'),
-    where=ComparisonPredicate(dialect, "=", Column(dialect, 'indexname'), Literal(dialect, 'idx_category_price')),
-)
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-verify_result = backend.execute(*verify_expr.to_sql(), options=options)
-print(f"Index info: {verify_result.data}")
+    verify_expr = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'indexname')],
+        from_=Table(dialect, 'pg_indexes'),
+        where=ComparisonPredicate(dialect, "=", Column(dialect, 'indexname'), Literal(dialect, 'idx_category_price')),
+    )
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    verify_result = backend.execute(*verify_expr.to_sql(), options=options)
+    print(f"Index info: {verify_result.data}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

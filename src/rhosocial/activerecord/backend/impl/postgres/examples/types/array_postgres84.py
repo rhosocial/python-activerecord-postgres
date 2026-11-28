@@ -24,102 +24,103 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+            ColumnDefinition('scores', 'INTEGER[]'),
+        ],
+    )
+    backend.execute(*create_table.to_sql())
+
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['name', 'scores'],
+        source=ValuesSource(
+            dialect,
+            [
+                [Literal(dialect, 'Alice'), Literal(dialect, '{85,90,78}')],
+                [Literal(dialect, 'Bob'), Literal(dialect, '{92,88,95}')],
+                [Literal(dialect, 'Charlie'), Literal(dialect, '{70,75,80}')],
             ],
         ),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-        ColumnDefinition('scores', 'INTEGER[]'),
-    ],
-)
-backend.execute(*create_table.to_sql())
+    )
+    backend.execute(*insert_expr.to_sql())
 
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['name', 'scores'],
-    source=ValuesSource(
-        dialect,
-        [
-            [Literal(dialect, 'Alice'), Literal(dialect, '{85,90,78}')],
-            [Literal(dialect, 'Bob'), Literal(dialect, '{92,88,95}')],
-            [Literal(dialect, 'Charlie'), Literal(dialect, '{70,75,80}')],
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement, Column,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.impl.postgres.functions.array import (
+        array_length,
+        array_to_string,
+    )
+
+    # Note: array_length and array_to_string are helper functions that return
+    # SQL string fragments. They can be used to build raw SQL expressions:
+    sql_fragment = array_length(dialect, 'scores', 1)
+    print(f"array_length SQL: {sql_fragment}")
+
+    sql_fragment = array_to_string(dialect, 'scores', ', ')
+    print(f"array_to_string SQL: {sql_fragment}")
+
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'name'),
+            Column(dialect, 'scores'),
         ],
-    ),
-)
-backend.execute(*insert_expr.to_sql())
+        from_=Table(dialect, 'users'),
+    )
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement, Column,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.impl.postgres.functions.array import (
-    array_length,
-    array_to_string,
-)
+    sql, params = query.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
 
-# Note: array_length and array_to_string are helper functions that return
-# SQL string fragments. They can be used to build raw SQL expressions:
-sql_fragment = array_length(dialect, 'scores', 1)
-print(f"array_length SQL: {sql_fragment}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=options)
+    print(f"Rows returned: {len(result.data) if result.data else 0}")
+    for row in result.data or []:
+        print(f" {row}")
 
-sql_fragment = array_to_string(dialect, 'scores', ', ')
-print(f"array_to_string SQL: {sql_fragment}")
-
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'name'),
-        Column(dialect, 'scores'),
-    ],
-    from_=Table(dialect, 'users'),
-)
-
-sql, params = query.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
-
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(sql, params, options=options)
-print(f"Rows returned: {len(result.data) if result.data else 0}")
-for row in result.data or []:
-    print(f" {row}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

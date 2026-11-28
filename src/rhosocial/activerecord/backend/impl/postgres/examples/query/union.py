@@ -15,120 +15,121 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    InsertStatement,
-    ValuesSource,
-    DropTableStatement,
-)
-from rhosocial.activerecord.backend.expression.core import Literal, Column
-from rhosocial.activerecord.backend.expression.statements import (
-    ColumnDefinition,
-)
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        InsertStatement,
+        ValuesSource,
+        DropTableStatement,
+    )
+    from rhosocial.activerecord.backend.expression.core import Literal, Column
+    from rhosocial.activerecord.backend.expression.statements import (
+        ColumnDefinition,
+    )
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'INT'),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-print(f"Create table SQL: {sql}")
-backend.execute(sql, params)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'INT'),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    print(f"Create table SQL: {sql}")
+    backend.execute(sql, params)
 
-insert = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['id', 'name'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 1), Literal(dialect, 'Alice')],
-        [Literal(dialect, 2), Literal(dialect, 'Bob')],
-    ]),
-)
-sql, params = insert.to_sql()
-print(f"Insert SQL: {sql}")
-backend.execute(sql, params)
+    insert = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['id', 'name'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 1), Literal(dialect, 'Alice')],
+            [Literal(dialect, 2), Literal(dialect, 'Bob')],
+        ]),
+    )
+    sql, params = insert.to_sql()
+    print(f"Insert SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: UNION
-# ============================================================
-from rhosocial.activerecord.backend.expression import (
-    QueryStatement, SetOperation,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
+    # ============================================================
+    # SECTION: UNION
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import (
+        QueryStatement, SetOperation,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
 
-query1 = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'name')],
-    from_=Table(dialect, 'users'),
-)
+    query1 = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'name')],
+        from_=Table(dialect, 'users'),
+    )
 
-query2 = QueryStatement(
-    dialect=dialect,
-    select=[Literal(dialect, 'Charlie')],
-)
+    query2 = QueryStatement(
+        dialect=dialect,
+        select=[Literal(dialect, 'Charlie')],
+    )
 
-union_expr = SetOperation(
-    dialect=dialect,
-    op='union',
-    left=query1,
-    right=query2,
-)
-sql, params = union_expr.to_sql()
-print(f"UNION SQL: {sql}")
-print(f"Params: {params}")
+    union_expr = SetOperation(
+        dialect=dialect,
+        op='union',
+        left=query1,
+        right=query2,
+    )
+    sql, params = union_expr.to_sql()
+    print(f"UNION SQL: {sql}")
+    print(f"Params: {params}")
 
-options = ExecutionOptions(stmt_type=StatementType.DQL)
-result = backend.execute(sql, params, options=options)
-print(f"Result: {result.data}")
+    options = ExecutionOptions(stmt_type=StatementType.DQL)
+    result = backend.execute(sql, params, options=options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: UNION ALL
-# ============================================================
-union_all = SetOperation(
-    dialect=dialect,
-    op='union_all',
-    left=query1,
-    right=query2,
-)
-sql, params = union_all.to_sql()
-print(f"UNION ALL SQL: {sql}")
-result = backend.execute(sql, params, options=options)
-print(f"Result: {result.data}")
+    # ============================================================
+    # SECTION: UNION ALL
+    # ============================================================
+    union_all = SetOperation(
+        dialect=dialect,
+        op='union_all',
+        left=query1,
+        right=query2,
+    )
+    sql, params = union_all.to_sql()
+    print(f"UNION ALL SQL: {sql}")
+    result = backend.execute(sql, params, options=options)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: Teardown
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+    sql, params = drop_expr.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use SetOperation with op='union' for UNION and op='union_all' for UNION ALL
-# 2. UNION removes duplicates, UNION ALL keeps all
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use SetOperation with op='union' for UNION and op='union_all' for UNION ALL
+    # 2. UNION removes duplicates, UNION ALL keeps all

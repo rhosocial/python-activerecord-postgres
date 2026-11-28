@@ -32,72 +32,73 @@ from rhosocial.activerecord.backend.expression.statements.ddl_alter import (
     AlterTableStatement, AddColumnAction, DropColumnAction,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("POSTGRES_HOST", "localhost"),
-    port=int(os.getenv("POSTGRES_PORT", "5432")),
-    database=os.getenv("POSTGRES_DATABASE", "test"),
-    username=os.getenv("POSTGRES_USER", "postgres"),
-    password=os.getenv("POSTGRES_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=os.getenv("POSTGRES_DATABASE", "test"),
+        username=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
-sql, params = drop_demo.to_sql()
-backend.execute(sql, params)
+    drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
+    sql, params = drop_demo.to_sql()
+    backend.execute(sql, params)
 
-demo_table = CreateTableStatement(
-    dialect=dialect, table=Table(dialect, 'demo'), columns=[
-        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
-        ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
-        ColumnDefinition(dialect, "email", VarCharType(dialect, length=200)),
-    ]
-)
-sql, params = demo_table.to_sql()
-backend.execute(sql, params)
+    demo_table = CreateTableStatement(
+        dialect=dialect, table=Table(dialect, 'demo'), columns=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
+            ColumnDefinition(dialect, "name", VarCharType(dialect, length=100)),
+            ColumnDefinition(dialect, "email", VarCharType(dialect, length=200)),
+        ]
+    )
+    sql, params = demo_table.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.schema import (  # noqa: E402
-    SyncSchemaSnapshotBuilder,
-)
-from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
-    PostgresSchemaDiffer,
-)
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.schema import (  # noqa: E402
+        SyncSchemaSnapshotBuilder,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
+        PostgresSchemaDiffer,
+    )
 
-builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
-snapshot_before = builder.build(schema="public")
+    builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
+    snapshot_before = builder.build(schema="public")
 
-# Add a column between name and email — shifts ordinal positions
-# but PostgresSchemaDiffer ignores ordinal_position.
-add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), AddColumnAction(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect))))
-sql, params = add_age.to_sql()
-backend.execute(sql, params)
+    # Add a column between name and email — shifts ordinal positions
+    # but PostgresSchemaDiffer ignores ordinal_position.
+    add_age = AlterTableStatement(dialect, Table(dialect, 'demo'), AddColumnAction(dialect, ColumnDefinition(dialect, "age", IntegerType(dialect))))
+    sql, params = add_age.to_sql()
+    backend.execute(sql, params)
 
-# Now drop it — column set is identical
-drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), DropColumnAction(dialect, "age"))
-sql, params = drop_age.to_sql()
-backend.execute(sql, params)
+    # Now drop it — column set is identical
+    drop_age = AlterTableStatement(dialect, Table(dialect, 'demo'), DropColumnAction(dialect, "age"))
+    sql, params = drop_age.to_sql()
+    backend.execute(sql, params)
 
-snapshot_after = builder.build(schema="public")
+    snapshot_after = builder.build(schema="public")
 
-differ = PostgresSchemaDiffer()
-diff = differ.compare(snapshot_before, snapshot_after)
+    differ = PostgresSchemaDiffer()
+    diff = differ.compare(snapshot_before, snapshot_after)
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-print(f"Modified tables: {diff.modified_tables}")
-print(f"Diff is empty:   {diff.is_empty}")
-print("(No diff expected — column set unchanged regardless of position)")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    print(f"Modified tables: {diff.modified_tables}")
+    print(f"Diff is empty:   {diff.is_empty}")
+    print("(No diff expected — column set unchanged regardless of position)")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-sql, params = drop_demo.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    sql, params = drop_demo.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()

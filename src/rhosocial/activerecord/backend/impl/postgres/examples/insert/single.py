@@ -13,77 +13,78 @@ import os
 from rhosocial.activerecord.backend.impl.postgres.backend import PostgresBackend
 from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnectionConfig
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-from rhosocial.activerecord.backend.expression import CreateTableStatement
-from rhosocial.activerecord.backend.expression.statements import (
-    ColumnDefinition,
-)
+    from rhosocial.activerecord.backend.expression import CreateTableStatement
+    from rhosocial.activerecord.backend.expression.statements import (
+        ColumnDefinition,
+    )
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL'),
-        ColumnDefinition('name', 'VARCHAR(100)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-print(f"Create table SQL: {sql}")
-backend.execute(sql, params)
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL'),
+            ColumnDefinition('name', 'VARCHAR(100)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    print(f"Create table SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Single INSERT
-# ============================================================
-from rhosocial.activerecord.backend.expression import InsertStatement, ValuesSource, QueryStatement
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
+    # ============================================================
+    # SECTION: Single INSERT
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import InsertStatement, ValuesSource, QueryStatement
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.core import Literal, AllColumnsWildcard
 
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['name'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'Alice')],
-    ]),
-)
-sql, params = insert_expr.to_sql()
-print(f"Insert SQL: {sql}")
-print(f"Params: {params}")
-backend.execute(sql, params)
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['name'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'Alice')],
+        ]),
+    )
+    sql, params = insert_expr.to_sql()
+    print(f"Insert SQL: {sql}")
+    print(f"Params: {params}")
+    backend.execute(sql, params)
 
-verify_query = QueryStatement(
-    dialect=dialect,
-    select=[AllColumnsWildcard(dialect)],
-    from_=Table(dialect, 'users'),
-)
-sql, params = verify_query.to_sql()
-result = backend.execute(sql, params)
-print(f"Result: {result.data}")
+    verify_query = QueryStatement(
+        dialect=dialect,
+        select=[AllColumnsWildcard(dialect)],
+        from_=Table(dialect, 'users'),
+    )
+    sql, params = verify_query.to_sql()
+    result = backend.execute(sql, params)
+    print(f"Result: {result.data}")
 
-# ============================================================
-# SECTION: Teardown
-# ============================================================
-from rhosocial.activerecord.backend.expression import DropTableStatement
+    # ============================================================
+    # SECTION: Teardown
+    # ============================================================
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'users'), if_exists=True)
+    sql, params = drop_expr.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Use InsertStatement with ValuesSource
-# 2. SERIAL creates auto-increment
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Use InsertStatement with ValuesSource
+    # 2. SERIAL creates auto-increment

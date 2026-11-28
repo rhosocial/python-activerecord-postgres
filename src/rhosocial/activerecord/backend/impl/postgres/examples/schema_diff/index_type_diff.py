@@ -32,76 +32,77 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
     CreateIndexStatement, DropIndexStatement,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("POSTGRES_HOST", "localhost"),
-    port=int(os.getenv("POSTGRES_PORT", "5432")),
-    database=os.getenv("POSTGRES_DATABASE", "test"),
-    username=os.getenv("POSTGRES_USER", "postgres"),
-    password=os.getenv("POSTGRES_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("POSTGRES_HOST", "localhost"),
+        port=int(os.getenv("POSTGRES_PORT", "5432")),
+        database=os.getenv("POSTGRES_DATABASE", "test"),
+        username=os.getenv("POSTGRES_USER", "postgres"),
+        password=os.getenv("POSTGRES_PASSWORD", ""),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
-sql, params = drop_demo.to_sql()
-backend.execute(sql, params)
+    drop_demo = DropTableStatement(dialect, Table(dialect, 'demo'), if_exists=True, cascade=True)
+    sql, params = drop_demo.to_sql()
+    backend.execute(sql, params)
 
-demo_table = CreateTableStatement(
-    dialect=dialect, table=Table(dialect, 'demo'), columns=[
-        ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
-            constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
-        ColumnDefinition(dialect, "name", VarCharType(dialect, length=200)),
-        ColumnDefinition(dialect, "tags", ArrayType(dialect, element_type=TextType(dialect), dimensions=1)),
-    ]
-)
-sql, params = demo_table.to_sql()
-backend.execute(sql, params)
+    demo_table = CreateTableStatement(
+        dialect=dialect, table=Table(dialect, 'demo'), columns=[
+            ColumnDefinition(dialect, "id", PostgresSerialType(dialect),
+                constraints=[ColumnConstraint(branch=ColumnPrimaryKeyConstraint())]),
+            ColumnDefinition(dialect, "name", VarCharType(dialect, length=200)),
+            ColumnDefinition(dialect, "tags", ArrayType(dialect, element_type=TextType(dialect), dimensions=1)),
+        ]
+    )
+    sql, params = demo_table.to_sql()
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.schema import (  # noqa: E402
-    SyncSchemaSnapshotBuilder,
-)
-from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
-    PostgresSchemaDiffer,
-)
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.schema import (  # noqa: E402
+        SyncSchemaSnapshotBuilder,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.schema.differ import (  # noqa: E402
+        PostgresSchemaDiffer,
+    )
 
-builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
+    builder = SyncSchemaSnapshotBuilder(backend.introspector, dialect)
 
-# Snapshot with BTREE index
-idx_btree = CreateIndexStatement(dialect, Index(dialect, 'idx_name'), Table(dialect, 'demo'), ["name"], index_type="BTREE")
-sql, params = idx_btree.to_sql()
-backend.execute(sql, params)
-snap_btree = builder.build(schema="public")
+    # Snapshot with BTREE index
+    idx_btree = CreateIndexStatement(dialect, Index(dialect, 'idx_name'), Table(dialect, 'demo'), ["name"], index_type="BTREE")
+    sql, params = idx_btree.to_sql()
+    backend.execute(sql, params)
+    snap_btree = builder.build(schema="public")
 
-# Drop BTREE, create GIN index on array column — different index type
-drop_idx = DropIndexStatement(dialect, Index(dialect, 'idx_name'), "demo", if_exists=True)
-sql, params = drop_idx.to_sql()
-backend.execute(sql, params)
-idx_gin = CreateIndexStatement(dialect, Index(dialect, 'idx_tags'), Table(dialect, 'demo'), ["tags"], index_type="GIN")
-sql, params = idx_gin.to_sql()
-backend.execute(sql, params)
-snap_gin = builder.build(schema="public")
+    # Drop BTREE, create GIN index on array column — different index type
+    drop_idx = DropIndexStatement(dialect, Index(dialect, 'idx_name'), "demo", if_exists=True)
+    sql, params = drop_idx.to_sql()
+    backend.execute(sql, params)
+    idx_gin = CreateIndexStatement(dialect, Index(dialect, 'idx_tags'), Table(dialect, 'demo'), ["tags"], index_type="GIN")
+    sql, params = idx_gin.to_sql()
+    backend.execute(sql, params)
+    snap_gin = builder.build(schema="public")
 
-differ = PostgresSchemaDiffer()
-diff = differ.compare(snap_btree, snap_gin)
+    differ = PostgresSchemaDiffer()
+    diff = differ.compare(snap_btree, snap_gin)
 
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-print(f"Modified tables: {diff.modified_tables}")
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    print(f"Modified tables: {diff.modified_tables}")
 
-if "demo" in diff.table_diffs:
-    td = diff.table_diffs["demo"]
-    print(f"  Removed indexes: {[(idx.name, idx.index_type.value) for idx in td.removed_indexes]}")
-    print(f"  Added indexes:   {[(idx.name, idx.index_type.value) for idx in td.added_indexes]}")
+    if "demo" in diff.table_diffs:
+        td = diff.table_diffs["demo"]
+        print(f"  Removed indexes: {[(idx.name, idx.index_type.value) for idx in td.removed_indexes]}")
+        print(f"  Added indexes:   {[(idx.name, idx.index_type.value) for idx in td.added_indexes]}")
 
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-sql, params = drop_demo.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    sql, params = drop_demo.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()

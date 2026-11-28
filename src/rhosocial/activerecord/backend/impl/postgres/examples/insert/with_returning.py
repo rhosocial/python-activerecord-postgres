@@ -30,116 +30,117 @@ from rhosocial.activerecord.backend.expression.statements import (
     ColumnConstraint,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', '5432')),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', '5432')),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition('id', 'SERIAL', constraints=[
-            ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition('id', 'SERIAL', constraints=[
+                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('name', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('email', 'VARCHAR(200)'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+
+    # 1. INSERT with RETURNING id
+    insert_expr = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        source=ValuesSource(dialect, [[Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')]]),
+        columns=['name', 'email'],
+        returning=ReturningClause(dialect, [Column(dialect, 'id')]),
+    )
+
+    sql, params = insert_expr.to_sql()
+    print(f"SQL: {sql}")
+    print(f"Params: {params}")
+
+    # ============================================================
+    # SECTION: Execution (run the expression)
+    # ============================================================
+    result = backend.execute(sql, params)
+    print(f"Affected rows: {result.affected_rows}")
+    print(f"Returned data: {result.data}")
+
+    # 2. INSERT with multiple RETURNING columns
+    insert_multi = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        source=ValuesSource(dialect, [[Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')]]),
+        columns=['name', 'email'],
+        returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
+    )
+
+    sql, params = insert_multi.to_sql()
+    result = backend.execute(sql, params)
+    print(f"Multi-column RETURNING: {result.data}")
+
+    # 3. Batch INSERT with RETURNING
+    batch_insert = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'Charlie'), Literal(dialect, 'charlie@example.com')],
+            [Literal(dialect, 'Diana'), Literal(dialect, 'diana@example.com')],
         ]),
-        ColumnDefinition('name', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-        ]),
-        ColumnDefinition('email', 'VARCHAR(200)'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
+        columns=['name', 'email'],
+        returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
+    )
 
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
+    sql, params = batch_insert.to_sql()
+    result = backend.execute(sql, params)
+    print(f"Batch RETURNING: {result.data}")
 
-# 1. INSERT with RETURNING id
-insert_expr = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    source=ValuesSource(dialect, [[Literal(dialect, 'Alice'), Literal(dialect, 'alice@example.com')]]),
-    columns=['name', 'email'],
-    returning=ReturningClause(dialect, [Column(dialect, 'id')]),
-)
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-sql, params = insert_expr.to_sql()
-print(f"SQL: {sql}")
-print(f"Params: {params}")
-
-# ============================================================
-# SECTION: Execution (run the expression)
-# ============================================================
-result = backend.execute(sql, params)
-print(f"Affected rows: {result.affected_rows}")
-print(f"Returned data: {result.data}")
-
-# 2. INSERT with multiple RETURNING columns
-insert_multi = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    source=ValuesSource(dialect, [[Literal(dialect, 'Bob'), Literal(dialect, 'bob@example.com')]]),
-    columns=['name', 'email'],
-    returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
-)
-
-sql, params = insert_multi.to_sql()
-result = backend.execute(sql, params)
-print(f"Multi-column RETURNING: {result.data}")
-
-# 3. Batch INSERT with RETURNING
-batch_insert = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'Charlie'), Literal(dialect, 'charlie@example.com')],
-        [Literal(dialect, 'Diana'), Literal(dialect, 'diana@example.com')],
-    ]),
-    columns=['name', 'email'],
-    returning=ReturningClause(dialect, [Column(dialect, 'id'), Column(dialect, 'name')]),
-)
-
-sql, params = batch_insert.to_sql()
-result = backend.execute(sql, params)
-print(f"Batch RETURNING: {result.data}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
-
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. PostgreSQL natively supports RETURNING clause on INSERT
-# 2. ReturningClause returns data from inserted rows (e.g., auto-generated id)
-# 3. Batch INSERT with RETURNING returns all inserted rows
-# 4. Use Column() in ReturningClause to specify which columns to return
-# 5. result.data contains the returned rows
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. PostgreSQL natively supports RETURNING clause on INSERT
+    # 2. ReturningClause returns data from inserted rows (e.g., auto-generated id)
+    # 3. Batch INSERT with RETURNING returns all inserted rows
+    # 4. Use Column() in ReturningClause to specify which columns to return
+    # 5. result.data contains the returned rows

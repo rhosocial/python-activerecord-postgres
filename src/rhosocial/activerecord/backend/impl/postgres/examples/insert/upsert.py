@@ -34,180 +34,181 @@ from rhosocial.activerecord.backend.expression.statements import (
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 
-config = PostgresConnectionConfig(
-    host=os.getenv('POSTGRES_HOST', 'localhost'),
-    port=int(os.getenv('POSTGRES_PORT', 5432)),
-    database=os.getenv('POSTGRES_DATABASE', 'test'),
-    username=os.getenv('POSTGRES_USER', 'postgres'),
-    password=os.getenv('POSTGRES_PASSWORD', ''),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-dialect = backend.dialect
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv('POSTGRES_HOST', 'localhost'),
+        port=int(os.getenv('POSTGRES_PORT', 5432)),
+        database=os.getenv('POSTGRES_DATABASE', 'test'),
+        username=os.getenv('POSTGRES_USER', 'postgres'),
+        password=os.getenv('POSTGRES_PASSWORD', ''),
+    )
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    dialect = backend.dialect
 
-dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
+    dql_options = ExecutionOptions(stmt_type=StatementType.DQL)
 
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
 
-create_table = CreateTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    columns=[
-        ColumnDefinition(
-            'id',
-            'SERIAL',
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+    create_table = CreateTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        columns=[
+            ColumnDefinition(
+                'id',
+                'SERIAL',
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition('username', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnUniqueConstraint(dialect)),
                 ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
+            ]),
+            ColumnDefinition('email', 'VARCHAR(100)', constraints=[
+                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+            ]),
+            ColumnDefinition('login_count', 'INTEGER'),
+        ],
+        if_not_exists=True,
+    )
+    sql, params = create_table.to_sql()
+    backend.execute(sql, params)
+
+    # ============================================================
+    # SECTION: INSERT ON CONFLICT DO NOTHING
+    # ============================================================
+    # Ignore duplicate key violations
+
+    insert_nothing = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['username', 'email', 'login_count'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
+        ]),
+        on_conflict=OnConflictClause(
+            dialect,
+            [Column(dialect, 'username')],
+            do_nothing=True,
         ),
-        ColumnDefinition('username', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnUniqueConstraint(dialect)),
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+    )
+    sql, params = insert_nothing.to_sql()
+    print(f"DO NOTHING SQL: {sql}")
+    backend.execute(sql, params)
+
+    # Try to insert again - will be ignored
+    insert_nothing2 = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['username', 'email', 'login_count'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
         ]),
-        ColumnDefinition('email', 'VARCHAR(100)', constraints=[
-            ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+        on_conflict=OnConflictClause(
+            dialect,
+            [Column(dialect, 'username')],
+            do_nothing=True,
+        ),
+    )
+    sql, params = insert_nothing2.to_sql()
+    backend.execute(sql, params)
+
+    query = QueryStatement(
+        dialect=dialect,
+        select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
+        from_=Table(dialect, 'users'),
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'alice')),
+    )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"DO NOTHING result: {result.data}")
+
+    # ============================================================
+    # SECTION: INSERT ON CONFLICT DO UPDATE
+    # ============================================================
+    # Update existing rows on conflict
+
+    insert_update = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['username', 'email', 'login_count'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
         ]),
-        ColumnDefinition('login_count', 'INTEGER'),
-    ],
-    if_not_exists=True,
-)
-sql, params = create_table.to_sql()
-backend.execute(sql, params)
+        on_conflict=OnConflictClause(
+            dialect,
+            [Column(dialect, 'username')],
+            update_assignments={
+                'email': Column(dialect, 'email', table='EXCLUDED'),
+                'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
+            },
+        ),
+    )
+    sql, params = insert_update.to_sql()
+    print(f"DO UPDATE SQL: {sql}")
+    backend.execute(sql, params)
 
-# ============================================================
-# SECTION: INSERT ON CONFLICT DO NOTHING
-# ============================================================
-# Ignore duplicate key violations
+    # Insert again - will update
+    insert_update2 = InsertStatement(
+        dialect=dialect,
+        into=Table(dialect, 'users'),
+        columns=['username', 'email', 'login_count'],
+        source=ValuesSource(dialect, [
+            [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],
+        ]),
+        on_conflict=OnConflictClause(
+            dialect,
+            [Column(dialect, 'username')],
+            update_assignments={
+                'email': Column(dialect, 'email', table='EXCLUDED'),
+                'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
+            },
+        ),
+    )
+    sql, params = insert_update2.to_sql()
+    backend.execute(sql, params)
 
-insert_nothing = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['username', 'email', 'login_count'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'alice'), Literal(dialect, 'alice@example.com'), Literal(dialect, 1)],
-    ]),
-    on_conflict=OnConflictClause(
-        dialect,
-        [Column(dialect, 'username')],
-        do_nothing=True,
-    ),
-)
-sql, params = insert_nothing.to_sql()
-print(f"DO NOTHING SQL: {sql}")
-backend.execute(sql, params)
+    query = QueryStatement(
+        dialect=dialect,
+        select=[
+            Column(dialect, 'id'), Column(dialect, 'username'),
+            Column(dialect, 'email'), Column(dialect, 'login_count'),
+        ],
+        from_=Table(dialect, 'users'),
+        where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
+    )
+    sql, params = query.to_sql()
+    result = backend.execute(sql, params, options=dql_options)
+    print(f"DO UPDATE result: {result.data}")
 
-# Try to insert again - will be ignored
-insert_nothing2 = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['username', 'email', 'login_count'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'alice'), Literal(dialect, 'different@example.com'), Literal(dialect, 2)],
-    ]),
-    on_conflict=OnConflictClause(
-        dialect,
-        [Column(dialect, 'username')],
-        do_nothing=True,
-    ),
-)
-sql, params = insert_nothing2.to_sql()
-backend.execute(sql, params)
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_table = DropTableStatement(
+        dialect=dialect,
+        table=Table(dialect, 'users'),
+        if_exists=True,
+        cascade=True,
+    )
+    sql, params = drop_table.to_sql()
+    backend.execute(sql, params)
+    backend.disconnect()
 
-query = QueryStatement(
-    dialect=dialect,
-    select=[Column(dialect, 'id'), Column(dialect, 'username'), Column(dialect, 'email')],
-    from_=Table(dialect, 'users'),
-    where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'alice')),
-)
-sql, params = query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"DO NOTHING result: {result.data}")
-
-# ============================================================
-# SECTION: INSERT ON CONFLICT DO UPDATE
-# ============================================================
-# Update existing rows on conflict
-
-insert_update = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['username', 'email', 'login_count'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'bob'), Literal(dialect, 'bob@example.com'), Literal(dialect, 1)],
-    ]),
-    on_conflict=OnConflictClause(
-        dialect,
-        [Column(dialect, 'username')],
-        update_assignments={
-            'email': Column(dialect, 'email', table='EXCLUDED'),
-            'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
-        },
-    ),
-)
-sql, params = insert_update.to_sql()
-print(f"DO UPDATE SQL: {sql}")
-backend.execute(sql, params)
-
-# Insert again - will update
-insert_update2 = InsertStatement(
-    dialect=dialect,
-    into=Table(dialect, 'users'),
-    columns=['username', 'email', 'login_count'],
-    source=ValuesSource(dialect, [
-        [Literal(dialect, 'bob'), Literal(dialect, 'bob_new@example.com'), Literal(dialect, 2)],
-    ]),
-    on_conflict=OnConflictClause(
-        dialect,
-        [Column(dialect, 'username')],
-        update_assignments={
-            'email': Column(dialect, 'email', table='EXCLUDED'),
-            'login_count': Column(dialect, 'login_count', table='EXCLUDED'),
-        },
-    ),
-)
-sql, params = insert_update2.to_sql()
-backend.execute(sql, params)
-
-query = QueryStatement(
-    dialect=dialect,
-    select=[
-        Column(dialect, 'id'), Column(dialect, 'username'),
-        Column(dialect, 'email'), Column(dialect, 'login_count'),
-    ],
-    from_=Table(dialect, 'users'),
-    where=ComparisonPredicate(dialect, '=', Column(dialect, 'username'), Literal(dialect, 'bob')),
-)
-sql, params = query.to_sql()
-result = backend.execute(sql, params, options=dql_options)
-print(f"DO UPDATE result: {result.data}")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_table = DropTableStatement(
-    dialect=dialect,
-    table=Table(dialect, 'users'),
-    if_exists=True,
-    cascade=True,
-)
-sql, params = drop_table.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
-
-# ============================================================
-# SECTION: Summary
-# ============================================================
-# Key points:
-# 1. Requires PostgreSQL 9.5+
-# 2. Use OnConflictClause with do_nothing=True for DO NOTHING
-# 3. Use OnConflictClause with update_assignments for DO UPDATE
-# 4. conflict_target specifies the conflict columns (e.g., [Column(dialect, 'username')])
-# 5. Use Column(dialect, 'col', table='EXCLUDED') to reference EXCLUDED values
+    # ============================================================
+    # SECTION: Summary
+    # ============================================================
+    # Key points:
+    # 1. Requires PostgreSQL 9.5+
+    # 2. Use OnConflictClause with do_nothing=True for DO NOTHING
+    # 3. Use OnConflictClause with update_assignments for DO UPDATE
+    # 4. conflict_target specifies the conflict columns (e.g., [Column(dialect, 'username')])
+    # 5. Use Column(dialect, 'col', table='EXCLUDED') to reference EXCLUDED values

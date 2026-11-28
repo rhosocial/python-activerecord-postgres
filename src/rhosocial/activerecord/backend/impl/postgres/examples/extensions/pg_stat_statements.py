@@ -21,192 +21,193 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    DropTableStatement,
-    InsertStatement,
-    QueryStatement,
-    Column,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements import ValuesSource
-from rhosocial.activerecord.backend.expression.core import Literal
-from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
-from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-from rhosocial.activerecord.backend.impl.postgres.functions.pg_stat_statements import (
-    pg_stat_statements_reset,
-)
-
-# Check if pg_stat_statements extension is available
-available = dialect.is_extension_available("pg_stat_statements")
-installed = dialect.is_extension_installed("pg_stat_statements")
-print(f"Extension check: pg_stat_statements available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="pg_stat_statements",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    try:
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
+    backend.introspect_and_adapt()
+    dialect = backend.dialect
+
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        DropTableStatement,
+        InsertStatement,
+        QueryStatement,
+        Column,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.objects import Table
+    from rhosocial.activerecord.backend.expression.statements import ValuesSource
+    from rhosocial.activerecord.backend.expression.core import Literal
+    from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
+    from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+    from rhosocial.activerecord.backend.impl.postgres.functions.pg_stat_statements import (
+        pg_stat_statements_reset,
+    )
+
+    # Check if pg_stat_statements extension is available
+    available = dialect.is_extension_available("pg_stat_statements")
+    installed = dialect.is_extension_installed("pg_stat_statements")
+    print(f"Extension check: pg_stat_statements available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="pg_stat_statements",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        try:
+            backend.execute(sql, params)
+            backend.introspect_and_adapt()
+        except Exception as e:
+            print(f"Could not create extension (may require superuser): {e}")
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("pg_stat_statements")
+
+    if installed:
+        # Example 1: Query pg_stat_statements view for top queries by total execution time
+        # This requires superuser or pg_read_all_stats role
+        try:
+            query = QueryStatement(
+                dialect=dialect,
+                select=[
+                    Column(dialect, "query"),
+                    Column(dialect, "calls"),
+                    Column(dialect, "total_exec_time"),
+                    Column(dialect, "mean_exec_time"),
+                ],
+                from_=Table(dialect, "pg_stat_statements"),
+                order_by=OrderByClause(dialect, [Column(dialect, "total_exec_time")], descending=True),
+            )
+            sql, params = query.to_sql()
+            print("\n--- Query top statements by total execution time ---")
+            print(f"SQL: {sql}")
+            opts = ExecutionOptions(stmt_type=StatementType.DQL)
+            result = backend.execute(sql, params, options=opts)
+            print(f"Number of tracked statements: {len(result.data) if result.data else 0}")
+            if result.data:
+                for row in result.data[:3]:
+                    print(f"  calls={row.get('calls')}, total_time={row.get('total_exec_time')}, query={row.get('query', '')[:80]}...")
+        except Exception as e:
+            print(f"Could not query pg_stat_statements (may require pg_read_all_stats role): {e}")
+
+        # Example 2: Reset statistics using pg_stat_statements_reset function
+        try:
+            reset_func = pg_stat_statements_reset(dialect)
+            query = QueryStatement(
+                dialect=dialect,
+                select=[reset_func],
+            )
+            sql, params = query.to_sql()
+            print("\n--- Reset statistics ---")
+            print(f"SQL: {sql}")
+            backend.execute(sql, params, options=opts)
+            print("Statistics reset successfully")
+        except Exception as e:
+            print(f"Could not reset statistics (may require superuser): {e}")
+
+        # Example 3: Create a test table and run some queries to generate statistics
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type="SERIAL",
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(name="name", data_type="TEXT"),
+            ColumnDefinition(name="value", data_type="INTEGER"),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'stats_demo'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE test table ---")
+        print(f"SQL: {sql}")
         backend.execute(sql, params)
-        backend.introspect_and_adapt()
-    except Exception as e:
-        print(f"Could not create extension (may require superuser): {e}")
 
-# Re-check after creation
-installed = dialect.is_extension_installed("pg_stat_statements")
+        # Insert data
+        rows = [[Literal(dialect, f"item{i}"), Literal(dialect, i * 10)] for i in range(5)]
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'stats_demo'),
+            columns=["name", "value"],
+            source=ValuesSource(dialect, rows),
+        )
+        sql, params = insert_expr.to_sql()
+        backend.execute(sql, params)
 
-if installed:
-    # Example 1: Query pg_stat_statements view for top queries by total execution time
-    # This requires superuser or pg_read_all_stats role
-    try:
+        # Run a query to generate a statistic entry
         query = QueryStatement(
             dialect=dialect,
-            select=[
-                Column(dialect, "query"),
-                Column(dialect, "calls"),
-                Column(dialect, "total_exec_time"),
-                Column(dialect, "mean_exec_time"),
-            ],
-            from_=Table(dialect, "pg_stat_statements"),
-            order_by=OrderByClause(dialect, [Column(dialect, "total_exec_time")], descending=True),
+            select=[Column(dialect, "name"), Column(dialect, "value")],
+            from_=Table(dialect, "stats_demo"),
+            where=ComparisonPredicate(
+                Column(dialect, "value"),
+                ">",
+                Literal(dialect, 20),
+            ),
         )
         sql, params = query.to_sql()
-        print("\n--- Query top statements by total execution time ---")
+        print("\n--- Execute a query to generate statistics ---")
         print(f"SQL: {sql}")
-        opts = ExecutionOptions(stmt_type=StatementType.DQL)
         result = backend.execute(sql, params, options=opts)
-        print(f"Number of tracked statements: {len(result.data) if result.data else 0}")
-        if result.data:
-            for row in result.data[:3]:
-                print(f"  calls={row.get('calls')}, total_time={row.get('total_exec_time')}, query={row.get('query', '')[:80]}...")
-    except Exception as e:
-        print(f"Could not query pg_stat_statements (may require pg_read_all_stats role): {e}")
+        print(f"Query result: {result.data}")
 
-    # Example 2: Reset statistics using pg_stat_statements_reset function
-    try:
-        reset_func = pg_stat_statements_reset(dialect)
-        query = QueryStatement(
-            dialect=dialect,
-            select=[reset_func],
-        )
-        sql, params = query.to_sql()
-        print("\n--- Reset statistics ---")
-        print(f"SQL: {sql}")
-        backend.execute(sql, params, options=opts)
-        print("Statistics reset successfully")
-    except Exception as e:
-        print(f"Could not reset statistics (may require superuser): {e}")
+        # Check statistics again
+        try:
+            query = QueryStatement(
+                dialect=dialect,
+                select=[
+                    Column(dialect, "query"),
+                    Column(dialect, "calls"),
+                ],
+                from_=Table(dialect, "pg_stat_statements"),
+            )
+            sql, params = query.to_sql()
+            result = backend.execute(sql, params, options=opts)
+            print("\n--- Statistics after queries ---")
+            print(f"Tracked statements: {len(result.data) if result.data else 0}")
+        except Exception as e:
+            print(f"Could not check statistics: {e}")
 
-    # Example 3: Create a test table and run some queries to generate statistics
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type="SERIAL",
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(name="name", data_type="TEXT"),
-        ColumnDefinition(name="value", data_type="INTEGER"),
-    ]
+        # Cleanup demo table
+        drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'stats_demo'), if_exists=True)
+        sql, params = drop_expr.to_sql()
+        backend.execute(sql, params)
 
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'stats_demo'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE test table ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
+    else:
+        print("\nSkipping execution - pg_stat_statements extension not available on this server")
+        print("To enable pg_stat_statements:")
+        print("1. Add 'shared_preload_libraries = pg_stat_statements' to postgresql.conf")
+        print("2. Restart PostgreSQL")
+        print("3. Run: CREATE EXTENSION pg_stat_statements;")
 
-    # Insert data
-    rows = [[Literal(dialect, f"item{i}"), Literal(dialect, i * 10)] for i in range(5)]
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'stats_demo'),
-        columns=["name", "value"],
-        source=ValuesSource(dialect, rows),
-    )
-    sql, params = insert_expr.to_sql()
-    backend.execute(sql, params)
-
-    # Run a query to generate a statistic entry
-    query = QueryStatement(
-        dialect=dialect,
-        select=[Column(dialect, "name"), Column(dialect, "value")],
-        from_=Table(dialect, "stats_demo"),
-        where=ComparisonPredicate(
-            Column(dialect, "value"),
-            ">",
-            Literal(dialect, 20),
-        ),
-    )
-    sql, params = query.to_sql()
-    print("\n--- Execute a query to generate statistics ---")
-    print(f"SQL: {sql}")
-    result = backend.execute(sql, params, options=opts)
-    print(f"Query result: {result.data}")
-
-    # Check statistics again
-    try:
-        query = QueryStatement(
-            dialect=dialect,
-            select=[
-                Column(dialect, "query"),
-                Column(dialect, "calls"),
-            ],
-            from_=Table(dialect, "pg_stat_statements"),
-        )
-        sql, params = query.to_sql()
-        result = backend.execute(sql, params, options=opts)
-        print("\n--- Statistics after queries ---")
-        print(f"Tracked statements: {len(result.data) if result.data else 0}")
-    except Exception as e:
-        print(f"Could not check statistics: {e}")
-
-    # Cleanup demo table
-    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'stats_demo'), if_exists=True)
-    sql, params = drop_expr.to_sql()
-    backend.execute(sql, params)
-
-else:
-    print("\nSkipping execution - pg_stat_statements extension not available on this server")
-    print("To enable pg_stat_statements:")
-    print("1. Add 'shared_preload_libraries = pg_stat_statements' to postgresql.conf")
-    print("2. Restart PostgreSQL")
-    print("3. Run: CREATE EXTENSION pg_stat_statements;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-backend.disconnect()
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    backend.disconnect()

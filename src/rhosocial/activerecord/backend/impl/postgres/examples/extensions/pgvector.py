@@ -25,221 +25,222 @@ from rhosocial.activerecord.backend.impl.postgres.config import (
     PostgresConnectionConfig,
 )
 
-config = PostgresConnectionConfig(
-    host=os.getenv("PG_HOST", "localhost"),
-    port=int(os.getenv("PG_PORT", "5432")),
-    database=os.getenv("PG_DATABASE", "test"),
-    username=os.getenv("PG_USERNAME", "postgres"),
-    password=os.getenv("PG_PASSWORD", ""),
-)
-backend = PostgresBackend(connection_config=config)
-backend.connect()
-backend.introspect_and_adapt()
-dialect = backend.dialect
-
-# Clean up for demo
-from rhosocial.activerecord.backend.expression import DropTableStatement
-
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-
-# ============================================================
-# SECTION: Business Logic (the pattern to learn)
-# ============================================================
-from rhosocial.activerecord.backend.impl.postgres.expression import (
-    PostgresCreateExtensionStatement,
-)
-from rhosocial.activerecord.backend.expression import (
-    CreateTableStatement,
-    ColumnDefinition,
-    ColumnConstraint,
-    ColumnNotNullConstraint,
-    ColumnPrimaryKeyConstraint,
-)
-from rhosocial.activerecord.backend.expression.statements.dml import (
-    InsertStatement,
-)
-from rhosocial.activerecord.backend.expression.statements import (
-    ValuesSource,
-)
-from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
-from rhosocial.activerecord.backend.options import ExecutionOptions
-from rhosocial.activerecord.backend.schema import StatementType
-from rhosocial.activerecord.backend.impl.postgres.functions import (
-    vector_search,
-    create_vector_index,
-)
-from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresVectorType
-
-# Check if vector extension is available
-available = dialect.is_extension_available("vector")
-installed = dialect.is_extension_installed("vector")
-print(f"Extension check: vector available = {available}, installed = {installed}")
-
-# Create extension using expression
-if available and not installed:
-    create_ext = PostgresCreateExtensionStatement(
-        dialect=dialect,
-        name="vector",
+if __name__ == "__main__":
+    config = PostgresConnectionConfig(
+        host=os.getenv("PG_HOST", "localhost"),
+        port=int(os.getenv("PG_PORT", "5432")),
+        database=os.getenv("PG_DATABASE", "test"),
+        username=os.getenv("PG_USERNAME", "postgres"),
+        password=os.getenv("PG_PASSWORD", ""),
     )
-    sql, params = create_ext.to_sql()
-    print("\n--- CREATE EXTENSION ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    # Re-detect extensions after creation
+    backend = PostgresBackend(connection_config=config)
+    backend.connect()
     backend.introspect_and_adapt()
+    dialect = backend.dialect
 
-# Re-check after creation
-installed = dialect.is_extension_installed("vector")
+    # Clean up for demo
+    from rhosocial.activerecord.backend.expression import DropTableStatement
 
-if installed:
-    # Example 1: Create table with vector column
-    # Column data types are built by constructing expression types directly.
-    columns = [
-        ColumnDefinition(
-            name="id",
-            data_type=PostgresSerialType(),
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="content",
-            data_type=TextType(),
-            constraints=[
-                ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
-            ],
-        ),
-        ColumnDefinition(
-            name="embedding",
-            data_type=PostgresVectorType(dim=3),
-        ),
-    ]
-
-    create_expr = CreateTableStatement(
-        dialect=dialect,
-        table=Table(dialect, 'documents'),
-        columns=columns,
-        if_not_exists=True,
-    )
-    sql, params = create_expr.to_sql()
-    print("\n--- CREATE TABLE ---")
-    print(f"SQL: {sql}")
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
 
-    # Example 2: Insert vector data
-    # Use CastExpression over a Literal for type-safe vector insertion.
-    insert_expr = InsertStatement(
-        dialect=dialect,
-        into=Table(dialect, 'documents'),
-        columns=["content", "embedding"],
-        source=ValuesSource(
+    # ============================================================
+    # SECTION: Business Logic (the pattern to learn)
+    # ============================================================
+    from rhosocial.activerecord.backend.impl.postgres.expression import (
+        PostgresCreateExtensionStatement,
+    )
+    from rhosocial.activerecord.backend.expression import (
+        CreateTableStatement,
+        ColumnDefinition,
+        ColumnConstraint,
+        ColumnNotNullConstraint,
+        ColumnPrimaryKeyConstraint,
+    )
+    from rhosocial.activerecord.backend.expression.statements.dml import (
+        InsertStatement,
+    )
+    from rhosocial.activerecord.backend.expression.statements import (
+        ValuesSource,
+    )
+    from rhosocial.activerecord.backend.expression.core import CastExpression, Literal
+    from rhosocial.activerecord.backend.options import ExecutionOptions
+    from rhosocial.activerecord.backend.schema import StatementType
+    from rhosocial.activerecord.backend.impl.postgres.functions import (
+        vector_search,
+        create_vector_index,
+    )
+    from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresVectorType
+
+    # Check if vector extension is available
+    available = dialect.is_extension_available("vector")
+    installed = dialect.is_extension_installed("vector")
+    print(f"Extension check: vector available = {available}, installed = {installed}")
+
+    # Create extension using expression
+    if available and not installed:
+        create_ext = PostgresCreateExtensionStatement(
+            dialect=dialect,
+            name="vector",
+        )
+        sql, params = create_ext.to_sql()
+        print("\n--- CREATE EXTENSION ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        # Re-detect extensions after creation
+        backend.introspect_and_adapt()
+
+    # Re-check after creation
+    installed = dialect.is_extension_installed("vector")
+
+    if installed:
+        # Example 1: Create table with vector column
+        # Column data types are built by constructing expression types directly.
+        columns = [
+            ColumnDefinition(
+                name="id",
+                data_type=PostgresSerialType(),
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnPrimaryKeyConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="content",
+                data_type=TextType(),
+                constraints=[
+                    ColumnConstraint(dialect, branch=ColumnNotNullConstraint(dialect)),
+                ],
+            ),
+            ColumnDefinition(
+                name="embedding",
+                data_type=PostgresVectorType(dim=3),
+            ),
+        ]
+
+        create_expr = CreateTableStatement(
+            dialect=dialect,
+            table=Table(dialect, 'documents'),
+            columns=columns,
+            if_not_exists=True,
+        )
+        sql, params = create_expr.to_sql()
+        print("\n--- CREATE TABLE ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 2: Insert vector data
+        # Use CastExpression over a Literal for type-safe vector insertion.
+        insert_expr = InsertStatement(
+            dialect=dialect,
+            into=Table(dialect, 'documents'),
+            columns=["content", "embedding"],
+            source=ValuesSource(
+                dialect,
+                [
+                    [
+                        Literal(dialect, "cat"),
+                        CastExpression(
+                            dialect, Literal(dialect, "[1.0, 0.5, 0.2]"),
+                            PostgresVectorType(dialect),
+                        ),
+                    ],
+                    [
+                        Literal(dialect, "dog"),
+                        CastExpression(
+                            dialect, Literal(dialect, "[0.9, 0.6, 0.3]"),
+                            PostgresVectorType(dialect),
+                        ),
+                    ],
+                    [
+                        Literal(dialect, "car"),
+                        CastExpression(
+                            dialect, Literal(dialect, "[0.1, 0.2, 0.9]"),
+                            PostgresVectorType(dialect),
+                        ),
+                    ],
+                    [
+                        Literal(dialect, "bicycle"),
+                        CastExpression(
+                            dialect, Literal(dialect, "[0.15, 0.25, 0.85]"),
+                            PostgresVectorType(dialect),
+                        ),
+                    ],
+                ],
+            ),
+        )
+        sql, params = insert_expr.to_sql()
+        print("\n--- INSERT vector data ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+
+        # Example 3: Cosine similarity search (query similar to "cat")
+        opts = ExecutionOptions(stmt_type=StatementType.DQL)
+        query = vector_search(
             dialect,
-            [
-                [
-                    Literal(dialect, "cat"),
-                    CastExpression(
-                        dialect, Literal(dialect, "[1.0, 0.5, 0.2]"),
-                        PostgresVectorType(dialect),
-                    ),
-                ],
-                [
-                    Literal(dialect, "dog"),
-                    CastExpression(
-                        dialect, Literal(dialect, "[0.9, 0.6, 0.3]"),
-                        PostgresVectorType(dialect),
-                    ),
-                ],
-                [
-                    Literal(dialect, "car"),
-                    CastExpression(
-                        dialect, Literal(dialect, "[0.1, 0.2, 0.9]"),
-                        PostgresVectorType(dialect),
-                    ),
-                ],
-                [
-                    Literal(dialect, "bicycle"),
-                    CastExpression(
-                        dialect, Literal(dialect, "[0.15, 0.25, 0.85]"),
-                        PostgresVectorType(dialect),
-                    ),
-                ],
-            ],
-        ),
-    )
-    sql, params = insert_expr.to_sql()
-    print("\n--- INSERT vector data ---")
-    print(f"SQL: {sql}")
+            "documents",
+            [1.0, 0.55, 0.18],
+            metric="cosine",
+            top_k=3,
+            columns=["content"],
+            include_similarity=True,
+        )
+        sql, params = query.to_sql()
+        print("\n--- Cosine similarity search ---")
+        print("Query vector: [1.0, 0.55, 0.18] (similar to 'cat')")
+        print(f"SQL: {sql}")
+        print(f"Params: {params}")
+        result = backend.execute(sql, params, options=opts)
+        print(f"Results: {result.data}")
+
+        # Example 4: L2 distance search (query vector equal to "car" row)
+        query = vector_search(
+            dialect,
+            "documents",
+            [0.1, 0.2, 0.9],
+            metric="l2",
+            top_k=3,
+            columns=["content"],
+            include_distance=True,
+        )
+        sql, params = query.to_sql()
+        print("\n--- L2 distance search ---")
+        print("Query vector: [0.1, 0.2, 0.9] (similar to 'car')")
+        print(f"SQL: {sql}")
+        result = backend.execute(sql, params, options=opts)
+        print(f"Results: {result.data}")
+
+        # Example 5: Create HNSW index for fast vector search
+        # Metric 'cosine' maps to the vector_cosine_ops operator class.
+        index_expr = create_vector_index(
+            dialect,
+            "documents",
+            metric="cosine",
+            index_type="hnsw",
+            m=16,
+            ef_construction=64,
+        )
+        sql, params = index_expr.to_sql()
+        print("\n--- CREATE HNSW INDEX ---")
+        print(f"SQL: {sql}")
+        backend.execute(sql, params)
+        print("HNSW index created")
+
+        # Note: HNSW query-time parameter can be set via:
+        # SET hnsw.ef_search = 100;
+        # Supported operator classes (metric -> opclass):
+        #   cosine -> vector_cosine_ops (<=>)
+        #   l2 -> vector_l2_ops (<->)
+        #   ip -> vector_ip_ops (<#> inner product)
+
+    else:
+        print("\nSkipping execution - vector extension not available on this server")
+        print("To enable pgvector, install pgvector and run: CREATE EXTENSION vector;")
+
+    # ============================================================
+    # SECTION: Teardown (necessary for execution, reference only)
+    # ============================================================
+    drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
+    sql, params = drop_expr.to_sql()
     backend.execute(sql, params)
-
-    # Example 3: Cosine similarity search (query similar to "cat")
-    opts = ExecutionOptions(stmt_type=StatementType.DQL)
-    query = vector_search(
-        dialect,
-        "documents",
-        [1.0, 0.55, 0.18],
-        metric="cosine",
-        top_k=3,
-        columns=["content"],
-        include_similarity=True,
-    )
-    sql, params = query.to_sql()
-    print("\n--- Cosine similarity search ---")
-    print("Query vector: [1.0, 0.55, 0.18] (similar to 'cat')")
-    print(f"SQL: {sql}")
-    print(f"Params: {params}")
-    result = backend.execute(sql, params, options=opts)
-    print(f"Results: {result.data}")
-
-    # Example 4: L2 distance search (query vector equal to "car" row)
-    query = vector_search(
-        dialect,
-        "documents",
-        [0.1, 0.2, 0.9],
-        metric="l2",
-        top_k=3,
-        columns=["content"],
-        include_distance=True,
-    )
-    sql, params = query.to_sql()
-    print("\n--- L2 distance search ---")
-    print("Query vector: [0.1, 0.2, 0.9] (similar to 'car')")
-    print(f"SQL: {sql}")
-    result = backend.execute(sql, params, options=opts)
-    print(f"Results: {result.data}")
-
-    # Example 5: Create HNSW index for fast vector search
-    # Metric 'cosine' maps to the vector_cosine_ops operator class.
-    index_expr = create_vector_index(
-        dialect,
-        "documents",
-        metric="cosine",
-        index_type="hnsw",
-        m=16,
-        ef_construction=64,
-    )
-    sql, params = index_expr.to_sql()
-    print("\n--- CREATE HNSW INDEX ---")
-    print(f"SQL: {sql}")
-    backend.execute(sql, params)
-    print("HNSW index created")
-
-    # Note: HNSW query-time parameter can be set via:
-    # SET hnsw.ef_search = 100;
-    # Supported operator classes (metric -> opclass):
-    #   cosine -> vector_cosine_ops (<=>)
-    #   l2 -> vector_l2_ops (<->)
-    #   ip -> vector_ip_ops (<#> inner product)
-
-else:
-    print("\nSkipping execution - vector extension not available on this server")
-    print("To enable pgvector, install pgvector and run: CREATE EXTENSION vector;")
-
-# ============================================================
-# SECTION: Teardown (necessary for execution, reference only)
-# ============================================================
-drop_expr = DropTableStatement(dialect=dialect, table=Table(dialect, 'documents'), if_exists=True)
-sql, params = drop_expr.to_sql()
-backend.execute(sql, params)
-backend.disconnect()
+    backend.disconnect()
