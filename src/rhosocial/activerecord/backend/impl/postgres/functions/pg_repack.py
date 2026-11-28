@@ -36,7 +36,7 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
 
 def repack_version(
     dialect: "SQLDialectBase",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Get the pg_repack extension version.
 
     Returns the version string of the installed pg_repack extension.
@@ -63,7 +63,7 @@ def repack_version(
         >>> repack_version(dialect)
         # Generates: repack.repack_version()
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect,
         dialect.pg_repack_function_name("repack_version"),
     )

@@ -11,7 +11,7 @@ from typing import Any, Dict, List, Optional, Sequence, Union
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.operators import RawSQLPredicate
 
-from ..expression.ddl import PostgresCreateIndexExpression
+from ..expression.statements.ddl import PostgresCreateIndexExpression
 
 
 def create_index_pg(

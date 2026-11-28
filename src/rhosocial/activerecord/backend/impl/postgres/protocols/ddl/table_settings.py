@@ -9,7 +9,7 @@ table-level settings (LOGGED/UNLOGGED, ACCESS METHOD).
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.table_settings import (
+    from ...expression.statements.ddl.table_settings import (
         PostgresAlterTableSettingsStatement,
     )
 

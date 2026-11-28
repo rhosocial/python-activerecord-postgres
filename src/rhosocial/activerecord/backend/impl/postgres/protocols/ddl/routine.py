@@ -9,7 +9,7 @@ CREATE/DROP PROCEDURE is covered by the existing
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.routine import (
+    from ...expression.statements.ddl.routine import (
         PostgresCreateAggregateDdlStatement,
         PostgresCreateFunctionDdlStatement,
         PostgresDropAggregateDdlStatement,

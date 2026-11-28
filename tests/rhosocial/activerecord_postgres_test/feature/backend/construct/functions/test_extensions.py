@@ -14,7 +14,8 @@ import pytest  # noqa: F401
 from unittest.mock import MagicMock  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core, operators, Parameter
+from rhosocial.activerecord.backend.expression import operators, Parameter
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.functions.ltree import (
     ltree_literal,
@@ -74,7 +75,7 @@ class TestLtreeFunctions:
         """Test ltree literal function."""
         dialect = PostgresDialect((14, 0, 0))
         result = ltree_literal(dialect, 'Top.Science.Astronomy')
-        assert isinstance(result, core.Parameter)
+        assert isinstance(result, Parameter)
         sql, params = result.to_sql()
         assert 'Top.Science.Astronomy' in params
 
@@ -141,7 +142,7 @@ class TestLtreeFunctions:
         """Test ltree subpath with length."""
         dialect = PostgresDialect((14, 0, 0))
         result = ltree_subpath(dialect, 'path', 0, 2)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "subpath" in sql.lower()
 
@@ -149,7 +150,7 @@ class TestLtreeFunctions:
         """Test ltree subpath without length."""
         dialect = PostgresDialect((14, 0, 0))
         result = ltree_subpath(dialect, 'path', 1)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "subpath" in sql.lower()
 
@@ -157,7 +158,7 @@ class TestLtreeFunctions:
         """Test ltree nlevel function."""
         dialect = PostgresDialect((14, 0, 0))
         result = ltree_nlevel(dialect, 'path')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "nlevel" in sql.lower()
 
@@ -197,7 +198,7 @@ class TestEarthdistanceFunctions:
         """Test earth distance calculation."""
         dialect = PostgresDialect((14, 0, 0))
         result = earth_distance(dialect, 'point1', 'point2')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "earth_distance" in sql.lower()
 
@@ -205,7 +206,7 @@ class TestEarthdistanceFunctions:
         """Test ll_to_earth function."""
         dialect = PostgresDialect((14, 0, 0))
         result = ll_to_earth(dialect, 40.7128, -74.0060)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "ll_to_earth" in sql.lower()
 
@@ -217,7 +218,7 @@ class TestPgTrgmFunctions:
         """Test similarity function."""
         dialect = PostgresDialect((14, 0, 0))
         result = similarity(dialect, 'col', 'pattern')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "similarity" in sql.lower()
 
@@ -233,7 +234,7 @@ class TestPgTrgmFunctions:
         """Test show_trgm function."""
         dialect = PostgresDialect((14, 0, 0))
         result = show_trgm(dialect, 'text')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "show_trgm" in sql.lower()
 
@@ -272,7 +273,7 @@ class TestPostGISFunctions:
         """Test geometry from text."""
         dialect = PostgresDialect((14, 0, 0))
         result = st_geom_from_text(dialect, Parameter(dialect, 'POINT(0 0)'), Parameter(dialect, 4326))
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "st_geomfromtext" in sql.lower()
 
@@ -280,6 +281,6 @@ class TestPostGISFunctions:
         """Test geography from text."""
         dialect = PostgresDialect((14, 0, 0))
         result = st_geog_from_text(dialect, Parameter(dialect, 'POINT(0 0)'))
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "st_geogfromtext" in sql.lower()

@@ -18,12 +18,12 @@ from rhosocial.activerecord.backend.expression import (
     InsertStatement,
     QueryStatement,
 )
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import ValuesSource
 from rhosocial.activerecord.backend.expression.types import TextType
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresExplainStatement,
     PostgresQueryStatement,
 )

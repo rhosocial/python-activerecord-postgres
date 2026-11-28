@@ -26,7 +26,7 @@ usable; they simply do not carry `schema` / `if_not_exists`.
 ```python
 from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryStatement, TableExpression
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresCreateMaterializedViewStatement,
 )
 
@@ -116,7 +116,7 @@ create = PostgresCreateMaterializedViewStatement(
 ## Refreshing
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresRefreshMaterializedViewStatement,
 )
 
@@ -144,7 +144,7 @@ them (a materialized view cannot be relocated to another tablespace after
 creation).
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresRenameMaterializedViewAction,
@@ -184,7 +184,7 @@ owner is quoted as an identifier.
 ## Dropping
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresDropMaterializedViewExpression,
 )
 

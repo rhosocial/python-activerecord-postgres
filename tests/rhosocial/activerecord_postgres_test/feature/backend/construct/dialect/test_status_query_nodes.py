@@ -16,7 +16,10 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.status import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.status import (
+    PostgresShowStatement,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.introspection.status import (
     PostgresActiveReplicationCountQuery,
     PostgresActivityCountQuery,
     PostgresArchiveStatsQuery,
@@ -33,7 +36,6 @@ from rhosocial.activerecord.backend.impl.postgres.expression.status import (
     PostgresRoleListQuery,
     PostgresSchemaStatsQuery,
     PostgresSettingsQuery,
-    PostgresShowStatement,
     PostgresSslSessionQuery,
     PostgresWalFileCountQuery,
     PostgresWalPositionQuery,

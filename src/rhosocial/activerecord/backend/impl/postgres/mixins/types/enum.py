@@ -11,12 +11,12 @@ from __future__ import annotations
 from typing import Any, List, Optional, Sequence, Tuple, cast, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.expression.objects import Type
-from rhosocial.activerecord.backend.expression.statements.ddl_type import (
+from rhosocial.activerecord.backend.expression.statements import (
     AlterTypeStatement,
     CreateTypeStatement,
     DropTypeStatement,
 )
-from ...expression.ddl.type import (
+from ...expression.statements.ddl.type import (
     PostgresEnumTypeNameExpression,
     PostgresEnumValuesExpression,
     PostgresRenameEnumValueAction,
@@ -24,7 +24,7 @@ from ...expression.ddl.type import (
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-    from ...expression.enum_ import PostgresEnumType
+    from ...expression.statements.enum_ import PostgresEnumType
 
 __all__ = ["EnumTypeMixin"]
 

@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import ForeignTable
 
 if TYPE_CHECKING:
-    from ...expression.ddl.foreign_table import (
+    from ...expression.statements.ddl.foreign_table import (
         PostgresCreateForeignTableStatement,
         PostgresDropForeignTableStatement,
     )

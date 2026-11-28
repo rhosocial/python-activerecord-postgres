@@ -30,7 +30,7 @@ from typing import Callable, Mapping, Tuple, TYPE_CHECKING, cast
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.graph import (
+    from rhosocial.activerecord.backend.expression.statements import (
         AlterPropertyGraphStatement,
         ColumnsClause,
         GraphEdge,
@@ -126,7 +126,7 @@ class PostgresPropertyGraphQueryMixin:
         """Validate and format a graph expr."""
         self._require_graph_match()
 
-        from rhosocial.activerecord.backend.expression.graph import GraphEdge, GraphEdgeDirection
+        from rhosocial.activerecord.backend.expression.statements import GraphEdge, GraphEdgeDirection
 
         if not isinstance(expr, GraphEdge):
             raise TypeError("GraphEdge must be a GraphEdge expression")
@@ -162,7 +162,7 @@ class PostgresPropertyGraphQueryMixin:
         """Validate and format an ALTER PROPERTY GRAPH statement."""
         self._require_graph_table("ALTER PROPERTY GRAPH")
 
-        from rhosocial.activerecord.backend.expression.graph import AlterPropertyGraphStatement
+        from rhosocial.activerecord.backend.expression.statements import AlterPropertyGraphStatement
 
         if not isinstance(expr, AlterPropertyGraphStatement):
             raise TypeError(

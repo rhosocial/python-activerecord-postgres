@@ -28,7 +28,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -39,7 +41,7 @@ if TYPE_CHECKING:
 def gen_salt(
     dialect: "SQLDialectBase",
     algorithm: str = "md5",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate a random salt string for use with crypt().
 
     Generates a new random salt string for use in crypt(). The salt
@@ -64,9 +66,9 @@ def gen_salt(
         >>> gen_salt(dialect, 'bf')
         >>> gen_salt(dialect)  # uses md5
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "gen_salt",
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
+        algorithm if isinstance(algorithm, BaseExpression) else Parameter(dialect, algorithm),
     )
 
 
@@ -74,9 +76,9 @@ def gen_salt(
 
 def crypt(
     dialect: "SQLDialectBase",
-    password: bases.BaseExpression,
-    salt: bases.BaseExpression,
-) -> core.FunctionCall:
+    password: BaseExpression,
+    salt: BaseExpression,
+) -> FunctionCall:
     """Hash a password using the crypt() function.
 
     When salt is a gen_salt() result, this performs password hashing.
@@ -94,10 +96,10 @@ def crypt(
         >>> crypt(dialect, 'mypassword', gen_salt(dialect, 'bf'))
         >>> # For verification: crypt(dialect, 'mypassword', stored_hash)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "crypt",
-        password if isinstance(password, bases.BaseExpression) else core.Parameter(dialect, password),
-        salt if isinstance(salt, bases.BaseExpression) else core.Parameter(dialect, salt),
+        password if isinstance(password, BaseExpression) else Parameter(dialect, password),
+        salt if isinstance(salt, BaseExpression) else Parameter(dialect, salt),
     )
 
 
@@ -105,10 +107,10 @@ def crypt(
 
 def encrypt(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
-    key: bases.BaseExpression,
+    data: BaseExpression,
+    key: BaseExpression,
     algorithm: str = "aes",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Encrypt data using the encrypt() function.
 
     Encrypts data using the specified cipher algorithm and key.
@@ -139,20 +141,20 @@ def encrypt(
         >>> encrypt(dialect, 'secret data', 'mykey', 'bf')
         >>> encrypt(dialect, 'secret data', 'mykey', 'aes-cbc')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "encrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        key if isinstance(key, BaseExpression) else Parameter(dialect, key),
+        algorithm if isinstance(algorithm, BaseExpression) else Parameter(dialect, algorithm),
     )
 
 
 def decrypt(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
-    key: bases.BaseExpression,
+    data: BaseExpression,
+    key: BaseExpression,
     algorithm: str = "aes",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Decrypt data using the decrypt() function.
 
     Decrypts data that was encrypted with encrypt(). The algorithm
@@ -171,11 +173,11 @@ def decrypt(
         >>> decrypt(dialect, encrypted_data, 'mykey')
         >>> decrypt(dialect, encrypted_data, 'mykey', 'bf')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "decrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        key if isinstance(key, BaseExpression) else Parameter(dialect, key),
+        algorithm if isinstance(algorithm, BaseExpression) else Parameter(dialect, algorithm),
     )
 
 
@@ -184,7 +186,7 @@ def decrypt(
 def gen_random_bytes(
     dialect: "SQLDialectBase",
     length: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate random bytes.
 
     Returns length cryptographically random bytes.
@@ -200,9 +202,9 @@ def gen_random_bytes(
         >>> gen_random_bytes(dialect, 16)
         >>> gen_random_bytes(dialect, 32)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "gen_random_bytes",
-        length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length),
+        length if isinstance(length, BaseExpression) else Parameter(dialect, length),
     )
 
 
@@ -210,10 +212,10 @@ def gen_random_bytes(
 
 def hmac(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
-    key: bases.BaseExpression,
+    data: BaseExpression,
+    key: BaseExpression,
     algorithm: str = "sha256",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Compute HMAC (Hash-based Message Authentication Code).
 
     Calculates hashed MAC for data with the given key.
@@ -241,19 +243,19 @@ def hmac(
         >>> hmac(dialect, 'message', 'secret_key')
         >>> hmac(dialect, 'message', 'secret_key', 'sha512')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "hmac",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        key if isinstance(key, BaseExpression) else Parameter(dialect, key),
+        algorithm if isinstance(algorithm, BaseExpression) else Parameter(dialect, algorithm),
     )
 
 
 def digest(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
+    data: BaseExpression,
     algorithm: str = "sha256",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Compute a hash digest.
 
     Computes a binary hash of the given data. Use this for
@@ -279,10 +281,10 @@ def digest(
         >>> digest(dialect, 'hello world')
         >>> digest(dialect, 'hello world', 'sha512')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "digest",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        algorithm if isinstance(algorithm, bases.BaseExpression) else core.Parameter(dialect, algorithm),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        algorithm if isinstance(algorithm, BaseExpression) else Parameter(dialect, algorithm),
     )
 
 
@@ -290,9 +292,9 @@ def digest(
 
 def pgp_sym_encrypt(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
-    key: bases.BaseExpression,
-) -> core.FunctionCall:
+    data: BaseExpression,
+    key: BaseExpression,
+) -> FunctionCall:
     """Encrypt data with a symmetric PGP key.
 
     Encrypts data using a symmetric key following the OpenPGP standard.
@@ -313,18 +315,18 @@ def pgp_sym_encrypt(
     Example:
         >>> pgp_sym_encrypt(dialect, 'secret message', 'my_passphrase')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgp_sym_encrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        key if isinstance(key, BaseExpression) else Parameter(dialect, key),
     )
 
 
 def pgp_sym_decrypt(
     dialect: "SQLDialectBase",
-    data: bases.BaseExpression,
-    key: bases.BaseExpression,
-) -> core.FunctionCall:
+    data: BaseExpression,
+    key: BaseExpression,
+) -> FunctionCall:
     """Decrypt data with a symmetric PGP key.
 
     Decrypts data that was encrypted with pgp_sym_encrypt().
@@ -341,10 +343,10 @@ def pgp_sym_decrypt(
     Example:
         >>> pgp_sym_decrypt(dialect, encrypted_data, 'my_passphrase')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgp_sym_decrypt",
-        data if isinstance(data, bases.BaseExpression) else core.Parameter(dialect, data),
-        key if isinstance(key, bases.BaseExpression) else core.Parameter(dialect, key),
+        data if isinstance(data, BaseExpression) else Parameter(dialect, data),
+        key if isinstance(key, BaseExpression) else Parameter(dialect, key),
     )
 
 

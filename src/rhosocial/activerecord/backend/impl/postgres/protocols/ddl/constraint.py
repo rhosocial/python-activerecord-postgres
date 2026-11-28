@@ -24,7 +24,7 @@ if TYPE_CHECKING:  # pragma: no cover
         TableConstraint,
         ValidateConstraintAction,
     )
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.exclude_constraint import (
         PostgresExcludeBranch,
     )
 

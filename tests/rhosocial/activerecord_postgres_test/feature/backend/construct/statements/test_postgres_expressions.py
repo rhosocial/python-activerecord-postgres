@@ -8,7 +8,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresVacuumStatement,
     PostgresAnalyzeStatement,
     PostgresCreatePartitionStatement,

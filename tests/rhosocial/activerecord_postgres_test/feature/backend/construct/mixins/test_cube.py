@@ -13,7 +13,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
     BinaryExpression,
@@ -36,7 +36,7 @@ class TestPostgresCubeFunctions:
         """cube_literal should return FunctionCall with cube."""
         dialect = PostgresDialect((14, 0, 0))
         result = cube_literal(dialect, [1, 2])
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cube" in sql.lower()
         # Coordinates are parameterized; verify they appear in params
@@ -46,7 +46,7 @@ class TestPostgresCubeFunctions:
         """cube_literal with string should return FunctionCall with cube."""
         dialect = PostgresDialect((14, 0, 0))
         result = cube_literal(dialect, "(1,2,3),(4,5,6)")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cube" in sql.lower()
 
@@ -54,7 +54,7 @@ class TestPostgresCubeFunctions:
         """cube_dimension should return FunctionCall with cube."""
         dialect = PostgresDialect((14, 0, 0))
         result = cube_dimension(dialect, 3, 1.0)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cube" in sql.lower()
 
@@ -62,7 +62,7 @@ class TestPostgresCubeFunctions:
         """cube_size should return FunctionCall with cube_size."""
         dialect = PostgresDialect((14, 0, 0))
         result = cube_size(dialect, "c1")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cube_size" in sql.lower()
 

@@ -3,7 +3,7 @@
 
 from typing import Tuple
 
-from ...expression.tablefunc import (
+from ...expression.statements.tablefunc import (
     PostgresConnectbyFullStatement,
     PostgresCrosstabWithDefinitionStatement,
 )

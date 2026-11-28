@@ -6,7 +6,7 @@ from typing import List, Optional, Sequence, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.ddl.repack import PostgresRepackStatement
+    from ...expression.statements.ddl.repack import PostgresRepackStatement
 
 
 class PostgresRepackMixin:

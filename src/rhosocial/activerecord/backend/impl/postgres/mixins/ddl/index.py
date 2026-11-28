@@ -10,18 +10,18 @@ from typing import Tuple, List, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.bases import ToSQLProtocol
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl import PostgresCreateIndexExpression, PostgresIndexType
+from ...expression.statements.ddl import PostgresCreateIndexExpression, PostgresIndexType
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresAlterIndexStatement,
         PostgresReindexStatement,
     )
-    from rhosocial.activerecord.backend.expression.statements.ddl_index import (
+    from rhosocial.activerecord.backend.expression.statements import (
         CreateIndexStatement,
         DropIndexStatement,
     )
-    from rhosocial.activerecord.backend.expression.statements.fulltext_match import (
+    from rhosocial.activerecord.backend.expression.statements import (
         FulltextMatch,
     )
 
@@ -570,7 +570,7 @@ class PostgresIndexMixin:
             ValueError: If required parameters for an action are missing or the action is unrecognised.
 
         """
-        from ...expression.ddl import PostgresAlterIndexActionType
+        from ...expression.statements.ddl import PostgresAlterIndexActionType
 
         parts = ["ALTER INDEX"]
         action = expr.action_type

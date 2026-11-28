@@ -10,7 +10,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.uuid import (
     uuid_generate_v1,
     uuid_generate_v1mc,
@@ -26,7 +26,7 @@ class TestPostgresUuidOsspFunctions:
         """uuid_generate_v1 should return FunctionCall with uuid_generate_v1."""
         dialect = PostgresDialect((14, 0, 0))
         result = uuid_generate_v1(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "uuid_generate_v1" in sql.lower()
 
@@ -34,7 +34,7 @@ class TestPostgresUuidOsspFunctions:
         """uuid_generate_v1mc should return FunctionCall with uuid_generate_v1mc."""
         dialect = PostgresDialect((14, 0, 0))
         result = uuid_generate_v1mc(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "uuid_generate_v1mc" in sql.lower()
 
@@ -42,7 +42,7 @@ class TestPostgresUuidOsspFunctions:
         """uuid_generate_v4 should return FunctionCall with uuid_generate_v4."""
         dialect = PostgresDialect((14, 0, 0))
         result = uuid_generate_v4(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "uuid_generate_v4" in sql.lower()
 
@@ -50,6 +50,6 @@ class TestPostgresUuidOsspFunctions:
         """uuid_generate_v5 should return FunctionCall with uuid_generate_v5."""
         dialect = PostgresDialect((14, 0, 0))
         result = uuid_generate_v5(dialect, "uuid_ns_dns()", "example.com")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "uuid_generate_v5" in sql.lower()

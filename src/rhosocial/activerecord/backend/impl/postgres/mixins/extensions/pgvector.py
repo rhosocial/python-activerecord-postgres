@@ -8,7 +8,8 @@ import warnings
 from typing import Tuple
 
 from rhosocial.activerecord.backend.expression import Column, Parameter, QueryStatement
-from rhosocial.activerecord.backend.expression.core import AllColumnsWildcard, Subquery
+from rhosocial.activerecord.backend.expression.value_types import AllColumnsWildcard
+from rhosocial.activerecord.backend.expression.sources import Subquery
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 from rhosocial.activerecord.backend.expression.operators import (
     ArithmeticOperation,
@@ -19,7 +20,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     OrderByClause,
 )
 
-from ...expression.ddl import (
+from ...expression.statements.ddl import (
     PostgresCreateIndexExpression,
     PostgresIndexType,
     PostgresVectorIndexExpression,
@@ -65,7 +66,7 @@ class PostgresPgvectorMixin:
     def format_postgres_vector_distance_expression(
         self, expr: PostgresVectorDistanceExpression
     ) -> Tuple[str, tuple]:
-        from rhosocial.activerecord.backend.expression import bases, core
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
         from ...functions.pgvector import PostgresVector, _typed_vector
 
@@ -83,7 +84,7 @@ class PostgresPgvectorMixin:
             if isinstance(expr.column, str)
             else expr.column
         )
-        if isinstance(expr.query_vector, bases.BaseExpression):
+        if isinstance(expr.query_vector, BaseExpression):
             query_expr = expr.query_vector
         elif isinstance(expr.query_vector, PostgresVector):
             query_expr = _typed_vector(
@@ -97,7 +98,7 @@ class PostgresPgvectorMixin:
                 self, vec.to_postgres_string(), vec.dimensions
             )
         else:
-            query_expr = core.Parameter(self, expr.query_vector)
+            query_expr = Parameter(self, expr.query_vector)
         return BinaryExpression(
             self, _DISTANCE_OPERATOR[metric], column_expr, query_expr
         ).to_sql()

@@ -44,13 +44,13 @@ pg_hint_plan 的提示是**附着在单条语句上的注释**，不是独立语
 通过语句的 `hints=` 关键字传入负载：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_leading, hint_hash_join, hint_seq_scan,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
+from rhosocial.activerecord.backend.impl.postgres.expression.query_parts.hint import HintGroup
 
 query = PostgresQueryStatement(
     dialect,
@@ -70,7 +70,7 @@ backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQ
 `PostgresExplainStatement` 会把注释写在 `EXPLAIN` 关键字之前，这正是 pg_hint_plan 要求的位置：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresExplainStatement,
 )
 
@@ -86,7 +86,7 @@ sql, params = explained.to_sql()
 `hints=` 关键字同样被三条在运行时才规划语句的 DDL 语句接受：`PostgresCreateTableAsStatement`（`CREATE TABLE ... AS`）、`PostgresCreateMaterializedViewStatement`（`CREATE MATERIALIZED VIEW ... AS`）与 `PostgresRefreshMaterializedViewStatement`（`REFRESH MATERIALIZED VIEW`）。在 PG 18 + pg_hint_plan 1.8.1 上实测，三者都会因头部注释报告 `used hint` 并改用不同计划：
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresCreateTableAsStatement,
 )
 

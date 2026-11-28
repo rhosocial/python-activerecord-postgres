@@ -4,7 +4,7 @@
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.datetime import (
+    from rhosocial.activerecord.backend.expression.functions import (
         DatetimeDiffExpression,
         SecondsBetweenExpression,
     )

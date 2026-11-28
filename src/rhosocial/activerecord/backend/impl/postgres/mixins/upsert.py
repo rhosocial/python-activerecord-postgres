@@ -42,7 +42,7 @@ class PostgresUpsertMixin:
             Tuple of (SQL string, params tuple)
 
         """
-        from rhosocial.activerecord.backend.expression import bases
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
         all_params = []
         parts = ["ON CONFLICT"]
@@ -67,7 +67,7 @@ class PostgresUpsertMixin:
                 if getattr(expr_val, 'table', None) == 'EXCLUDED':
                     val_sql = f'EXCLUDED.{self.format_identifier(expr_val.name)}'
                     update_parts.append(f"{self.format_identifier(col)} = {val_sql}")
-                elif isinstance(expr_val, bases.BaseExpression):
+                elif isinstance(expr_val, BaseExpression):
                     val_sql, val_params = expr_val.to_sql()
                     update_parts.append(f"{self.format_identifier(col)} = {val_sql}")
                     all_params.extend(val_params)

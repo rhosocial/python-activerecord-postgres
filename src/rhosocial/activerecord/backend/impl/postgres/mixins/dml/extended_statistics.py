@@ -10,7 +10,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import SchemaObject, Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresCreateStatisticsStatement, PostgresDropStatisticsStatement
+    from ...expression.statements.ddl import PostgresCreateStatisticsStatement, PostgresDropStatisticsStatement
 
 
 class PostgresExtendedStatisticsMixin:

@@ -17,19 +17,19 @@ Version requirements:
 from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.objects import Type
-from rhosocial.activerecord.backend.expression.statements.ddl_type import (
+from rhosocial.activerecord.backend.expression.statements import (
     AlterTypeStatement,
     CreateTypeStatement,
 )
 
-from .expression.ddl import (
+from .expression.statements.ddl import (
     PostgresAddEnumValueAction,
     PostgresDropTypeExpression,
     PostgresEnumTypeDefinition,
     PostgresRenameEnumValueAction,
 )
-from .expression.enum_ import (
-    PostgresEnumType,
+from .expression.statements.enum_ import PostgresEnumType
+from .expression.introspection.enum_ import (
     PostgresEnumTypeExistsQuery,
     PostgresEnumTypeValuesQuery,
 )

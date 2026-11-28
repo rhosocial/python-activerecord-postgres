@@ -39,7 +39,7 @@ import re
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.objects import (
     Function,
     MaterializedView,
@@ -49,8 +49,8 @@ from rhosocial.activerecord.backend.expression.objects import (
     Type,
     View,
 )
-from rhosocial.activerecord.backend.expression.pivot import Unpivot
-from rhosocial.activerecord.backend.expression.query_sources import (
+from rhosocial.activerecord.backend.expression.query_parts.pivot import Unpivot
+from rhosocial.activerecord.backend.expression.sources.query_sources import (
     CTEClause,
     SetOperation,
 )
@@ -88,12 +88,12 @@ from rhosocial.activerecord.backend.expression.statements.ddl_view import (
     RefreshMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
-from rhosocial.activerecord.backend.expression.transaction import (
+from rhosocial.activerecord.backend.expression.statements.transaction import (
     BeginTransactionStatement,
     SetTransactionStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.copy import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.copy import (
     PostgresCopyToStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.mixins import (
@@ -102,13 +102,13 @@ from rhosocial.activerecord.backend.impl.postgres.mixins import (
     PostgresTransactionMixin,
     PostgresTruncateMixin,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.exclude_constraint import (
     PostgresExcludeConstraint,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv import (
     PostgresRefreshMaterializedViewStatement,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.type import (
     PostgresDropTypeExpression,
 )
 

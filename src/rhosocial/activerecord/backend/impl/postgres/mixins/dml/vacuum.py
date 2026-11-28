@@ -10,7 +10,7 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
+    from ...expression.statements.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
 
 
 class PostgresVacuumMixin:

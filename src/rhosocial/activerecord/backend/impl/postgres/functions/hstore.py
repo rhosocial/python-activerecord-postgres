@@ -36,7 +36,10 @@ Supported operators:
 
 from typing import Dict, Optional, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import PostgresHstore
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
@@ -49,7 +52,7 @@ if TYPE_CHECKING:
 def hstore_literal(
     dialect: "SQLDialectBase",
     data: Union[PostgresHstore, Dict[str, Optional[str]], str],
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Build a typed hstore literal from domain data.
 
     The one place a Python value becomes an hstore expression, and it is called
@@ -71,16 +74,16 @@ def hstore_literal(
     elif isinstance(data, dict):
         text = PostgresHstore(data=data).to_postgres_string()
     else:
-        return core.Parameter(dialect, data)
-    return core.CastExpression(dialect, core.Parameter(dialect, text), PostgresHstoreType(dialect))
+        return Parameter(dialect, data)
+    return CastExpression(dialect, Parameter(dialect, text), PostgresHstoreType(dialect))
 
 
 # ============== Constructors ==============
 
 def hstore_from_record(
     dialect: "SQLDialectBase",
-    record: "bases.BaseExpression",
-) -> core.FunctionCall:
+    record: "BaseExpression",
+) -> FunctionCall:
     """Construct hstore from a record/row.
 
     Args:
@@ -90,14 +93,14 @@ def hstore_from_record(
     Returns:
         FunctionCall for hstore(record)
     """
-    return core.FunctionCall(dialect, "hstore", record)
+    return FunctionCall(dialect, "hstore", record)
 
 
 def hstore_from_key_value(
     dialect: "SQLDialectBase",
-    key: "bases.BaseExpression",
-    value: "bases.BaseExpression",
-) -> core.FunctionCall:
+    key: "BaseExpression",
+    value: "BaseExpression",
+) -> FunctionCall:
     """Construct hstore from a single key/value pair.
 
     Args:
@@ -108,7 +111,7 @@ def hstore_from_key_value(
     Returns:
         FunctionCall for hstore(key, value)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "hstore",
         key,
         value,
@@ -119,8 +122,8 @@ def hstore_from_key_value(
 
 def hstore_akeys(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Get all keys from hstore as a text array.
 
     Args:
@@ -130,13 +133,13 @@ def hstore_akeys(
     Returns:
         FunctionCall for akeys(hstore)
     """
-    return core.FunctionCall(dialect, "akeys", hstore_expr)
+    return FunctionCall(dialect, "akeys", hstore_expr)
 
 
 def hstore_skeys(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Get all keys from hstore as a set.
 
     Args:
@@ -146,13 +149,13 @@ def hstore_skeys(
     Returns:
         FunctionCall for skeys(hstore)
     """
-    return core.FunctionCall(dialect, "skeys", hstore_expr)
+    return FunctionCall(dialect, "skeys", hstore_expr)
 
 
 def hstore_avals(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Get all values from hstore as a text array.
 
     Args:
@@ -162,13 +165,13 @@ def hstore_avals(
     Returns:
         FunctionCall for avals(hstore)
     """
-    return core.FunctionCall(dialect, "avals", hstore_expr)
+    return FunctionCall(dialect, "avals", hstore_expr)
 
 
 def hstore_svals(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Get all values from hstore as a set.
 
     Args:
@@ -178,13 +181,13 @@ def hstore_svals(
     Returns:
         FunctionCall for svals(hstore)
     """
-    return core.FunctionCall(dialect, "svals", hstore_expr)
+    return FunctionCall(dialect, "svals", hstore_expr)
 
 
 def hstore_each(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Get all key/value pairs from hstore as a set of (key, value) records.
 
     Args:
@@ -194,15 +197,15 @@ def hstore_each(
     Returns:
         FunctionCall for each(hstore)
     """
-    return core.FunctionCall(dialect, "each", hstore_expr)
+    return FunctionCall(dialect, "each", hstore_expr)
 
 
 # ============== Conversion Functions ==============
 
 def hstore_to_array(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to text array (alternating keys and values).
 
     Args:
@@ -212,13 +215,13 @@ def hstore_to_array(
     Returns:
         FunctionCall for hstore_to_array(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_array", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_array", hstore_expr)
 
 
 def hstore_to_matrix(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to 2D text array (key/value pairs as rows).
 
     Args:
@@ -228,13 +231,13 @@ def hstore_to_matrix(
     Returns:
         FunctionCall for hstore_to_matrix(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_matrix", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_matrix", hstore_expr)
 
 
 def hstore_to_json(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to JSON (values as strings).
 
     Args:
@@ -244,13 +247,13 @@ def hstore_to_json(
     Returns:
         FunctionCall for hstore_to_json(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_json", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_json", hstore_expr)
 
 
 def hstore_to_jsonb(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to JSONB (values as strings).
 
     Args:
@@ -260,13 +263,13 @@ def hstore_to_jsonb(
     Returns:
         FunctionCall for hstore_to_jsonb(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_jsonb", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_jsonb", hstore_expr)
 
 
 def hstore_to_json_loose(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to JSON with loose type inference.
 
     Attempts to infer proper JSON types for values (numeric, boolean, etc).
@@ -278,13 +281,13 @@ def hstore_to_json_loose(
     Returns:
         FunctionCall for hstore_to_json_loose(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_json_loose", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_json_loose", hstore_expr)
 
 
 def hstore_to_jsonb_loose(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Convert hstore to JSONB with loose type inference.
 
     Attempts to infer proper JSON types for values (numeric, boolean, etc).
@@ -296,16 +299,16 @@ def hstore_to_jsonb_loose(
     Returns:
         FunctionCall for hstore_to_jsonb_loose(hstore)
     """
-    return core.FunctionCall(dialect, "hstore_to_jsonb_loose", hstore_expr)
+    return FunctionCall(dialect, "hstore_to_jsonb_loose", hstore_expr)
 
 
 # ============== Subset Functions ==============
 
 def hstore_slice(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
+) -> FunctionCall:
     """Extract subset of hstore by keys.
 
     Args:
@@ -316,7 +319,7 @@ def hstore_slice(
     Returns:
         FunctionCall for slice(hstore, keys)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "slice",
         hstore_expr,
         keys,
@@ -327,9 +330,9 @@ def hstore_slice(
 
 def hstore_exist(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
+) -> FunctionCall:
     """Check if key exists in hstore (including NULL values).
 
     Args:
@@ -340,7 +343,7 @@ def hstore_exist(
     Returns:
         FunctionCall for exist(hstore, key)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "exist",
         hstore_expr,
         key,
@@ -349,9 +352,9 @@ def hstore_exist(
 
 def hstore_defined(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
+) -> FunctionCall:
     """Check if key exists and has a non-NULL value.
 
     Args:
@@ -362,7 +365,7 @@ def hstore_defined(
     Returns:
         FunctionCall for defined(hstore, key)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "defined",
         hstore_expr,
         key,
@@ -373,9 +376,9 @@ def hstore_defined(
 
 def hstore_delete(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
+) -> FunctionCall:
     """Delete a key from hstore.
 
     Args:
@@ -386,7 +389,7 @@ def hstore_delete(
     Returns:
         FunctionCall for delete(hstore, key)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "delete",
         hstore_expr,
         key,
@@ -395,9 +398,9 @@ def hstore_delete(
 
 def hstore_delete_keys(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
+) -> FunctionCall:
     """Delete multiple keys from hstore.
 
     Args:
@@ -408,7 +411,7 @@ def hstore_delete_keys(
     Returns:
         FunctionCall for delete(hstore, keys)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "delete",
         hstore_expr,
         keys,
@@ -417,9 +420,9 @@ def hstore_delete_keys(
 
 def hstore_delete_pairs(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    pairs: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    pairs: "BaseExpression",
+) -> FunctionCall:
     """Delete matching key/value pairs from hstore.
 
     Args:
@@ -430,7 +433,7 @@ def hstore_delete_pairs(
     Returns:
         FunctionCall for delete(hstore, hstore)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "delete",
         hstore_expr,
         pairs,
@@ -441,9 +444,9 @@ def hstore_delete_pairs(
 
 def hstore_populate_record(
     dialect: "SQLDialectBase",
-    record: "bases.BaseExpression",
-    hstore_expr: "bases.BaseExpression",
-) -> core.FunctionCall:
+    record: "BaseExpression",
+    hstore_expr: "BaseExpression",
+) -> FunctionCall:
     """Update a record/row with values from hstore.
 
     Args:
@@ -454,7 +457,7 @@ def hstore_populate_record(
     Returns:
         FunctionCall for populate_record(record, hstore)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "populate_record",
         record,
         hstore_expr,
@@ -465,8 +468,8 @@ def hstore_populate_record(
 
 def hstore_get_value(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
 ) -> BinaryExpression:
     """Get value by key (operator ->).
 
@@ -489,8 +492,8 @@ def hstore_get_value(
 
 def hstore_get_value_as_text(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
 ) -> BinaryExpression:
     """Get value by key as text (operator ->>).
 
@@ -513,8 +516,8 @@ def hstore_get_value_as_text(
 
 def hstore_get_values(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
 ) -> BinaryExpression:
     """Get values by multiple keys (operator -> text[]).
 
@@ -535,8 +538,8 @@ def hstore_get_values(
 
 def hstore_concat(
     dialect: "SQLDialectBase",
-    left: "bases.BaseExpression",
-    right: "bases.BaseExpression",
+    left: "BaseExpression",
+    right: "BaseExpression",
 ) -> BinaryExpression:
     """Concatenate two hstores (operator ||).
 
@@ -557,8 +560,8 @@ def hstore_concat(
 
 def hstore_key_exists(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
 ) -> BinaryExpression:
     """Check if key exists (operator ?).
 
@@ -579,8 +582,8 @@ def hstore_key_exists(
 
 def hstore_all_keys_exist(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
 ) -> BinaryExpression:
     """Check if all keys exist (operator ?&).
 
@@ -601,8 +604,8 @@ def hstore_all_keys_exist(
 
 def hstore_any_key_exists(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
 ) -> BinaryExpression:
     """Check if any key exists (operator ?|).
 
@@ -623,8 +626,8 @@ def hstore_any_key_exists(
 
 def hstore_contains(
     dialect: "SQLDialectBase",
-    left: "bases.BaseExpression",
-    right: "bases.BaseExpression",
+    left: "BaseExpression",
+    right: "BaseExpression",
 ) -> BinaryExpression:
     """Check if left hstore contains right (operator @>).
 
@@ -645,8 +648,8 @@ def hstore_contains(
 
 def hstore_contained_by(
     dialect: "SQLDialectBase",
-    left: "bases.BaseExpression",
-    right: "bases.BaseExpression",
+    left: "BaseExpression",
+    right: "BaseExpression",
 ) -> BinaryExpression:
     """Check if left hstore is contained by right (operator <@).
 
@@ -667,8 +670,8 @@ def hstore_contained_by(
 
 def hstore_subtract_key(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
 ) -> BinaryExpression:
     """Delete key from hstore (operator - text).
 
@@ -689,8 +692,8 @@ def hstore_subtract_key(
 
 def hstore_subtract_keys(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    keys: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
+    keys: "BaseExpression",
 ) -> BinaryExpression:
     """Delete multiple keys from hstore (operator - text[]).
 
@@ -711,8 +714,8 @@ def hstore_subtract_keys(
 
 def hstore_subtract_pairs(
     dialect: "SQLDialectBase",
-    left: "bases.BaseExpression",
-    right: "bases.BaseExpression",
+    left: "BaseExpression",
+    right: "BaseExpression",
 ) -> BinaryExpression:
     """Delete matching pairs from hstore (operator - hstore).
 
@@ -733,7 +736,7 @@ def hstore_subtract_pairs(
 
 def hstore_to_array_operator(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
 ) -> BinaryExpression:
     """Convert hstore to alternating key/value array (operator %%).
 
@@ -750,14 +753,14 @@ def hstore_to_array_operator(
     """
     return BinaryExpression(
         dialect, "%",
-        core.Parameter(dialect, ""),
+        Parameter(dialect, ""),
         hstore_expr,
     )
 
 
 def hstore_to_matrix_operator(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
+    hstore_expr: "BaseExpression",
 ) -> BinaryExpression:
     """Convert hstore to 2D key/value array (operator %#).
 
@@ -774,15 +777,15 @@ def hstore_to_matrix_operator(
     """
     return BinaryExpression(
         dialect, "%#",
-        core.Parameter(dialect, ""),
+        Parameter(dialect, ""),
         hstore_expr,
     )
 
 
 def hstore_record_update(
     dialect: "SQLDialectBase",
-    record: "bases.BaseExpression",
-    hstore_expr: "bases.BaseExpression",
+    record: "BaseExpression",
+    hstore_expr: "BaseExpression",
 ) -> BinaryExpression:
     """Update record fields from hstore (operator #=).
 
@@ -805,9 +808,9 @@ def hstore_record_update(
 
 def hstore_subscript_get(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
+) -> FunctionCall:
     """Get value by key using subscript syntax.
 
     Note: Subscript access (hstore['key']) is equivalent to the -> operator
@@ -828,10 +831,10 @@ def hstore_subscript_get(
 
 def hstore_subscript_set(
     dialect: "SQLDialectBase",
-    hstore_expr: "bases.BaseExpression",
-    key: "bases.BaseExpression",
-    value: "bases.BaseExpression",
-) -> core.FunctionCall:
+    hstore_expr: "BaseExpression",
+    key: "BaseExpression",
+    value: "BaseExpression",
+) -> FunctionCall:
     """Set value by key using subscript syntax.
 
     Generates an expression equivalent to hstore[key] = value using

@@ -7,7 +7,10 @@ All factories take the dialect first and return Expression nodes.
 from enum import Enum
 from typing import TYPE_CHECKING, Optional
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.types import BigIntType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresRegClassType
 
@@ -17,9 +20,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
-    if isinstance(value, bases.BaseExpression):
+    if isinstance(value, BaseExpression):
         return value
-    return core.Parameter(dialect, value)
+    return Parameter(dialect, value)
 
 
 class SkipMode(str, Enum):
@@ -34,7 +37,7 @@ class SkipMode(str, Enum):
 
 def bt_index_check(
     dialect: "SQLDialectBase", index, *, heapallindexed: Optional[bool] = None
-) -> core.FunctionCall:
+) -> FunctionCall:
     """``bt_index_check(index)`` or ``bt_index_check(index, heapallindexed)``.
 
     Omitting ``heapallindexed`` emits the one-argument form, which exists in
@@ -44,20 +47,20 @@ def bt_index_check(
     if heapallindexed is not None:
         if not isinstance(heapallindexed, bool):
             raise TypeError("heapallindexed must be a bool")
-        arguments.append(core.Parameter(dialect, heapallindexed))
-    return core.FunctionCall(dialect, "bt_index_check", *arguments)
+        arguments.append(Parameter(dialect, heapallindexed))
+    return FunctionCall(dialect, "bt_index_check", *arguments)
 
 
 def bt_index_parent_check(
     dialect: "SQLDialectBase", index, *, heapallindexed: Optional[bool] = None
-) -> core.FunctionCall:
+) -> FunctionCall:
     """``bt_index_parent_check(index[, heapallindexed])``."""
     arguments = [_expr(dialect, index)]
     if heapallindexed is not None:
         if not isinstance(heapallindexed, bool):
             raise TypeError("heapallindexed must be a bool")
-        arguments.append(core.Parameter(dialect, heapallindexed))
-    return core.FunctionCall(dialect, "bt_index_parent_check", *arguments)
+        arguments.append(Parameter(dialect, heapallindexed))
+    return FunctionCall(dialect, "bt_index_parent_check", *arguments)
 
 
 def verify_heapam(
@@ -69,7 +72,7 @@ def verify_heapam(
     skip: SkipMode = SkipMode.NONE,
     start_block=None,
     end_block=None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """``verify_heapam(relation, on_error_stop, check_toast, skip, startblock, endblock)``."""
     for name, value in (("on_error_stop", on_error_stop), ("check_toast", check_toast)):
         if not isinstance(value, bool):
@@ -77,16 +80,16 @@ def verify_heapam(
     if not isinstance(skip, SkipMode):
         raise TypeError("skip must be a SkipMode")
     # Explicit casts keep the six-argument signature unambiguous on the wire.
-    regclass = core.CastExpression(dialect, _expr(dialect, relation), PostgresRegClassType(dialect))
+    regclass = CastExpression(dialect, _expr(dialect, relation), PostgresRegClassType(dialect))
     bigint = BigIntType(dialect)
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "verify_heapam",
         regclass,
-        core.Parameter(dialect, on_error_stop),
-        core.Parameter(dialect, check_toast),
-        core.Parameter(dialect, skip.value),
-        core.CastExpression(dialect, core.Parameter(dialect, start_block), bigint),
-        core.CastExpression(dialect, core.Parameter(dialect, end_block), bigint),
+        Parameter(dialect, on_error_stop),
+        Parameter(dialect, check_toast),
+        Parameter(dialect, skip.value),
+        CastExpression(dialect, Parameter(dialect, start_block), bigint),
+        CastExpression(dialect, Parameter(dialect, end_block), bigint),
     )
 
 

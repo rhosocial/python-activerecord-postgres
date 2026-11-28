@@ -20,7 +20,7 @@ from rhosocial.activerecord.backend.expression import Column, Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.policy import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.policy import (
     AlterPolicyMode,
     PostgresAlterPolicyStatement,
     PostgresCreatePolicyStatement,

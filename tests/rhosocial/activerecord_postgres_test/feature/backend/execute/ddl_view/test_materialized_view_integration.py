@@ -12,7 +12,7 @@ import pytest
 from rhosocial.activerecord.backend.errors import DatabaseError
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewStatement,

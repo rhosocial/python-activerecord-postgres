@@ -36,8 +36,9 @@ from rhosocial.activerecord.backend.impl.postgres.functions.postgis import (
     st_centroid,
 )
 from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
-from rhosocial.activerecord.backend.expression import bases, Parameter
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression import Parameter
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 
 
 class TestPostgisConstructionFunctions:
@@ -284,33 +285,33 @@ class TestPostgisNestedExpressions:
         """Test that all PostGIS functions return Expression objects (not strings)."""
         assert isinstance(
             st_make_point(postgres_dialect, Parameter(postgres_dialect, 1), Parameter(postgres_dialect, 2)),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
-            st_geom_from_text(postgres_dialect, Parameter(postgres_dialect, "POINT(1 2)")), bases.BaseExpression
+            st_geom_from_text(postgres_dialect, Parameter(postgres_dialect, "POINT(1 2)")), BaseExpression
         )
         assert isinstance(
-            st_geog_from_text(postgres_dialect, Parameter(postgres_dialect, "POINT(1 2)")), bases.BaseExpression
+            st_geog_from_text(postgres_dialect, Parameter(postgres_dialect, "POINT(1 2)")), BaseExpression
         )
         assert isinstance(
             st_set_srid(postgres_dialect, Parameter(postgres_dialect, "geom"), Parameter(postgres_dialect, 4326)),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_transform(postgres_dialect, Parameter(postgres_dialect, "geom"), Parameter(postgres_dialect, 3857)),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_contains(postgres_dialect, Parameter(postgres_dialect, "a"), Parameter(postgres_dialect, "b")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_intersects(postgres_dialect, Parameter(postgres_dialect, "a"), Parameter(postgres_dialect, "b")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_within(postgres_dialect, Parameter(postgres_dialect, "a"), Parameter(postgres_dialect, "b")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_dwithin(
@@ -319,19 +320,19 @@ class TestPostgisNestedExpressions:
                 Parameter(postgres_dialect, "b"),
                 Parameter(postgres_dialect, 100),
             ),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             st_distance(postgres_dialect, Parameter(postgres_dialect, "a"), Parameter(postgres_dialect, "b")),
-            bases.BaseExpression,
+            BaseExpression,
         )
-        assert isinstance(st_area(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
-        assert isinstance(st_length(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
-        assert isinstance(st_as_geojson(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
-        assert isinstance(st_as_text(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
+        assert isinstance(st_area(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)
+        assert isinstance(st_length(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)
+        assert isinstance(st_as_geojson(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)
+        assert isinstance(st_as_text(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)
         assert isinstance(
             st_buffer(postgres_dialect, Parameter(postgres_dialect, "geom"), Parameter(postgres_dialect, 100)),
-            bases.BaseExpression,
+            BaseExpression,
         )
-        assert isinstance(st_envelope(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
-        assert isinstance(st_centroid(postgres_dialect, Parameter(postgres_dialect, "geom")), bases.BaseExpression)
+        assert isinstance(st_envelope(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)
+        assert isinstance(st_centroid(postgres_dialect, Parameter(postgres_dialect, "geom")), BaseExpression)

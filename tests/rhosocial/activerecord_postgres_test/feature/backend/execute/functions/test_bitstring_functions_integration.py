@@ -7,7 +7,7 @@ created by functions.bit_string against the database.
 """
 import pytest
 
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.sources.subquery import Subquery
 from rhosocial.activerecord.backend.impl.postgres.functions.bit_string import (
     bit_and,
     bit_concat,
@@ -26,7 +26,7 @@ from rhosocial.activerecord.backend.impl.postgres.functions.bit_string import (
 
 
 def _bit(dialect, value):
-    return core.Subquery(dialect, f"B'{value}'")
+    return Subquery(dialect, f"B'{value}'")
 
 
 def _execute_expression(backend, expression, alias="result"):

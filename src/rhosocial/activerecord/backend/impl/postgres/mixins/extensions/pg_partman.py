@@ -13,7 +13,7 @@ in tests or callers.
 from typing import Any, List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresPgPartmanCreateParentExpression,
         PostgresPgPartmanRunMaintenanceExpression,
         PostgresPgPartmanUpdateConfigExpression,

@@ -27,7 +27,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -40,7 +42,7 @@ def cron_schedule(
     schedule: str,
     command: str,
     comment: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Schedule a new cron job.
 
     Schedules a new job to be run at the specified schedule. The
@@ -70,23 +72,23 @@ def cron_schedule(
         >>> cron_schedule(dialect, '30 3 * * *', 'VACUUM ANALYZE', 'Nightly vacuum')
     """
     if comment is not None:
-        return core.FunctionCall(
+        return FunctionCall(
             dialect, "cron.schedule",
-            schedule if isinstance(schedule, bases.BaseExpression) else core.Parameter(dialect, schedule),
-            command if isinstance(command, bases.BaseExpression) else core.Parameter(dialect, command),
-            comment if isinstance(comment, bases.BaseExpression) else core.Parameter(dialect, comment),
+            schedule if isinstance(schedule, BaseExpression) else Parameter(dialect, schedule),
+            command if isinstance(command, BaseExpression) else Parameter(dialect, command),
+            comment if isinstance(comment, BaseExpression) else Parameter(dialect, comment),
         )
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cron.schedule",
-        schedule if isinstance(schedule, bases.BaseExpression) else core.Parameter(dialect, schedule),
-        command if isinstance(command, bases.BaseExpression) else core.Parameter(dialect, command),
+        schedule if isinstance(schedule, BaseExpression) else Parameter(dialect, schedule),
+        command if isinstance(command, BaseExpression) else Parameter(dialect, command),
     )
 
 
 def cron_unschedule(
     dialect: "SQLDialectBase",
     job_id: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Remove a scheduled cron job.
 
     Removes the cron job with the specified job ID. The job ID
@@ -103,16 +105,16 @@ def cron_unschedule(
         >>> cron_unschedule(dialect, 1)
         >>> cron_unschedule(dialect, job_id_expr)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cron.unschedule",
-        job_id if isinstance(job_id, bases.BaseExpression) else core.Parameter(dialect, job_id),
+        job_id if isinstance(job_id, BaseExpression) else Parameter(dialect, job_id),
     )
 
 
 def cron_run(
     dialect: "SQLDialectBase",
     job_id: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Run a scheduled cron job immediately.
 
     Triggers immediate execution of the cron job with the specified
@@ -130,9 +132,9 @@ def cron_run(
         >>> cron_run(dialect, 1)
         >>> cron_run(dialect, job_id_expr)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cron.run",
-        job_id if isinstance(job_id, bases.BaseExpression) else core.Parameter(dialect, job_id),
+        job_id if isinstance(job_id, BaseExpression) else Parameter(dialect, job_id),
     )
 
 

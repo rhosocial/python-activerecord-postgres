@@ -10,7 +10,7 @@ from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.protocols import PartitionSupport
 
 if TYPE_CHECKING:
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresPartitionValue,
         PostgresCreatePartitionStatement,
         PostgresDetachPartitionStatement,

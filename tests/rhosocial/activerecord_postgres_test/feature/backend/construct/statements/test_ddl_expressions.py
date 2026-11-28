@@ -27,7 +27,7 @@ from rhosocial.activerecord.backend.expression.statements import (
 )
 from rhosocial.activerecord.backend.impl.dummy.backend import DummyDialect
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresPartitionValue,
     PostgresRefreshMaterializedViewStatement,
     PostgresCommentOnStatement,

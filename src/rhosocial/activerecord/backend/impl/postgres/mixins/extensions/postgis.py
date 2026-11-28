@@ -8,7 +8,7 @@ from typing import Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl import (
+from ...expression.statements.ddl import (
     PostgresCreateIndexExpression,
     PostgresIndexType,
     PostgresSpatialIndexExpression,

@@ -85,7 +85,7 @@ class PostgresPartitionSuggestionBase:
         child_method = getattr(spec, "child_method", None)
         if not child_method:
             return None
-        from ....expression.core import Column
+        from rhosocial.activerecord.backend.expression.column_types import Column
         from ....expression.statements import PartitionClause
 
         columns = getattr(spec, "child_columns", ()) or ()
@@ -102,7 +102,7 @@ class PostgresPartitionSuggestionBase:
         """
         from ....expression.objects import Table
         from ....expression.statements import DropTableStatement
-        from ..expression.ddl.partition import PostgresDetachPartitionStatement
+        from ..expression.statements.ddl.partition import PostgresDetachPartitionStatement
 
         table = Table(self, name, schema_name=schema)
         drop = DropTableStatement(self, table, if_exists=True)

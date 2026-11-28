@@ -8,7 +8,7 @@ that are not part of the SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
+    from ...expression.statements.ddl import PostgresVacuumStatement, PostgresAnalyzeStatement
 
 
 @runtime_checkable

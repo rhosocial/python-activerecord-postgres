@@ -15,7 +15,7 @@ from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAd
 from rhosocial.activerecord.backend.impl.postgres.enum_type_manager import (
     EnumTypeManager,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.enum_ import PostgresEnumType
 
 
 ENUM_TYPE = "test_status_enum"

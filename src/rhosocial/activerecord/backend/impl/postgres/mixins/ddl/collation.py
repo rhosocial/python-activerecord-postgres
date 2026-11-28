@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import SchemaObject
 
 if TYPE_CHECKING:
-    from ...expression.ddl.collation import (
+    from ...expression.statements.ddl.collation import (
         PostgresCreateCollationStatement,
         PostgresDropCollationStatement,
     )

@@ -3,7 +3,7 @@
 
 from typing import Any, Dict, Optional, Sequence
 
-from ..expression.ddl import (
+from ..expression.statements.ddl import (
     PostgresCallProcedureStatement,
     PostgresCreateProcedureStatement,
     PostgresDropProcedureStatement,

@@ -7,7 +7,7 @@ from typing import List, Optional, Tuple, cast, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.user_defined_type import UserDefinedTypeMixin
-from rhosocial.activerecord.backend.expression.statements.ddl_type import (
+from rhosocial.activerecord.backend.expression.statements import (
     AlterTypeStatement,
     CreateTypeStatement,
     DropTypeStatement,
@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
 )
 from rhosocial.activerecord.backend.expression.objects import Type
 from rhosocial.activerecord.backend.expression.types import DataType
-from ...expression.ddl.type import (
+from ...expression.statements.ddl.type import (
     PostgresAddEnumValueAction,
     PostgresAddTypeAttributeAction,
     PostgresAlterTypeAttributeAction,
@@ -37,8 +37,8 @@ from ...expression.ddl.type import (
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
-    from ...expression.ddl.extension_index import PostgresDropTypeNameExpression
-    from ...expression.ddl.type import PostgresCompositeTypeAttribute
+    from ...expression.statements.ddl.extension_index import PostgresDropTypeNameExpression
+    from ...expression.statements.ddl.type import PostgresCompositeTypeAttribute
 
 
 __all__ = ["PostgresTypeMixin"]

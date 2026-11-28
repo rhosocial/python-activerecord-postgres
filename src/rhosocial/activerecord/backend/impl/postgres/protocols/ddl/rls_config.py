@@ -12,7 +12,7 @@ not SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.rls_config import (
+    from ...expression.statements.ddl.rls_config import (
         PostgresAlterTableRlsStatement,
         PostgresForceRlsStatement,
     )

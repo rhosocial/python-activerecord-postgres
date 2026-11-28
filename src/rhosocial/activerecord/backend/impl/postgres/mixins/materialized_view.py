@@ -30,7 +30,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.dialect.mixins import ViewMixin
 from rhosocial.activerecord.backend.expression.objects import MaterializedView
 
-from ..expression.ddl.mv import (
+from ..expression.statements.ddl.mv import (
     _CURRENT_ROLE_KEYWORDS,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewStatement,
@@ -46,7 +46,7 @@ if TYPE_CHECKING:
         CreateMaterializedViewStatement,
         DropMaterializedViewStatement,
     )
-    from ..expression.ddl.mv import (
+    from ..expression.statements.ddl.mv import (
         PostgresAlterMaterializedViewStatement,
         PostgresMaterializedViewAlterAction,
         PostgresRefreshMaterializedViewStatement,

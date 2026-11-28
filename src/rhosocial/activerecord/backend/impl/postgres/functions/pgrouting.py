@@ -27,7 +27,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -41,7 +43,7 @@ def pgr_dijkstra(
     start_vid: int,
     end_vid: int,
     directed: bool = True,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Calculate the shortest path using Dijkstra's algorithm.
 
     Returns the shortest path from a start vertex to an end vertex
@@ -74,12 +76,12 @@ def pgr_dijkstra(
         ...     'SELECT id, source, target, cost, reverse_cost FROM edges',
         ...     1, 5, directed=False)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgr_dijkstra",
-        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Parameter(dialect, edges_sql),
-        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Parameter(dialect, start_vid),
-        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Parameter(dialect, end_vid),
-        directed if isinstance(directed, bases.BaseExpression) else core.Parameter(dialect, directed),
+        edges_sql if isinstance(edges_sql, BaseExpression) else Parameter(dialect, edges_sql),
+        start_vid if isinstance(start_vid, BaseExpression) else Parameter(dialect, start_vid),
+        end_vid if isinstance(end_vid, BaseExpression) else Parameter(dialect, end_vid),
+        directed if isinstance(directed, BaseExpression) else Parameter(dialect, directed),
     )
 
 
@@ -89,7 +91,7 @@ def pgr_astar(
     start_vid: int,
     end_vid: int,
     directed: bool = True,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Calculate the shortest path using A* algorithm.
 
     Returns the shortest path from a start vertex to an end vertex
@@ -125,12 +127,12 @@ def pgr_astar(
         ...     'SELECT id, source, target, cost, x1, y1, x2, y2, reverse_cost FROM edges',
         ...     1, 5, directed=False)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgr_astar",
-        edges_sql if isinstance(edges_sql, bases.BaseExpression) else core.Parameter(dialect, edges_sql),
-        start_vid if isinstance(start_vid, bases.BaseExpression) else core.Parameter(dialect, start_vid),
-        end_vid if isinstance(end_vid, bases.BaseExpression) else core.Parameter(dialect, end_vid),
-        directed if isinstance(directed, bases.BaseExpression) else core.Parameter(dialect, directed),
+        edges_sql if isinstance(edges_sql, BaseExpression) else Parameter(dialect, edges_sql),
+        start_vid if isinstance(start_vid, BaseExpression) else Parameter(dialect, start_vid),
+        end_vid if isinstance(end_vid, BaseExpression) else Parameter(dialect, end_vid),
+        directed if isinstance(directed, BaseExpression) else Parameter(dialect, directed),
     )
 
 

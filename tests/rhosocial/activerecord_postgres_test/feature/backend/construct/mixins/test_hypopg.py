@@ -10,7 +10,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.hypopg import (
     hypopg_create_index,
     hypopg_reset,
@@ -26,7 +26,7 @@ class TestPostgresHypoPgFunctions:
         """hypopg_create_index should return FunctionCall with hypopg_create_index."""
         dialect = PostgresDialect((14, 0, 0))
         result = hypopg_create_index(dialect, "CREATE INDEX ON users USING btree (email)")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "hypopg_create_index" in sql.lower()
 
@@ -34,7 +34,7 @@ class TestPostgresHypoPgFunctions:
         """hypopg_reset should return FunctionCall with hypopg_reset."""
         dialect = PostgresDialect((14, 0, 0))
         result = hypopg_reset(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "hypopg_reset" in sql.lower()
 
@@ -42,7 +42,7 @@ class TestPostgresHypoPgFunctions:
         """hypopg_show_indexes should return FunctionCall with hypopg_index_detail."""
         dialect = PostgresDialect((14, 0, 0))
         result = hypopg_show_indexes(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "hypopg" in sql.lower()
 
@@ -50,6 +50,6 @@ class TestPostgresHypoPgFunctions:
         """hypopg_estimate_size should return FunctionCall with hypopg_relation_size."""
         dialect = PostgresDialect((14, 0, 0))
         result = hypopg_estimate_size(dialect, 1)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "hypopg_relation_size" in sql.lower()

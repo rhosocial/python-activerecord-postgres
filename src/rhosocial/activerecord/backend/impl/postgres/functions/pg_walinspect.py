@@ -34,7 +34,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -46,7 +48,7 @@ def pg_get_wal_records_info(
     dialect: "SQLDialectBase",
     start_lsn: str,
     end_lsn: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Get information about WAL records in a LSN range.
 
     Returns information about WAL records between the specified start and
@@ -69,10 +71,10 @@ def pg_get_wal_records_info(
     Example:
         >>> pg_get_wal_records_info(dialect, '0/16E9130', '0/16E9200')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pg_get_wal_records_info",
-        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Parameter(dialect, start_lsn),
-        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Parameter(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, BaseExpression) else Parameter(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, BaseExpression) else Parameter(dialect, end_lsn),
     )
 
 
@@ -80,7 +82,7 @@ def pg_get_wal_blocks_info(
     dialect: "SQLDialectBase",
     start_lsn: str,
     end_lsn: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Get information about WAL block references in a LSN range.
 
     Returns information about block references in WAL records between the
@@ -103,10 +105,10 @@ def pg_get_wal_blocks_info(
     Example:
         >>> pg_get_wal_blocks_info(dialect, '0/16E9130', '0/16E9200')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pg_get_wal_blocks_info",
-        start_lsn if isinstance(start_lsn, bases.BaseExpression) else core.Parameter(dialect, start_lsn),
-        end_lsn if isinstance(end_lsn, bases.BaseExpression) else core.Parameter(dialect, end_lsn),
+        start_lsn if isinstance(start_lsn, BaseExpression) else Parameter(dialect, start_lsn),
+        end_lsn if isinstance(end_lsn, BaseExpression) else Parameter(dialect, end_lsn),
     )
 
 

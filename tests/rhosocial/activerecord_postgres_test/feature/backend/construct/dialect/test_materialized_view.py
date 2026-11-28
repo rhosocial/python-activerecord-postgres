@@ -28,7 +28,7 @@ from rhosocial.activerecord.backend.expression import (
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresMaterializedViewAlterAction,
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
@@ -611,7 +611,7 @@ class TestAlterMaterializedView:
 
     def test_set_tablespace_not_offered(self):
         """T-35: PostgreSQL cannot relocate a MV to another tablespace."""
-        import rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv as mv_module
+        import rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv as mv_module
 
         assert not hasattr(mv_module, "PostgresSetMaterializedViewTablespaceAction")
         assert not any(

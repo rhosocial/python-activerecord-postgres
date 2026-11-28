@@ -41,7 +41,10 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresLqueryType,
@@ -57,7 +60,7 @@ if TYPE_CHECKING:
 def ltree_literal(
     dialect: "SQLDialectBase",
     path: str,
-) -> core.Parameter:
+) -> Parameter:
     """Create an ltree literal expression.
 
     Wraps a path string as a Parameter expression suitable for use in
@@ -75,13 +78,13 @@ def ltree_literal(
         >>> dialect = PostgresDialect()
         >>> ltree_literal(dialect, 'Top.Science.Astronomy')
     """
-    return core.Parameter(dialect, path)
+    return Parameter(dialect, path)
 
 
 def lquery_literal(
     dialect: "SQLDialectBase",
     pattern: str,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Create an lquery literal expression with type cast.
 
     Wraps a pattern string as a Parameter expression and casts it to
@@ -98,13 +101,13 @@ def lquery_literal(
         >>> lquery_literal(dialect, '*.Astronomy.*')
         # Generates SQL: '*.Astronomy.*'::lquery
     """
-    return core.CastExpression(dialect, core.Parameter(dialect, pattern), PostgresLqueryType(dialect))
+    return CastExpression(dialect, Parameter(dialect, pattern), PostgresLqueryType(dialect))
 
 
 def ltxtquery_literal(
     dialect: "SQLDialectBase",
     query: str,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Create an ltxtquery literal expression with type cast.
 
     Wraps a query string as a Parameter expression and casts it to
@@ -121,15 +124,15 @@ def ltxtquery_literal(
         >>> ltxtquery_literal(dialect, 'Science & Astronomy')
         # Generates SQL: 'Science & Astronomy'::ltxtquery
     """
-    return core.CastExpression(dialect, core.Parameter(dialect, query), PostgresLtxtqueryType(dialect))
+    return CastExpression(dialect, Parameter(dialect, query), PostgresLtxtqueryType(dialect))
 
 
 # ============== ltree Operators ==============
 
 def ltree_ancestor(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: bases.BaseExpression,
+    column: BaseExpression,
+    path: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for ltree ancestor operator (@>).
 
@@ -150,15 +153,15 @@ def ltree_ancestor(
     """
     return BinaryExpression(
         dialect, "@>",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        path if isinstance(path, BaseExpression) else Parameter(dialect, path),
     )
 
 
 def ltree_descendant(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: bases.BaseExpression,
+    column: BaseExpression,
+    path: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for ltree descendant operator (<@).
 
@@ -179,15 +182,15 @@ def ltree_descendant(
     """
     return BinaryExpression(
         dialect, "<@",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        path if isinstance(path, BaseExpression) else Parameter(dialect, path),
     )
 
 
 def ltree_matches(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    pattern: bases.BaseExpression,
+    column: BaseExpression,
+    pattern: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for ltree lquery match operator (~).
 
@@ -207,15 +210,15 @@ def ltree_matches(
     """
     return BinaryExpression(
         dialect, "~",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        pattern if isinstance(pattern, bases.BaseExpression) else core.Parameter(dialect, pattern),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        pattern if isinstance(pattern, BaseExpression) else Parameter(dialect, pattern),
     )
 
 
 def ltree_text_search(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    query: bases.BaseExpression,
+    column: BaseExpression,
+    query: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for ltree ltxtquery match operator (@).
 
@@ -235,15 +238,15 @@ def ltree_text_search(
     """
     return BinaryExpression(
         dialect, "@",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def ltree_concat(
     dialect: "SQLDialectBase",
-    left: bases.BaseExpression,
-    right: bases.BaseExpression,
+    left: BaseExpression,
+    right: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for ltree concatenation operator (||).
 
@@ -263,8 +266,8 @@ def ltree_concat(
     """
     return BinaryExpression(
         dialect, "||",
-        left if isinstance(left, bases.BaseExpression) else core.Parameter(dialect, left),
-        right if isinstance(right, bases.BaseExpression) else core.Parameter(dialect, right),
+        left if isinstance(left, BaseExpression) else Parameter(dialect, left),
+        right if isinstance(right, BaseExpression) else Parameter(dialect, right),
     )
 
 
@@ -272,8 +275,8 @@ def ltree_concat(
 
 def ltree_nlevel(
     dialect: "SQLDialectBase",
-    expr: bases.BaseExpression,
-) -> core.FunctionCall:
+    expr: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for nlevel function.
 
     Returns the number of labels in the ltree path.
@@ -291,17 +294,17 @@ def ltree_nlevel(
         >>> ltree_nlevel(dialect, ltree_literal(dialect, 'Top.Science.Astronomy'))
         # Returns 3 (number of labels)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "nlevel",
-        expr if isinstance(expr, bases.BaseExpression) else core.Parameter(dialect, expr))
+        expr if isinstance(expr, BaseExpression) else Parameter(dialect, expr))
 
 
 def ltree_subpath(
     dialect: "SQLDialectBase",
-    expr: bases.BaseExpression,
+    expr: BaseExpression,
     start: int,
     length: Optional[int] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for subpath function.
 
     Extracts a subpath from the ltree value, starting at the given
@@ -324,18 +327,18 @@ def ltree_subpath(
         # Generates SQL: subpath(path_col, 1)
     """
     args = [
-        expr if isinstance(expr, bases.BaseExpression) else core.Parameter(dialect, expr),
-        start if isinstance(start, bases.BaseExpression) else core.Parameter(dialect, start),
+        expr if isinstance(expr, BaseExpression) else Parameter(dialect, expr),
+        start if isinstance(start, BaseExpression) else Parameter(dialect, start),
     ]
     if length is not None:
-        args.append(length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length))
-    return core.FunctionCall(dialect, "subpath", *args)
+        args.append(length if isinstance(length, BaseExpression) else Parameter(dialect, length))
+    return FunctionCall(dialect, "subpath", *args)
 
 
 def ltree_lca(
     dialect: "SQLDialectBase",
-    *paths: bases.BaseExpression,
-) -> core.FunctionCall:
+    *paths: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for lca (lowest common ancestor) function.
 
     Computes the lowest common ancestor of the given ltree paths.
@@ -353,8 +356,8 @@ def ltree_lca(
         # Generates SQL: lca('Top.Science.Astronomy', 'Top.Science.Physics')
         # Returns: 'Top.Science'
     """
-    args = [path if isinstance(path, bases.BaseExpression) else core.Parameter(dialect, path) for path in paths]
-    return core.FunctionCall(dialect, "lca", *args)
+    args = [path if isinstance(path, BaseExpression) else Parameter(dialect, path) for path in paths]
+    return FunctionCall(dialect, "lca", *args)
 
 
 def ltree_index(
@@ -367,7 +370,7 @@ def ltree_index(
     schema: str = None,
 ):
     """Collect arguments for an ltree index; the formatter validates them."""
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresLtreeIndexExpression,
     )
 

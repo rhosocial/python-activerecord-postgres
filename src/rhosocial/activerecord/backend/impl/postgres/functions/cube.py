@@ -35,7 +35,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import List, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
@@ -46,8 +48,8 @@ if TYPE_CHECKING:
 
 def cube_literal(
     dialect: "SQLDialectBase",
-    coordinates: Union[List[float], str, "bases.BaseExpression"],
-) -> core.FunctionCall:
+    coordinates: Union[List[float], str, "BaseExpression"],
+) -> FunctionCall:
     """Generate SQL expression for the cube constructor from coordinates.
 
     Constructs a cube value from a list of coordinates. This generates
@@ -73,14 +75,14 @@ def cube_literal(
     if isinstance(coordinates, list):
         coords_str = ", ".join(str(c) for c in coordinates)
         array_literal = "ARRAY[{}]".format(coords_str)
-        return core.FunctionCall(
+        return FunctionCall(
             dialect, "cube",
-            core.Parameter(dialect, array_literal),
+            Parameter(dialect, array_literal),
         )
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cube",
-        coordinates if isinstance(coordinates, bases.BaseExpression)
-        else core.Parameter(dialect, coordinates),
+        coordinates if isinstance(coordinates, BaseExpression)
+        else Parameter(dialect, coordinates),
     )
 
 
@@ -88,7 +90,7 @@ def cube_dimension(
     dialect: "SQLDialectBase",
     dim: int,
     coord: float,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for the cube constructor from dimension and coordinate.
 
     Constructs a cube representing a point in the specified number of
@@ -108,10 +110,10 @@ def cube_dimension(
         # Generates SQL: cube(3, 1.0)
         # Creates a point (1, 1, 1) in 3 dimensions
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cube",
-        dim if isinstance(dim, bases.BaseExpression) else core.Parameter(dialect, dim),
-        coord if isinstance(coord, bases.BaseExpression) else core.Parameter(dialect, coord),
+        dim if isinstance(dim, BaseExpression) else Parameter(dialect, dim),
+        coord if isinstance(coord, BaseExpression) else Parameter(dialect, coord),
     )
 
 
@@ -119,8 +121,8 @@ def cube_dimension(
 
 def cube_size(
     dialect: "SQLDialectBase",
-    cube_expr: bases.BaseExpression,
-) -> core.FunctionCall:
+    cube_expr: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for the cube_size function.
 
     Returns the total size (volume) of the cube. For a point, this
@@ -138,10 +140,10 @@ def cube_size(
         >>> cube_size(dialect, 'location')
         # Generates SQL: cube_size(location)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "cube_size",
-        cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Parameter(dialect, cube_expr),
+        cube_expr if isinstance(cube_expr, BaseExpression)
+        else Parameter(dialect, cube_expr),
     )
 
 
@@ -149,8 +151,8 @@ def cube_size(
 
 def cube_union(
     dialect: "SQLDialectBase",
-    cube1: bases.BaseExpression,
-    cube2: bases.BaseExpression,
+    cube1: BaseExpression,
+    cube2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube union operator.
 
@@ -171,15 +173,15 @@ def cube_union(
     """
     return BinaryExpression(
         dialect, "union",
-        cube1 if isinstance(cube1, bases.BaseExpression) else core.Parameter(dialect, cube1),
-        cube2 if isinstance(cube2, bases.BaseExpression) else core.Parameter(dialect, cube2),
+        cube1 if isinstance(cube1, BaseExpression) else Parameter(dialect, cube1),
+        cube2 if isinstance(cube2, BaseExpression) else Parameter(dialect, cube2),
     )
 
 
 def cube_inter(
     dialect: "SQLDialectBase",
-    cube1: bases.BaseExpression,
-    cube2: bases.BaseExpression,
+    cube1: BaseExpression,
+    cube2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube intersection operator.
 
@@ -200,15 +202,15 @@ def cube_inter(
     """
     return BinaryExpression(
         dialect, "inter",
-        cube1 if isinstance(cube1, bases.BaseExpression) else core.Parameter(dialect, cube1),
-        cube2 if isinstance(cube2, bases.BaseExpression) else core.Parameter(dialect, cube2),
+        cube1 if isinstance(cube1, BaseExpression) else Parameter(dialect, cube1),
+        cube2 if isinstance(cube2, BaseExpression) else Parameter(dialect, cube2),
     )
 
 
 def cube_contains(
     dialect: "SQLDialectBase",
-    cube_expr: bases.BaseExpression,
-    target: bases.BaseExpression,
+    cube_expr: BaseExpression,
+    target: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube contains operator (@>).
 
@@ -230,16 +232,16 @@ def cube_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Parameter(dialect, cube_expr),
-        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
+        cube_expr if isinstance(cube_expr, BaseExpression)
+        else Parameter(dialect, cube_expr),
+        target if isinstance(target, BaseExpression) else Parameter(dialect, target),
     )
 
 
 def cube_distance(
     dialect: "SQLDialectBase",
-    cube_expr: bases.BaseExpression,
-    target: bases.BaseExpression,
+    cube_expr: BaseExpression,
+    target: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the cube distance operator (<->).
 
@@ -262,9 +264,9 @@ def cube_distance(
     """
     return BinaryExpression(
         dialect, "<->",
-        cube_expr if isinstance(cube_expr, bases.BaseExpression)
-        else core.Parameter(dialect, cube_expr),
-        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
+        cube_expr if isinstance(cube_expr, BaseExpression)
+        else Parameter(dialect, cube_expr),
+        target if isinstance(target, BaseExpression) else Parameter(dialect, target),
     )
 
 

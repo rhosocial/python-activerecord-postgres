@@ -7,7 +7,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_repack import (
     repack_version,
 )
@@ -25,7 +25,7 @@ class TestPgRepackMixin:
         """repack_version should return FunctionCall with repack.repack_version."""
         dialect = PostgresDialect((14, 0, 0))
         result = repack_version(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "repack_version" in sql.lower()
         assert "repack" in sql.lower()

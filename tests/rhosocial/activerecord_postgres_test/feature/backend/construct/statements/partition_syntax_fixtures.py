@@ -25,7 +25,7 @@ from typing import Any, Callable, Dict, Optional, Tuple
 
 import pytest
 
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresAttachPartitionStatement,
     PostgresDetachPartitionStatement,
 )

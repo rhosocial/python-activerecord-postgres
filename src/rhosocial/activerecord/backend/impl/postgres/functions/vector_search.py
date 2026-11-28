@@ -8,7 +8,7 @@ from typing import List, Optional, Union
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
-from ..expression.ddl import (
+from ..expression.statements.ddl import (
     PostgresVectorIndexExpression,
     PostgresVectorSearchExpression,
 )

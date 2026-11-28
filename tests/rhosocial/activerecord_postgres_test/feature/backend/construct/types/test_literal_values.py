@@ -38,7 +38,7 @@ import uuid as uuid_module
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.literal import (
     PostgresLiteralValueMixin,

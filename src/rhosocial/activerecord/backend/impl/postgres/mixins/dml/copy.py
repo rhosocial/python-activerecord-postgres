@@ -8,7 +8,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
-    from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
+    from ...expression.statements.copy import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 def _dollar_quote_tag(sql: str, index: int) -> Optional[str]:

@@ -28,8 +28,9 @@ if __name__ == "__main__":
         QueryStatement,
     )
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Column, FunctionCall
-    from rhosocial.activerecord.backend.expression.advanced_functions import (
+    from rhosocial.activerecord.backend.expression.column_types.column import Column
+    from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
+    from rhosocial.activerecord.backend.expression.functions.advanced_functions import (
         WindowSpecification,
         WindowFrameSpecification,
     )

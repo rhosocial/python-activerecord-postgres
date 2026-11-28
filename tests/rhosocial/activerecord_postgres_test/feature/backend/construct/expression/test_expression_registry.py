@@ -7,7 +7,8 @@ raw value at a value position into a bound parameter. Nothing here opens a
 connection -- rendering uses a bare ``PostgresDialect``.
 """
 
-from rhosocial.activerecord.backend.expression.core import Column, Parameter
+from rhosocial.activerecord.backend.expression.column_types.column import Column
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
 

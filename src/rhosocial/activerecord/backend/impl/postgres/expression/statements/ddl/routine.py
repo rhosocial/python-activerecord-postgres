@@ -1,0 +1,200 @@
+# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/ddl/routine.py
+"""
+PostgreSQL DDL expressions: FUNCTION and AGGREGATE routines.
+
+PostgreSQL Documentation:
+- CREATE FUNCTION: https://www.postgresql.org/docs/current/sql-createfunction.html
+- DROP FUNCTION:   https://www.postgresql.org/docs/current/sql-dropfunction.html
+- CREATE AGGREGATE: https://www.postgresql.org/docs/current/sql-createaggregate.html
+- DROP AGGREGATE:   https://www.postgresql.org/docs/current/sql-dropaggregate.html
+
+Version Requirements:
+- CREATE/DROP FUNCTION: PostgreSQL 9.6+
+- CREATE/DROP AGGREGATE: PostgreSQL 9.6+
+
+Note: CREATE/DROP PROCEDURE is covered by the existing
+``PostgresStoredProcedureMixin``; this module covers FUNCTION and AGGREGATE.
+"""
+
+from typing import List, Optional, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+__all__ = [
+    "PostgresCreateFunctionDdlStatement",
+    "PostgresDropFunctionDdlStatement",
+    "PostgresCreateAggregateDdlStatement",
+    "PostgresDropAggregateDdlStatement",
+]
+
+
+class PostgresCreateFunctionDdlStatement(BaseExpression):
+    """PostgreSQL CREATE FUNCTION statement expression.
+
+    Attributes:
+        name: Name of the function.
+        args: Optional list of argument declarations (e.g. ``["a integer"]``
+            or ``[]`` for no arguments).
+        returns: Return type (required for functions that return a value).
+        language: Procedural language (default ``plpgsql``).
+        body: Function body (between the ``$$`` dollar-quoting delimiters).
+        schema: Optional schema for the function.
+        or_replace: Add ``OR REPLACE``.
+        security: ``DEFINER`` or ``INVOKER`` (optional).
+        cost: Estimated execution cost (optional).
+        rows: Estimated rows returned (optional).
+        is_strict: When True, add ``STRICT``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        return_type: str,
+        body: str,
+        schema: Optional[str] = None,
+        args: Optional[List[str]] = None,
+        language: str = "plpgsql",
+        or_replace: bool = False,
+        security: Optional[str] = None,
+        cost: Optional[float] = None,
+        rows: Optional[int] = None,
+        strict: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.return_type = return_type
+        self.args = args or []
+        self.body = body
+        self.language = language
+        self.or_replace = or_replace
+        self.security = security
+        self.cost = cost
+        self.rows = rows
+        self.strict = strict
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_function_ddl_statement"
+
+
+class PostgresDropFunctionDdlStatement(BaseExpression):
+    """PostgreSQL DROP FUNCTION statement expression.
+
+    Attributes:
+        name: Name of the function to drop.
+        schema: Optional schema for the function.
+        args: Optional argument type list used for overload resolution
+            (e.g. ``["integer"]``).
+        if_exists: When True, add ``IF EXISTS``.
+        cascade: When True, add ``CASCADE``.
+        restrict: When True, add ``RESTRICT``. Mutually exclusive with
+            ``cascade``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        schema: Optional[str] = None,
+        args: Optional[List[str]] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
+        restrict: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.args = args or []
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.restrict = restrict
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_function_ddl_statement"
+
+
+class PostgresCreateAggregateDdlStatement(BaseExpression):
+    """PostgreSQL CREATE AGGREGATE statement expression (minimal).
+
+    Attributes:
+        name: Name of the aggregate.
+        sfunc: State transition function name.
+        stype: State data type.
+        schema: Optional schema for the aggregate.
+        finalfunc: Optional final function name.
+        initcond: Optional initial condition value.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        sfunc: str,
+        stype: str,
+        schema: Optional[str] = None,
+        finalfunc: Optional[str] = None,
+        initcond: Optional[str] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.sfunc = sfunc
+        self.stype = stype
+        self.finalfunc = finalfunc
+        self.initcond = initcond
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_aggregate_ddl_statement"
+
+
+class PostgresDropAggregateDdlStatement(BaseExpression):
+    """PostgreSQL DROP AGGREGATE statement expression.
+
+    Attributes:
+        name: Name of the aggregate to drop.
+        arg_type: Aggregated argument type (needed to identify the
+            aggregate, e.g. ``integer``).
+        schema: Optional schema for the aggregate.
+        if_exists: When True, add ``IF EXISTS``.
+        cascade: When True, add ``CASCADE``.
+        restrict: When True, add ``RESTRICT``. Mutually exclusive with
+            ``cascade``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        arg_type: str,
+        schema: Optional[str] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
+        restrict: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.arg_type = arg_type
+        self.schema = schema
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.restrict = restrict
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_aggregate_ddl_statement"

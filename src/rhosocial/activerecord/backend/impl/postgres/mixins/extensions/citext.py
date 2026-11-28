@@ -5,7 +5,7 @@ from typing import Tuple
 
 from rhosocial.activerecord.backend.expression import ColumnDefinition
 
-from ...expression.ddl import PostgresCitextColumnExpression
+from ...expression.statements.ddl import PostgresCitextColumnExpression
 from ...expression.types import PostgresCitextType
 
 

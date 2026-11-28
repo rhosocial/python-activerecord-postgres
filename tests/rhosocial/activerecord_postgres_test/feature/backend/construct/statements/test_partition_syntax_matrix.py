@@ -15,9 +15,9 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresAttachPartitionStatement,
     PostgresCreatePartitionStatement,
 )

@@ -12,12 +12,12 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     create_index_pg, create_type_enum, create_procedure, drop_procedure, call_procedure,
 )
-from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F401
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression  # noqa: F401
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnDefaultConstraint,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresExcludeConstraint,
 )
 from rhosocial.activerecord.backend.expression.types import VarCharType
@@ -25,8 +25,8 @@ from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
     RawSQL,
 )
-from rhosocial.activerecord.backend.expression.core import CastExpression
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresPartitionValue
+from rhosocial.activerecord.backend.expression.functions.cast_expression import CastExpression
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import PostgresPartitionValue
 from typing import Tuple, Any  # noqa: F401
 from rhosocial.activerecord.backend.expression.objects import Function, Table, Trigger
 
@@ -59,10 +59,10 @@ def test_postgresa_type_position_refuses_a_payload(dialect):
     from rhosocial.activerecord.backend.expression.statements import (
         AlterColumnAction,
     )
-    from rhosocial.activerecord.backend.expression.type_name import (
+    from rhosocial.activerecord.backend.expression.bases.type_name import (
         InvalidTypeNameError,
     )
-    from rhosocial.activerecord.backend.expression.xml import (
+    from rhosocial.activerecord.backend.expression.functions.xml import (
         XMLSerializeExpression,
     )
 
@@ -239,7 +239,7 @@ def test_exclude_constraint_rejects_empty_elements(dialect):
 
 def test_exclude_constraint_formats_expression_and_where(dialect):
     from rhosocial.activerecord.backend.expression import Column
-    from rhosocial.activerecord.backend.expression.core import Parameter
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     where = ComparisonPredicate(
@@ -352,7 +352,7 @@ class TestPartialIndexWhereClauseSecurity:
 
     def test_create_index_with_to_sql_protocol(self, dialect):
         """Test CREATE INDEX with ToSQLProtocol expression (parameterized)."""
-        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
+        from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression  # noqa: F811
 
         class MockWhereExpr(BaseExpression):
             def __init__(self):
@@ -374,7 +374,7 @@ class TestPartialIndexWhereClauseSecurity:
 
     def test_create_index_where_clause_params_collected(self, dialect):
         """Test WHERE clause parameters are properly collected and returned."""
-        from rhosocial.activerecord.backend.expression.bases import BaseExpression  # noqa: F811
+        from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression  # noqa: F811
 
         class MockWhereExpr(BaseExpression):
             def __init__(self):
@@ -446,7 +446,7 @@ class TestExtendedStatisticsNameSecurity:
 
     def test_create_statistics_name_quoted(self, dialect):
         """Test CREATE STATISTICS name is properly quoted."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.statistics import (
             PostgresCreateStatisticsStatement,
         )
 
@@ -464,7 +464,7 @@ class TestExtendedStatisticsNameSecurity:
 
     def test_drop_statistics_name_quoted(self, dialect):
         """Test DROP STATISTICS name is properly quoted."""
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.statistics import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.statistics import (
             PostgresDropStatisticsStatement,
         )
 
@@ -600,7 +600,7 @@ def test_format_identifier_empty_string(dialect):
 def test_format_binary_operator_percent_escaped():
     """format_binary_expression escapes % to %% for psycopg compatibility."""
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-    from rhosocial.activerecord.backend.expression.core import Parameter
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
     d = PostgresDialect((16, 0, 0))
 
     def binop(op, left_sql, right_sql, right_params=()):

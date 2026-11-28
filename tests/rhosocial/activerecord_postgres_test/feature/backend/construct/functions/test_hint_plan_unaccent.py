@@ -7,8 +7,8 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import Column, QueryStatement
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression.objects import (
     Index,
     MaterializedView,
@@ -33,16 +33,16 @@ from rhosocial.activerecord.backend.expression.statements.dml import (
 )
 from rhosocial.activerecord.backend.expression.statements.explain import ExplainStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
+from rhosocial.activerecord.backend.impl.postgres.expression.query_parts.hint import (
     CorrectionKind,
     HINT_FIELDS,
     HintGroup,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv import (
     PostgresCreateMaterializedViewStatement,
     PostgresRefreshMaterializedViewStatement,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresCreateTableAsStatement,
     PostgresDeleteStatement,
     PostgresExplainStatement,

@@ -8,7 +8,7 @@ from typing import Any, List, Optional, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.dialect.mixins.ddl_domain import DomainMixin
 from rhosocial.activerecord.backend.expression.objects import Domain
-from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
+from rhosocial.activerecord.backend.expression.statements import (
     AddDomainCheckAction,
     AlterDomainStatement,
     CreateDomainStatement,
@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     SetDomainDefaultAction,
     SetDomainNotNullAction,
 )
-from ...expression.ddl.domain import (
+from ...expression.statements.ddl.domain import (
     _PostgresUnsupportedDomainAction,
     PostgresAddDomainCheckAction,
     PostgresChangeDomainOwnerAction,
@@ -37,7 +37,7 @@ from ...expression.ddl.domain import (
 )
 
 if TYPE_CHECKING:
-    from ...expression.ddl.domain import PostgresLegacySqlExpression
+    from ...expression.statements.ddl.domain import PostgresLegacySqlExpression
 
 
 __all__ = ["PostgresDomainMixin"]

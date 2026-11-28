@@ -403,7 +403,7 @@ def test_parse_type_malformed_bracket_suffix_is_rejected(dialect):
     Falling back to CustomType would put "FOO[abc]" into the statement as-is,
     and the type position cannot take a bound parameter -- so a name that does
     not parse is a name that has to be reported rather than passed through."""
-    from rhosocial.activerecord.backend.expression.type_name import (
+    from rhosocial.activerecord.backend.expression.bases.type_name import (
         InvalidTypeNameError,
     )
 

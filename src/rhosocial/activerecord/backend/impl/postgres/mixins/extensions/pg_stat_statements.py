@@ -3,7 +3,7 @@
 
 from typing import Tuple
 
-from ...expression.pg_stat import PostgresPgStatStatement
+from ...expression.statements.pg_stat import PostgresPgStatStatement
 
 
 class PostgresPgStatStatementsMixin:

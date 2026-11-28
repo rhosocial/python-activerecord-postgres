@@ -17,7 +17,7 @@ from rhosocial.activerecord.backend.dialect.mixins.function import FunctionMixin
 from rhosocial.activerecord.backend.expression.objects import Function
 
 if TYPE_CHECKING:
-    from ...expression.ddl.routine import (
+    from ...expression.statements.ddl.routine import (
         PostgresCreateAggregateDdlStatement,
         PostgresCreateFunctionDdlStatement,
         PostgresDropAggregateDdlStatement,

@@ -11,7 +11,7 @@ These tests require a live PostgreSQL connection and test:
 import pytest
 import pytest_asyncio
 
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.sources.subquery import Subquery
 from rhosocial.activerecord.backend.expression.functions.xml import xmlparse
 from rhosocial.activerecord.backend.impl.postgres.adapters.xml import PostgresXMLAdapter
 from rhosocial.activerecord.backend.impl.postgres.functions.xml import (
@@ -138,7 +138,7 @@ class TestSyncXMLFunctionsIntegration:
 
     def test_xpath_query_executes(self, postgres_backend):
         """Execute xpath query and verify PostgreSQL returns the matching XML node."""
-        xml_expr = core.Subquery(
+        xml_expr = Subquery(
             postgres_backend.dialect,
             "'<root><item>value</item></root>'::xml",
         )
@@ -149,7 +149,7 @@ class TestSyncXMLFunctionsIntegration:
 
     def test_xpath_exists_executes(self, postgres_backend):
         """Execute xpath_exists and verify PostgreSQL reports a matching node."""
-        xml_expr = core.Subquery(
+        xml_expr = Subquery(
             postgres_backend.dialect,
             "'<root><item>value</item></root>'::xml",
         )
@@ -215,7 +215,7 @@ class TestAsyncXMLIntegration:
     @pytest.mark.asyncio
     async def test_async_xpath_exists_executes(self, async_postgres_backend):
         """Execute xpath_exists asynchronously and verify PostgreSQL returns True."""
-        xml_expr = core.Subquery(
+        xml_expr = Subquery(
             async_postgres_backend.dialect,
             "'<root><item>async</item></root>'::xml",
         )

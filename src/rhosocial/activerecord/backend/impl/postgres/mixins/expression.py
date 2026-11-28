@@ -4,8 +4,9 @@
 from typing import Tuple, TYPE_CHECKING, Union
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.core import FunctionCall, RowCountWildcard
-    from ..expression.values import (
+    from rhosocial.activerecord.backend.expression.functions import FunctionCall
+    from rhosocial.activerecord.backend.expression.value_types import RowCountWildcard
+    from ..expression.value_types.values import (
         PostgresHstoreValue,
         PostgresLtreeValue,
         PostgresNetworkValue,
@@ -37,7 +38,7 @@ class PostgresExpressionMixin:
         target is the node's ``target_type`` construction parameter.
 
         Args:
-            expr: :class:`~...expression.core.CastExpression` instance.
+            expr: :class:`~...expression.CastExpression` instance.
 
         Returns:
             Tuple of (SQL string, parameters)
@@ -103,7 +104,7 @@ class PostgresExpressionMixin:
         qualified form renders the bare asterisk.
 
         Args:
-            expr: :class:`~...expression.wildcard.PostgresRowCountWildcard`.
+            expr: :class:`~...expression.value_types.wildcard.PostgresRowCountWildcard`.
 
         Returns:
             A ``(sql, params)`` tuple; ``params`` is empty.
@@ -111,7 +112,7 @@ class PostgresExpressionMixin:
         Raises:
             TypeError: ``relation`` is set but is not a ``NamedRelationRef``.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.wildcard import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.value_types import (
             PostgresRowCountWildcard,
         )
 
@@ -180,7 +181,7 @@ class PostgresExpressionMixin:
         the call and the wrappers instead of a bare ``BaseExpression``. Every
         ordinary call still goes through core's implementation below it.
         """
-        from ..expression.values import (
+        from ..expression.value_types.values import (
             PostgresHstoreValue,
             PostgresLtreeValue,
             PostgresNetworkValue,

@@ -9,7 +9,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     DropTypeSupport,
     TypeObjectSupport,
 )
-from rhosocial.activerecord.backend.expression.statements.ddl_type import DropTypeStatement
+from rhosocial.activerecord.backend.expression.statements import DropTypeStatement
 
 
 __all__ = ["PostgresTypeSupport"]

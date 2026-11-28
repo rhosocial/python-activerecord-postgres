@@ -13,7 +13,7 @@ PostgreSQL supports declarative partitioning from version 10 onward, with signif
 ## Creating Partitions
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresCreatePartitionStatement,
 )
 
@@ -74,7 +74,7 @@ decisions stay with the application.
 
 ```python
 from datetime import datetime, timezone
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.statements import (
     PartitionByHashClause, PartitionByRangeClause,
 )
@@ -133,7 +133,7 @@ PostgreSQL does not support `ATTACH PARTITION CONCURRENTLY`. PostgreSQL 14+ supp
 `DETACH PARTITION CONCURRENTLY`, with `FINALIZE` for completing a pending detach.
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresAttachPartitionStatement, PostgresDetachPartitionStatement,
 )
 

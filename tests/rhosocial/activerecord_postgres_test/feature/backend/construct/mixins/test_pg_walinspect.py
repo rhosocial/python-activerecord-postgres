@@ -12,7 +12,7 @@ PostgreSQL function, not part of the pg_walinspect extension.
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_walinspect import (
     pg_get_wal_records_info,
     pg_get_wal_blocks_info,
@@ -26,7 +26,7 @@ class TestPgWalinspectMixin:
         """pg_get_wal_records_info should return FunctionCall with start and end LSN."""
         dialect = PostgresDialect((14, 0, 0))
         result = pg_get_wal_records_info(dialect, '0/16E9130', '0/16E9200')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pg_get_wal_records_info" in sql.lower()
         # Should have 2 parameters (start_lsn, end_lsn)
@@ -36,7 +36,7 @@ class TestPgWalinspectMixin:
         """pg_get_wal_blocks_info should return FunctionCall with start and end LSN."""
         dialect = PostgresDialect((14, 0, 0))
         result = pg_get_wal_blocks_info(dialect, '0/16E9130', '0/16E9200')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pg_get_wal_blocks_info" in sql.lower()
         # Should have 2 parameters (start_lsn, end_lsn)

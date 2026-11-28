@@ -43,7 +43,7 @@ See [Partition Documentation](../postgres_specific_features/partition.md) for pg
 ### Index Operation Enhancements
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.index import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.index import (
     PostgresAlterIndexStatement, PostgresAlterIndexActionType,
     PostgresReindexStatement,
 )

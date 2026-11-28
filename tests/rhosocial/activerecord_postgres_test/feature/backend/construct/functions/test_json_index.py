@@ -4,7 +4,7 @@ import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression import JSONColumn
-from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
+from rhosocial.activerecord.backend.expression.functions.advanced_functions import JSONPathMode
 from rhosocial.activerecord.backend.expression.functions.json import json_extract_text
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions.json import create_jsonb_index

@@ -283,7 +283,7 @@ Product.query().where("attributes ? 'brand'", ())
 PostgreSQL 支持为表达式指定排序规则：
 
 ```python
-from rhosocial.activerecord.backend.expression.collation import collate
+from rhosocial.activerecord.backend.expression.functions.collation import collate
 from rhosocial.activerecord.backend.impl.postgres.collation import PostgresCollation
 
 # 为列指定排序规则
@@ -302,7 +302,7 @@ if dialect.supports_collate_expression():
 ## 日期时间间隔表达式
 
 ```python
-from rhosocial.activerecord.backend.expression.datetime import (
+from rhosocial.activerecord.backend.expression.functions.datetime import (
     ExtractExpression, DateTimeField, IntervalExpression, IntervalUnit,
     DatetimeAddExpression, DatetimeSubtractExpression, DatetimeDiffExpression,
 )

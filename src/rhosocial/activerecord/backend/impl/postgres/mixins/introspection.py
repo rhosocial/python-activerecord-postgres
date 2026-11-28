@@ -65,13 +65,15 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresOperatorListQueryStatement,
         PostgresOperatorClassListQueryStatement,
         PostgresOperatorFamilyListQueryStatement,
-        PostgresDatabaseSizeFunction,
         PostgresDatabaseSizeQueryStatement,
-        PostgresIndexesSizeFunction,
-        PostgresRelationSizeFunction,
         PostgresTableStorageQueryStatement,
     )
-    from ..expression.status import (
+    from ..expression.functions.introspection import (
+        PostgresDatabaseSizeFunction,
+        PostgresIndexesSizeFunction,
+        PostgresRelationSizeFunction,
+    )
+    from ..expression.introspection.status import (
         PostgresSettingsQuery,
         PostgresActivityCountQuery,
         PostgresDatabaseListQuery,
@@ -93,7 +95,7 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresArchiveStatsQuery,
         PostgresExtensionListQuery,
     )
-    from ..expression.enum_ import (
+    from ..expression.introspection.enum_ import (
         PostgresEnumTypeExistsQuery,
         PostgresEnumTypeValuesQuery,
     )
@@ -492,7 +494,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         Returns:
             A cast node rendering ``'pg_catalog.<relation_name>'::regclass``.
         """
-        from rhosocial.activerecord.backend.expression.core import CastExpression
+        from rhosocial.activerecord.backend.expression.functions import CastExpression
         from ..expression.types import PostgresRegClassType
 
         return CastExpression(
@@ -540,7 +542,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
 
     def _relkind_case(self, alias: str):
         """The CASE that names a relation's kind, shared by the table listings."""
-        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CaseExpression
 
         return CaseExpression(
             self,
@@ -885,7 +887,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         QueryStatement is what the predicate holds, so the primary-key test is
         inspectable rather than a parenthesised string. ``a.attnum = ANY(...)``
         is a quantified comparison against another column, which is exactly
-        :class:`~...expression.advanced_functions.AnyPredicate`'s shape.
+        :class:`~...expression.functions.advanced_functions.AnyPredicate`'s shape.
 
         Args:
             expr: Column info expression with parameters.
@@ -902,7 +904,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             Subquery,
             WhereClause,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import (
+        from rhosocial.activerecord.backend.expression.functions import (
             AnyPredicate,
             ExistsPredicate,
         )
@@ -1123,7 +1125,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             LogicalPredicate,
             Subquery,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import AnyPredicate
+        from rhosocial.activerecord.backend.expression.functions import AnyPredicate
 
         params = expr.get_params()
         table_name = params.get("table_name", "")
@@ -1250,7 +1252,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             LogicalPredicate,
             Subquery,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import (
+        from rhosocial.activerecord.backend.expression.functions import (
             AnyPredicate,
             ArrayOperation,
         )
@@ -1526,7 +1528,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             QueryStatement,
             WhereClause,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import (
+        from rhosocial.activerecord.backend.expression.functions import (
             ExistsPredicate,
         )
 
@@ -1612,7 +1614,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             QueryStatement,
             WhereClause,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import ExistsPredicate
+        from rhosocial.activerecord.backend.expression.functions import ExistsPredicate
 
         unique_index = QueryStatement(
             self,
@@ -1924,7 +1926,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             ComparisonPredicate,
             FunctionCall,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CaseExpression
         from rhosocial.activerecord.backend.expression.types import IntegerType
 
         def masked(mask: int):
@@ -2301,7 +2303,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JoinClause,
             LogicalPredicate,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CaseExpression
         from rhosocial.activerecord.backend.expression.functions import CountFunction
 
         def counted(relkind: str):
@@ -2734,7 +2736,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             QueryStatement,
             WhereClause,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import ExistsPredicate
+        from rhosocial.activerecord.backend.expression.functions import ExistsPredicate
 
         if not expr.name:
             raise ValueError(
@@ -3153,7 +3155,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
         made-up type, so the absence is kept as NULL.
         """
         from rhosocial.activerecord.backend.expression import ComparisonPredicate
-        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CaseExpression
 
         return CaseExpression(
             mixin,
@@ -3904,7 +3906,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             # ``prokind`` arrived in PostgreSQL 11; before it the same fact
             # was two booleans. A procedure cannot exist on those releases,
             # so the two old flags answer the whole question they had.
-            from rhosocial.activerecord.backend.expression.advanced_functions import (
+            from rhosocial.activerecord.backend.expression.functions import (
                 CaseExpression,
             )
 
@@ -3989,7 +3991,7 @@ class PostgresIntrospectionCapabilityMixin(IntrospectionMixin):
             JoinClause,
             LogicalPredicate,
         )
-        from rhosocial.activerecord.backend.expression.advanced_functions import CaseExpression
+        from rhosocial.activerecord.backend.expression.functions import CaseExpression
         from rhosocial.activerecord.backend.expression.predicates import InPredicate
 
         params = expr.get_params()

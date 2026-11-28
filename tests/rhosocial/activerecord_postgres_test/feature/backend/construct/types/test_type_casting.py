@@ -11,7 +11,9 @@ import pytest  # noqa: F401
 import warnings
 
 from rhosocial.activerecord.backend.expression import cast
-from rhosocial.activerecord.backend.expression.core import Column, Parameter, CastExpression
+from rhosocial.activerecord.backend.expression.column_types.column import Column
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.functions.cast_expression import CastExpression
 from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.type_values.constants import (

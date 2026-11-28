@@ -16,7 +16,7 @@ this formatter is the only place in the backend that writes the keyword.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ..expression.status import PostgresShowStatement
+    from ..expression.statements.status import PostgresShowStatement
 
 
 class PostgresShowMixin:

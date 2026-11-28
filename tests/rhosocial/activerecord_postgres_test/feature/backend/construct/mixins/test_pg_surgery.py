@@ -8,7 +8,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_surgery import (
     heap_force_freeze,
     heap_force_kill,
@@ -27,7 +27,7 @@ class TestPgSurgeryMixin:
         """heap_force_freeze should return FunctionCall with heap_force_freeze."""
         dialect = PostgresDialect((14, 0, 0))
         result = heap_force_freeze(dialect, 'users', "'{(0,1)}'::tid[]")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "heap_force_freeze" in sql.lower()
 
@@ -35,6 +35,6 @@ class TestPgSurgeryMixin:
         """heap_force_kill should return FunctionCall with heap_force_kill."""
         dialect = PostgresDialect((14, 0, 0))
         result = heap_force_kill(dialect, 'users', "'{(0,1)}'::tid[]")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "heap_force_kill" in sql.lower()

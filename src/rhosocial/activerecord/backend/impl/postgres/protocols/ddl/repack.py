@@ -4,7 +4,7 @@
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.repack import PostgresRepackStatement
+    from ...expression.statements.ddl.repack import PostgresRepackStatement
 
 
 @runtime_checkable

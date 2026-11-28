@@ -14,8 +14,8 @@ from the server fails here rather than in the field.
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import Parameter
-from rhosocial.activerecord.backend.expression.execution_testing import (
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.statements.execution_testing import (
     ExecutionOutcome,
     classify_execution,
     confirm_expression_execution,
@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.expression.objects import (
     MaterializedView,
     Table,
 )
-from rhosocial.activerecord.backend.expression.query_sources import (
+from rhosocial.activerecord.backend.expression.sources.query_sources import (
     CTEClause,
     WithStatement,
 )
@@ -42,7 +42,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_view import (
 )
 from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
 
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv import (
     PostgresRefreshMaterializedViewStatement,
 )
 

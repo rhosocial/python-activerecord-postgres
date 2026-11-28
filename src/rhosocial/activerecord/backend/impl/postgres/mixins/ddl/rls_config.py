@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl.rls_config import (
+    from ...expression.statements.ddl.rls_config import (
         PostgresAlterTableRlsStatement,
         PostgresForceRlsStatement,
     )

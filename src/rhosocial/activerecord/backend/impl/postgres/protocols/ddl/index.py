@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.dialect.protocols import (
 )
 
 if TYPE_CHECKING:  # pragma: no cover
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresAlterIndexStatement,
         PostgresAlterIndexActionType,  # noqa: F401
         PostgresReindexStatement,

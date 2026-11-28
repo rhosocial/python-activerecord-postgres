@@ -18,14 +18,14 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.bases import SQLPredicate
 from rhosocial.activerecord.backend.expression.objects import Table
 
-from ...expression.ddl.policy import (
+from ...expression.statements.ddl.policy import (
     AlterPolicyMode,
     PolicyCommand,
     PolicyType,
 )
 
 if TYPE_CHECKING:
-    from ...expression.ddl.policy import (
+    from ...expression.statements.ddl.policy import (
         PostgresAlterPolicyStatement,
         PostgresCreatePolicyStatement,
         PostgresDropPolicyStatement,

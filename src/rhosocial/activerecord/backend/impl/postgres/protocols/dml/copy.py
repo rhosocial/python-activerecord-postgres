@@ -4,7 +4,7 @@
 from typing import Any, Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.copy import PostgresCopyFromStatement, PostgresCopyToStatement
+    from ...expression.statements.copy import PostgresCopyFromStatement, PostgresCopyToStatement
 
 
 @runtime_checkable

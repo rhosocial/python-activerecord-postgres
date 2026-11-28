@@ -6,7 +6,9 @@ All factories take the dialect first and return Expression nodes.
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -14,24 +16,24 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
-    if isinstance(value, bases.BaseExpression):
+    if isinstance(value, BaseExpression):
         return value
-    return core.Parameter(dialect, value)
+    return Parameter(dialect, value)
 
 
-def pgstattuple(dialect: "SQLDialectBase", relation) -> core.FunctionCall:
+def pgstattuple(dialect: "SQLDialectBase", relation) -> FunctionCall:
     """``pgstattuple(relation)``."""
-    return core.FunctionCall(dialect, "pgstattuple", _expr(dialect, relation))
+    return FunctionCall(dialect, "pgstattuple", _expr(dialect, relation))
 
 
-def pgstatindex(dialect: "SQLDialectBase", index) -> core.FunctionCall:
+def pgstatindex(dialect: "SQLDialectBase", index) -> FunctionCall:
     """``pgstatindex(index)``."""
-    return core.FunctionCall(dialect, "pgstatindex", _expr(dialect, index))
+    return FunctionCall(dialect, "pgstatindex", _expr(dialect, index))
 
 
-def pg_relpages(dialect: "SQLDialectBase", relation) -> core.FunctionCall:
+def pg_relpages(dialect: "SQLDialectBase", relation) -> FunctionCall:
     """``pg_relpages(relation)``."""
-    return core.FunctionCall(dialect, "pg_relpages", _expr(dialect, relation))
+    return FunctionCall(dialect, "pg_relpages", _expr(dialect, relation))
 
 
 __all__ = ["pgstattuple", "pgstatindex", "pg_relpages"]

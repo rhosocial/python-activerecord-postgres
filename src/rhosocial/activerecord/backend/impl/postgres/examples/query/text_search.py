@@ -16,7 +16,7 @@ from rhosocial.activerecord.backend.expression import (
     ColumnNotNullConstraint,
     ColumnPrimaryKeyConstraint,
 )
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
@@ -87,7 +87,8 @@ if __name__ == "__main__":
         QueryStatement, Column,
     )
     from rhosocial.activerecord.backend.expression.objects import Table
-    from rhosocial.activerecord.backend.expression.core import Parameter, FunctionCall
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+    from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 
     search_term = 'PostgreSQL'

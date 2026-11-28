@@ -19,7 +19,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
 )
 from rhosocial.activerecord.backend.expression.types import DataType
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.type import (
     PostgresAddEnumValueAction,
     PostgresAddTypeAttributeAction,
     PostgresAlterTypeAttributeAction,

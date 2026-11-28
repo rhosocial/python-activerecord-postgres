@@ -3,7 +3,7 @@
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ..expression.ddl import PostgresCreateIndexExpression
+from ..expression.statements.ddl import PostgresCreateIndexExpression
 
 
 def bloom_index(

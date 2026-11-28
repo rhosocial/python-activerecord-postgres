@@ -13,10 +13,10 @@ from typing import Optional, Tuple, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.expression.objects import Table
-from ...expression.ddl.table_settings import LoggingMode
+from ...expression.statements.ddl.table_settings import LoggingMode
 
 if TYPE_CHECKING:
-    from ...expression.ddl.table_settings import (
+    from ...expression.statements.ddl.table_settings import (
         PostgresAlterTableSettingsStatement,
     )
 

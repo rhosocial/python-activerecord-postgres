@@ -843,7 +843,7 @@ class PostgresConstraintMixin(_ConstraintMixinBase):
         :meth:`_validate_exclude_expression_sql`, because ``EXCLUDE`` is the
         one expr production where PostgreSQL takes expression text.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.exclude_constraint import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.exclude_constraint import (
             PostgresExcludeBranch,
         )
 

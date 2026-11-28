@@ -106,7 +106,7 @@ if TYPE_CHECKING:  # pragma: no cover
         PostgresOperatorClassListQueryStatement,
         PostgresOperatorFamilyListQueryStatement,
     )
-    from ..expression.status import PostgresExtensionListQuery
+    from ..expression.introspection.status import PostgresExtensionListQuery
 
 
 _PARTITION_KEY_WORDS = ("RANGE", "LIST", "HASH")
@@ -1705,7 +1705,7 @@ class PostgreSQLIntrospectorMixin(IntrospectorMixin):
 
     def extension_list_statement(self) -> "PostgresExtensionListQuery":
         """Return the statement that lists the installed extensions."""
-        from ..expression.status import PostgresExtensionListQuery
+        from ..expression.introspection.status import PostgresExtensionListQuery
 
         return PostgresExtensionListQuery(self.dialect)
 

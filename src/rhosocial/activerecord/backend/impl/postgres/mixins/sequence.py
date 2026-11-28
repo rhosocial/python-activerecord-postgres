@@ -20,7 +20,7 @@ which fail if a switch is declared in one and not the other.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.statements.ddl_sequence import (
+    from rhosocial.activerecord.backend.expression.statements import (
         AlterSequenceStatement,
         CreateSequenceStatement,
     )

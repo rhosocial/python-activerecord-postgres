@@ -6,11 +6,11 @@ from typing import Any, Dict, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.transaction import (
+    from rhosocial.activerecord.backend.expression.statements import (
         BeginTransactionStatement,
         SetTransactionStatement,
     )
-    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresSetConstraintsStatement,
     )
 

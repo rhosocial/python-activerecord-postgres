@@ -1,6 +1,6 @@
 # tests/rhosocial/activerecord_postgres_test/feature/backend/construct/dialect/test_ilike_support.py
 """Tests for ILIKE protocol support in PostgreSQL dialect."""
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
 from rhosocial.activerecord.backend.dialect.protocols import ILIKESupport

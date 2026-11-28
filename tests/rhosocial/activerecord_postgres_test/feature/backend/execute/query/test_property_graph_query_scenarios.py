@@ -55,7 +55,7 @@ from rhosocial.activerecord.backend.expression.query_parts import (
     GroupByHavingClause,
     LimitOffsetClause,
 )
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
 from rhosocial.activerecord.backend.expression.query_parts import JoinClause
 from rhosocial.activerecord.backend.expression.types import (

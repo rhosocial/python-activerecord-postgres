@@ -7,7 +7,7 @@ This module defines the protocol for PostgreSQL-specific ENUM type management.
 from typing import Any, Protocol, runtime_checkable, List, Optional, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.type import (
+    from ...expression.statements.ddl.type import (
         PostgresCreateEnumTypeExpression,
         PostgresDropEnumTypeExpression,
         PostgresAlterEnumAddValueExpression,

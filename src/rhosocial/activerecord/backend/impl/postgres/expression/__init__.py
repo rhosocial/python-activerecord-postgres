@@ -5,16 +5,19 @@ PostgreSQL-specific expression classes.
 This module provides expression classes that are specific to PostgreSQL,
 such as advisory lock expressions, DDL statements, and row-level locking support.
 
-Directory structure:
-- advisory/    - Advisory lock expressions
-- locking.py   - Lock strength expressions
-- ddl/         - DDL statement expressions
+Directory structure (canonical first-level namespaces):
+- functions/     - Advisory-lock and standard-server function expressions
+- statements/    - DDL / DML statements (including statements/ddl/)
+- introspection/ - Catalog and server query nodes
+- query_parts/   - Hint helpers
+- value_types/   - Value wrappers and wildcards
+- column_types/  - Column definition types
+- types/         - DataType subclasses
 """
 
-from .status import (
+from .introspection.status import (
     PostgresSettingsQuery,
     PostgresActivityCountQuery,
-    PostgresShowStatement,
     PostgresDatabaseListQuery,
     PostgresSchemaStatsQuery,
     PostgresCurrentDatabaseQuery,
@@ -34,32 +37,33 @@ from .status import (
     PostgresArchiveStatsQuery,
     PostgresExtensionListQuery,
 )
-from .enum_ import (
-    PostgresEnumType,
+from .statements.status import PostgresShowStatement
+from .statements.enum_ import PostgresEnumType
+from .introspection.enum_ import (
     PostgresEnumTypeExistsQuery,
     PostgresEnumTypeValuesQuery,
 )
-from .advisory import (
+from .functions.advisory import (
     PostgresAdvisoryLockExpression,
     PostgresAdvisoryUnlockExpression,
     PostgresAdvisoryUnlockAllExpression,
     PostgresTryAdvisoryLockExpression,
     AdvisoryLockType,
 )
-from .wildcard import PostgresRowCountWildcard
-from .pg_stat import PostgresPgStatStatement
-from .tablefunc import (
+from .value_types.wildcard import PostgresRowCountWildcard
+from .statements.pg_stat import PostgresPgStatStatement
+from .statements.tablefunc import (
     PostgresCrosstabWithDefinitionStatement,
     PostgresConnectbyFullStatement,
 )
-from .copy import (
+from .statements.copy import (
     PostgresCopyFormat,
     PostgresCopyOnError,
     PostgresCopyLogVerbosity,
     PostgresCopyToStatement,
     PostgresCopyFromStatement,
 )
-from .ddl import (
+from .statements.ddl import (
     PostgresColumnStorage,
     PostgresColumnDefinition,
     PostgresColumnOptions,
@@ -184,8 +188,8 @@ from .types import (
     PostgresCidrType,
 )
 
-from .load_library import PostgresLoadLibraryExpression
-from .hinted_statements import (
+from .statements.load_library import PostgresLoadLibraryExpression
+from .statements.hinted_statements import (
     PostgresCreateTableAsStatement,
     PostgresDeleteStatement,
     PostgresExplainStatement,

@@ -26,7 +26,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresCitextType,
 )
@@ -39,8 +41,8 @@ if TYPE_CHECKING:
 
 def citext_literal(
     dialect: "SQLDialectBase",
-    value: Union[str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
+    value: Union[str, "BaseExpression"],
+) -> "BaseExpression":
     """Create a citext literal expression with type cast.
 
     Wraps a string value as a Parameter expression with a citext type cast,
@@ -61,13 +63,13 @@ def citext_literal(
         >>> citext_literal(dialect, 'Hello World')
         # Produces: 'Hello World'::citext
     """
-    converted = value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value)
-    return core.CastExpression(dialect, converted, PostgresCitextType(dialect))
+    converted = value if isinstance(value, BaseExpression) else Parameter(dialect, value)
+    return CastExpression(dialect, converted, PostgresCitextType(dialect))
 
 
 def citext_column(dialect, column_name: str, length: int = None):
     """Collect arguments for a CITEXT column; the formatter validates them."""
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresCitextColumnExpression,
     )
 

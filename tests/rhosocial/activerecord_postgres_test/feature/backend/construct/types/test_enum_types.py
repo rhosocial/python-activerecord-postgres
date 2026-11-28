@@ -12,10 +12,10 @@ from typing import Tuple  # noqa: F401
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.enum_ import PostgresEnumType
 from rhosocial.activerecord.backend.impl.postgres.adapters import PostgresEnumAdapter
 from rhosocial.activerecord.backend.impl.postgres.protocols import PostgresEnumTypeSupport  # noqa: F401
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresCreateEnumTypeExpression,
     PostgresDropEnumTypeExpression,
     PostgresAlterEnumAddValueExpression,

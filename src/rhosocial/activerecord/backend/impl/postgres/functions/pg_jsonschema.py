@@ -8,7 +8,10 @@ the extension's function signatures without ambiguity.
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.types import JsonBType, JsonType
 
 if TYPE_CHECKING:  # pragma: no cover
@@ -17,35 +20,35 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _typed(dialect: "SQLDialectBase", value, data_type):
     """Expressions pass through; other values become typed literals."""
-    if isinstance(value, bases.BaseExpression):
+    if isinstance(value, BaseExpression):
         return value
-    return core.CastExpression(dialect, core.Parameter(dialect, value), data_type(dialect))
+    return CastExpression(dialect, Parameter(dialect, value), data_type(dialect))
 
 
-def json_matches_schema(dialect: "SQLDialectBase", schema, instance) -> core.FunctionCall:
+def json_matches_schema(dialect: "SQLDialectBase", schema, instance) -> FunctionCall:
     """``json_matches_schema(schema json, instance json)``."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "json_matches_schema",
         _typed(dialect, schema, JsonType), _typed(dialect, instance, JsonType),
     )
 
 
-def jsonb_matches_schema(dialect: "SQLDialectBase", schema, instance) -> core.FunctionCall:
+def jsonb_matches_schema(dialect: "SQLDialectBase", schema, instance) -> FunctionCall:
     """``jsonb_matches_schema(schema json, instance jsonb)``."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "jsonb_matches_schema",
         _typed(dialect, schema, JsonType), _typed(dialect, instance, JsonBType),
     )
 
 
-def jsonschema_is_valid(dialect: "SQLDialectBase", schema) -> core.FunctionCall:
+def jsonschema_is_valid(dialect: "SQLDialectBase", schema) -> FunctionCall:
     """``jsonschema_is_valid(schema json)``."""
-    return core.FunctionCall(dialect, "jsonschema_is_valid", _typed(dialect, schema, JsonType))
+    return FunctionCall(dialect, "jsonschema_is_valid", _typed(dialect, schema, JsonType))
 
 
-def jsonschema_validation_errors(dialect: "SQLDialectBase", schema, instance) -> core.FunctionCall:
+def jsonschema_validation_errors(dialect: "SQLDialectBase", schema, instance) -> FunctionCall:
     """``jsonschema_validation_errors(schema json, instance json)``."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "jsonschema_validation_errors",
         _typed(dialect, schema, JsonType), _typed(dialect, instance, JsonType),
     )

@@ -50,7 +50,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresLtreeType,
     PostgresSerialType,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.values import (
+from rhosocial.activerecord.backend.impl.postgres.expression.value_types.values import (
     operations_class_for,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions

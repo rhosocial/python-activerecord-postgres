@@ -14,7 +14,9 @@ The PostGIS extension must be installed:
 
 from typing import Optional, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl.postgres.type_values.postgis import PostgresGeometry
 
 if TYPE_CHECKING:
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
 def geometry_expr(
     dialect: "SQLDialectBase",
     value: Union[PostgresGeometry, str],
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Build the expression for a geometry given as domain data.
 
     A :class:`PostgresGeometry` carries a geometry type, a WKT body and an SRID,
@@ -42,24 +44,24 @@ def geometry_expr(
     """
     if isinstance(value, PostgresGeometry):
         if value.geometry_type == "geography":
-            return st_geog_from_text(dialect, core.Parameter(dialect, value.wkt))
+            return st_geog_from_text(dialect, Parameter(dialect, value.wkt))
         return st_geom_from_text(
             dialect,
-            core.Parameter(dialect, value.wkt),
-            core.Parameter(dialect, value.srid) if value.srid is not None else None,
+            Parameter(dialect, value.wkt),
+            Parameter(dialect, value.srid) if value.srid is not None else None,
         )
-    return core.Parameter(dialect, value)
+    return Parameter(dialect, value)
 
 
 # === Geometry Construction ===
 
 def st_make_point(
     dialect: "SQLDialectBase",
-    x: "bases.BaseExpression",
-    y: "bases.BaseExpression",
-    z: Optional["bases.BaseExpression"] = None,
-    m: Optional["bases.BaseExpression"] = None,
-) -> core.FunctionCall:
+    x: "BaseExpression",
+    y: "BaseExpression",
+    z: Optional["BaseExpression"] = None,
+    m: Optional["BaseExpression"] = None,
+) -> FunctionCall:
     """ST_MakePoint(x, y [, z [, m]]) - Construct a point geometry.
 
     Args:
@@ -77,14 +79,14 @@ def st_make_point(
         args.append(z)
     if m is not None:
         args.append(m)
-    return core.FunctionCall(dialect, "ST_MakePoint", *args)
+    return FunctionCall(dialect, "ST_MakePoint", *args)
 
 
 def st_geom_from_text(
     dialect: "SQLDialectBase",
-    wkt: "bases.BaseExpression",
-    srid: Optional["bases.BaseExpression"] = None,
-) -> core.FunctionCall:
+    wkt: "BaseExpression",
+    srid: Optional["BaseExpression"] = None,
+) -> FunctionCall:
     """ST_GeomFromText(wkt [, srid]) - Construct geometry from WKT.
 
     Args:
@@ -98,13 +100,13 @@ def st_geom_from_text(
     args = [wkt]
     if srid is not None:
         args.append(srid)
-    return core.FunctionCall(dialect, "ST_GeomFromText", *args)
+    return FunctionCall(dialect, "ST_GeomFromText", *args)
 
 
 def st_geog_from_text(
     dialect: "SQLDialectBase",
-    wkt: "bases.BaseExpression",
-) -> core.FunctionCall:
+    wkt: "BaseExpression",
+) -> FunctionCall:
     """ST_GeogFromText(wkt) - Construct geography from WKT.
 
     Args:
@@ -114,14 +116,14 @@ def st_geog_from_text(
     Returns:
         FunctionCall for ST_GeogFromText
     """
-    return core.FunctionCall(dialect, "ST_GeogFromText", wkt)
+    return FunctionCall(dialect, "ST_GeogFromText", wkt)
 
 
 def st_set_srid(
     dialect: "SQLDialectBase",
-    geometry: "bases.BaseExpression",
-    srid: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geometry: "BaseExpression",
+    srid: "BaseExpression",
+) -> FunctionCall:
     """ST_SetSRID(geometry, srid) - Set the SRID of a geometry.
 
     Args:
@@ -132,7 +134,7 @@ def st_set_srid(
     Returns:
         FunctionCall for ST_SetSRID
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_SetSRID",
         geometry,
         srid,
@@ -141,9 +143,9 @@ def st_set_srid(
 
 def st_transform(
     dialect: "SQLDialectBase",
-    geometry: "bases.BaseExpression",
-    target_srid: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geometry: "BaseExpression",
+    target_srid: "BaseExpression",
+) -> FunctionCall:
     """ST_Transform(geometry, target_srid) - Transform geometry to a different SRID.
 
     Args:
@@ -154,7 +156,7 @@ def st_transform(
     Returns:
         FunctionCall for ST_Transform
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Transform",
         geometry,
         target_srid,
@@ -165,15 +167,15 @@ def st_transform(
 
 def st_contains(
     dialect: "SQLDialectBase",
-    outer: "bases.BaseExpression",
-    inner: "bases.BaseExpression",
-) -> core.FunctionCall:
+    outer: "BaseExpression",
+    inner: "BaseExpression",
+) -> FunctionCall:
     """ST_Contains(outer, inner) - Test if outer geometry contains inner.
 
     Returns:
         FunctionCall for ST_Contains
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Contains",
         outer,
         inner,
@@ -182,15 +184,15 @@ def st_contains(
 
 def st_intersects(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
+) -> FunctionCall:
     """ST_Intersects(geom1, geom2) - Test if geometries intersect.
 
     Returns:
         FunctionCall for ST_Intersects
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Intersects",
         geom1,
         geom2,
@@ -199,15 +201,15 @@ def st_intersects(
 
 def st_within(
     dialect: "SQLDialectBase",
-    inner: "bases.BaseExpression",
-    outer: "bases.BaseExpression",
-) -> core.FunctionCall:
+    inner: "BaseExpression",
+    outer: "BaseExpression",
+) -> FunctionCall:
     """ST_Within(inner, outer) - Test if inner geometry is within outer.
 
     Returns:
         FunctionCall for ST_Within
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Within",
         inner,
         outer,
@@ -216,11 +218,11 @@ def st_within(
 
 def st_dwithin(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
-    distance: "bases.BaseExpression",
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
+    distance: "BaseExpression",
     use_spheroid: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """ST_DWithin(geom1, geom2, distance [, use_spheroid]) - Test proximity.
 
     Args:
@@ -239,17 +241,17 @@ def st_dwithin(
         distance,
     ]
     if use_spheroid:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "ST_DWithin", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "ST_DWithin", *args)
 
 
 def st_crosses(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
+) -> FunctionCall:
     """ST_Crosses(geom1, geom2) - Test if geometries cross."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Crosses",
         geom1,
         geom2,
@@ -258,11 +260,11 @@ def st_crosses(
 
 def st_touches(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
+) -> FunctionCall:
     """ST_Touches(geom1, geom2) - Test if geometries touch."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Touches",
         geom1,
         geom2,
@@ -271,11 +273,11 @@ def st_touches(
 
 def st_overlaps(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
+) -> FunctionCall:
     """ST_Overlaps(geom1, geom2) - Test if geometries overlap."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Overlaps",
         geom1,
         geom2,
@@ -286,10 +288,10 @@ def st_overlaps(
 
 def st_distance(
     dialect: "SQLDialectBase",
-    geom1: "bases.BaseExpression",
-    geom2: "bases.BaseExpression",
+    geom1: "BaseExpression",
+    geom2: "BaseExpression",
     use_spheroid: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """ST_Distance(geom1, geom2 [, use_spheroid]) - Calculate distance.
 
     Args:
@@ -306,15 +308,15 @@ def st_distance(
         geom2,
     ]
     if use_spheroid:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "ST_Distance", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "ST_Distance", *args)
 
 
 def st_area(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
+    geom: "BaseExpression",
     use_spheroid: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """ST_Area(geom [, use_spheroid]) - Calculate area.
 
     Args:
@@ -327,15 +329,15 @@ def st_area(
     """
     args = [geom]
     if use_spheroid:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "ST_Area", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "ST_Area", *args)
 
 
 def st_length(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
+    geom: "BaseExpression",
     use_spheroid: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """ST_Length(geom [, use_spheroid]) - Calculate length.
 
     Returns:
@@ -343,49 +345,49 @@ def st_length(
     """
     args = [geom]
     if use_spheroid:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "ST_Length", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "ST_Length", *args)
 
 
 # === Spatial Output ===
 
 def st_as_geojson(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom: "BaseExpression",
+) -> FunctionCall:
     """ST_AsGeoJSON(geom) - Convert geometry to GeoJSON.
 
     Returns:
         FunctionCall for ST_AsGeoJSON
     """
-    return core.FunctionCall(dialect, "ST_AsGeoJSON", geom)
+    return FunctionCall(dialect, "ST_AsGeoJSON", geom)
 
 
 def st_as_text(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom: "BaseExpression",
+) -> FunctionCall:
     """ST_AsText(geom) - Convert geometry to WKT.
 
     Returns:
         FunctionCall for ST_AsText
     """
-    return core.FunctionCall(dialect, "ST_AsText", geom)
+    return FunctionCall(dialect, "ST_AsText", geom)
 
 
 # === Spatial Operations ===
 
 def st_buffer(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
-    radius: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom: "BaseExpression",
+    radius: "BaseExpression",
+) -> FunctionCall:
     """ST_Buffer(geom, radius) - Create buffer around geometry.
 
     Returns:
         FunctionCall for ST_Buffer
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Buffer",
         geom,
         radius,
@@ -394,26 +396,26 @@ def st_buffer(
 
 def st_envelope(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom: "BaseExpression",
+) -> FunctionCall:
     """ST_Envelope(geom) - Compute bounding box.
 
     Returns:
         FunctionCall for ST_Envelope
     """
-    return core.FunctionCall(dialect, "ST_Envelope", geom)
+    return FunctionCall(dialect, "ST_Envelope", geom)
 
 
 def st_centroid(
     dialect: "SQLDialectBase",
-    geom: "bases.BaseExpression",
-) -> core.FunctionCall:
+    geom: "BaseExpression",
+) -> FunctionCall:
     """ST_Centroid(geom) - Compute geometric centroid.
 
     Returns:
         FunctionCall for ST_Centroid
     """
-    return core.FunctionCall(dialect, "ST_Centroid", geom)
+    return FunctionCall(dialect, "ST_Centroid", geom)
 
 
 def spatial_index(
@@ -426,7 +428,7 @@ def spatial_index(
     schema: str = None,
 ):
     """Collect arguments for a spatial index; the formatter validates them."""
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresSpatialIndexExpression,
     )
 

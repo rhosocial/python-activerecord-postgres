@@ -48,7 +48,7 @@ from rhosocial.activerecord.backend.expression import (
     JSONDocumentValue,
     JSONTextValue,
 )
-from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
+from rhosocial.activerecord.backend.expression.functions.advanced_functions import JSONPathMode
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.mixins.types.jsonb_enhanced import (
     PostgresJSONBEnhancedMixin,

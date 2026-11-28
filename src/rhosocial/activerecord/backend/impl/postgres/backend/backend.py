@@ -822,7 +822,9 @@ class PostgresBackend(
         Raises:
             DatabaseError: If the lock operation fails
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
+            PostgresAdvisoryLockExpression,
+        )
 
         expr = PostgresAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()
@@ -839,7 +841,9 @@ class PostgresBackend(
         Returns:
             True if the lock was released, False if it was not held
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
+            PostgresAdvisoryUnlockExpression,
+        )
 
         expr = PostgresAdvisoryUnlockExpression(self.dialect, key=key, shared=shared)
         sql, params = expr.to_sql()
@@ -855,7 +859,9 @@ class PostgresBackend(
         """
         Release all advisory locks held by the current session.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresAdvisoryUnlockAllExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
+            PostgresAdvisoryUnlockAllExpression,
+        )
 
         expr = PostgresAdvisoryUnlockAllExpression(self.dialect)
         sql, params = expr.to_sql()
@@ -878,7 +884,9 @@ class PostgresBackend(
         Returns:
             True if the lock was acquired, False if it was not available
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.advisory import PostgresTryAdvisoryLockExpression
+        from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
+            PostgresTryAdvisoryLockExpression,
+        )
 
         expr = PostgresTryAdvisoryLockExpression(self.dialect, key=key, shared=shared, session=session)
         sql, params = expr.to_sql()

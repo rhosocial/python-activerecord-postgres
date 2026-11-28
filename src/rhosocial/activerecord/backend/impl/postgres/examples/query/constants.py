@@ -17,7 +17,8 @@ from rhosocial.activerecord.backend.impl.postgres.config import PostgresConnecti
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType
 from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression import functions as F
 from rhosocial.activerecord.backend.expression import functions as F
 

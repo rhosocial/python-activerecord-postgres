@@ -124,7 +124,7 @@ class TestAlterColumnTypeAndUsing:
         return PostgresDialect(version=(15, 0, 0))
 
     def test_set_data_type_plain(self, dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresAlterColumnAction,
         )
 
@@ -140,7 +140,7 @@ class TestAlterColumnTypeAndUsing:
         from rhosocial.activerecord.backend.expression.operators import (
             ArithmeticOperation,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresAlterColumnAction,
         )
 
@@ -160,7 +160,7 @@ class TestAlterColumnTypeAndUsing:
 
     def test_set_data_type_using_rejected_for_other_ops(self, dialect):
         from rhosocial.activerecord.backend.expression import Column
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresAlterColumnAction,
         )
 
@@ -225,7 +225,7 @@ class TestPostgresCreateUnloggedTable:
 
     @staticmethod
     def _options(dialect):
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresCreateTableOptions,
         )
         return PostgresCreateTableOptions(dialect, unlogged=True)
@@ -284,7 +284,7 @@ class TestPostgresCreateUnloggedTable:
         from rhosocial.activerecord.backend.expression.statements.ddl_table import (
             CreateTableStatement,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresCreateTableOptions,
         )
 

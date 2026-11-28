@@ -1,0 +1,152 @@
+# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/ddl/publication.py
+"""
+PostgreSQL DDL expressions: PUBLICATION and SUBSCRIPTION (logical
+replication).
+
+PostgreSQL Documentation:
+- CREATE PUBLICATION:    https://www.postgresql.org/docs/current/sql-createpublication.html
+- DROP PUBLICATION:      https://www.postgresql.org/docs/current/sql-droppublication.html
+- CREATE SUBSCRIPTION:   https://www.postgresql.org/docs/current/sql-createsubscription.html
+- DROP SUBSCRIPTION:     https://www.postgresql.org/docs/current/sql-dropsubscription.html
+
+Version Requirements:
+- CREATE/DROP PUBLICATION: PostgreSQL 10+
+- CREATE/DROP SUBSCRIPTION: PostgreSQL 10+
+"""
+
+from typing import List, Optional, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+__all__ = [
+    "PostgresCreatePublicationStatement",
+    "PostgresDropPublicationStatement",
+    "PostgresCreateSubscriptionStatement",
+    "PostgresDropSubscriptionStatement",
+]
+
+
+class PostgresCreatePublicationStatement(BaseExpression):
+    """PostgreSQL CREATE PUBLICATION statement expression.
+
+    Attributes:
+        name: Name of the publication.
+        tables: Optional list of table identifiers to publish with
+            ``FOR TABLE``. Exactly one of ``tables`` or ``all_tables``
+            should be given.
+        all_tables: When True, publish all tables (``FOR ALL TABLES``).
+        options: Optional list of ``WITH (...)`` options (e.g. ``publish`
+            strings).
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        tables: Optional[List[str]] = None,
+        all_tables: bool = False,
+        options: Optional[List[str]] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.tables = tables
+        self.all_tables = all_tables
+        self.options = options or []
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_publication_statement"
+
+
+class PostgresDropPublicationStatement(BaseExpression):
+    """PostgreSQL DROP PUBLICATION statement expression.
+
+    Attributes:
+        name: Name of the publication to drop.
+        if_exists: When True, add ``IF EXISTS``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        cascade: bool = False,
+        if_exists: bool = False,
+        restrict: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.restrict = restrict
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_publication_statement"
+
+
+class PostgresCreateSubscriptionStatement(BaseExpression):
+    """PostgreSQL CREATE SUBSCRIPTION statement expression.
+
+    Attributes:
+        name: Name of the subscription.
+        connection: Connection string for ``CONNECTION '...'``.
+        publications: Publication names to subscribe to.
+        options: Optional ``WITH (``...)`` creation options.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        connection: str,
+        publications: List[str],
+        options: Optional[List[str]] = None,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.connection = connection
+        self.publications = publications
+        self.options = options or []
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_subscription_statement"
+
+
+class PostgresDropSubscriptionStatement(BaseExpression):
+    """PostgreSQL DROP SUBSCRIPTION statement expression.
+
+    Attributes:
+        name: Name of the subscription to drop.
+        if_exists: When True, add ``IF EXISTS``.
+        cascade: When True, add ``CASCADE``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        if_exists: bool = False,
+        cascade: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.if_exists = if_exists
+        self.cascade = cascade
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_subscription_statement"

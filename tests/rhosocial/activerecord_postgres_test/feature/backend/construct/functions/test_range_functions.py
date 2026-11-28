@@ -9,7 +9,8 @@ Tests for:
 import pytest  # noqa: F401
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import operators, core
+from rhosocial.activerecord.backend.expression import operators
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.range import (
     range_contains,
     range_contained_by,
@@ -349,7 +350,7 @@ class TestRangeFunctions:
         """Test range lower function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_lower(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower" in sql.lower()
         assert params == ("int4range_col",)
@@ -359,7 +360,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(1, 10)
         result = range_lower(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower" in sql.lower()
         assert "[1,10)" in params
@@ -368,7 +369,7 @@ class TestRangeFunctions:
         """Test range upper function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_upper(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper" in sql.lower()
         assert params == ("int4range_col",)
@@ -378,7 +379,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(1, 10)
         result = range_upper(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper" in sql.lower()
         assert "[1,10)" in params
@@ -387,7 +388,7 @@ class TestRangeFunctions:
         """Test range isempty function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_is_empty(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "isempty" in sql.lower()
         assert params == ("int4range_col",)
@@ -397,7 +398,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange.empty()
         result = range_is_empty(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "isempty" in sql.lower()
         assert "empty" in params
@@ -406,7 +407,7 @@ class TestRangeFunctions:
         """Test range lower_inc function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_lower_inc(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower_inc" in sql.lower()
         assert params == ("int4range_col",)
@@ -416,7 +417,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(1, 10)
         result = range_lower_inc(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower_inc" in sql.lower()
         assert "[1,10)" in params
@@ -425,7 +426,7 @@ class TestRangeFunctions:
         """Test range upper_inc function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_upper_inc(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper_inc" in sql.lower()
         assert params == ("int4range_col",)
@@ -435,7 +436,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(1, 10, upper_inc=True)
         result = range_upper_inc(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper_inc" in sql.lower()
         assert "[1,10]" in params
@@ -444,7 +445,7 @@ class TestRangeFunctions:
         """Test range lower_inf function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_lower_inf(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower_inf" in sql.lower()
         assert params == ("int4range_col",)
@@ -454,7 +455,7 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(None, 10)
         result = range_lower_inf(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "lower_inf" in sql.lower()
 
@@ -462,7 +463,7 @@ class TestRangeFunctions:
         """Test range upper_inf function with column."""
         dialect = PostgresDialect((14, 0, 0))
         result = range_upper_inf(dialect, "int4range_col")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper_inf" in sql.lower()
         assert params == ("int4range_col",)
@@ -472,6 +473,6 @@ class TestRangeFunctions:
         dialect = PostgresDialect((14, 0, 0))
         r = PostgresRange(1, None)
         result = range_upper_inf(dialect, r)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "upper_inf" in sql.lower()

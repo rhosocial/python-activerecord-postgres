@@ -40,7 +40,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -51,8 +53,8 @@ if TYPE_CHECKING:
 def heap_force_freeze(
     dialect: "SQLDialectBase",
     reloid: str,
-    tids: Union[str, "bases.BaseExpression"],
-) -> core.FunctionCall:
+    tids: Union[str, "BaseExpression"],
+) -> FunctionCall:
     """Force-freeze tuples on a heap relation.
 
     Marks the specified tuples as frozen on the given heap relation.
@@ -82,18 +84,18 @@ def heap_force_freeze(
         >>> heap_force_freeze(dialect, 'my_table', "'{(0,1)}'::tid[]")
         >>> heap_force_freeze(dialect, 'public.users', tid_array_expr)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "heap_force_freeze",
-        reloid if isinstance(reloid, bases.BaseExpression) else core.Parameter(dialect, reloid),
-        tids if isinstance(tids, bases.BaseExpression) else core.Parameter(dialect, tids),
+        reloid if isinstance(reloid, BaseExpression) else Parameter(dialect, reloid),
+        tids if isinstance(tids, BaseExpression) else Parameter(dialect, tids),
     )
 
 
 def heap_force_kill(
     dialect: "SQLDialectBase",
     reloid: str,
-    tids: Union[str, "bases.BaseExpression"],
-) -> core.FunctionCall:
+    tids: Union[str, "BaseExpression"],
+) -> FunctionCall:
     """Force-kill tuples on a heap relation.
 
     Marks the specified tuples as dead on the given heap relation.
@@ -123,10 +125,10 @@ def heap_force_kill(
         >>> heap_force_kill(dialect, 'my_table', "'{(0,1)}'::tid[]")
         >>> heap_force_kill(dialect, 'public.users', tid_array_expr)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "heap_force_kill",
-        reloid if isinstance(reloid, bases.BaseExpression) else core.Parameter(dialect, reloid),
-        tids if isinstance(tids, bases.BaseExpression) else core.Parameter(dialect, tids),
+        reloid if isinstance(reloid, BaseExpression) else Parameter(dialect, reloid),
+        tids if isinstance(tids, BaseExpression) else Parameter(dialect, tids),
     )
 
 

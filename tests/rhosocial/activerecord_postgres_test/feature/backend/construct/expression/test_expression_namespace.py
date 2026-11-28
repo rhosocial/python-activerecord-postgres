@@ -3,8 +3,8 @@
 
 ``BaseExpression`` subclasses render SQL, so they belong in
 ``rhosocial.activerecord.backend.impl.postgres.expression``. Data types are no
-exception: a value-level ``DataType`` belongs in ``expression/types.py`` and a
-DDL-level type in ``expression/ddl/type.py``.
+exception: a value-level ``DataType`` belongs in ``expression/types/types.py``
+and a DDL-level type in ``expression/statements/ddl/type.py``.
 
 This test failed repeatedly in the past (SHOW expressions sat in ``show/``, and
 ``PostgresEnumType`` sat in ``types/``), so the invariant is asserted
@@ -17,7 +17,7 @@ import pkgutil
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
 from rhosocial.activerecord.backend.impl import postgres
 
 EXPRESSION_NS = postgres.__name__ + ".expression"
@@ -113,10 +113,10 @@ def test_every_expression_class_is_inspectable(all_expression_classes):
 
 def test_postgres_enum_type_lives_in_expression_namespace():
     """Regression test for the specific violation this branch fixes."""
-    from rhosocial.activerecord.backend.impl.postgres.expression.enum_ import PostgresEnumType
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements.enum_ import PostgresEnumType
 
     assert issubclass(PostgresEnumType, BaseExpression)
-    assert PostgresEnumType.__module__ == f"{EXPRESSION_NS}.enum_"
+    assert PostgresEnumType.__module__ == f"{EXPRESSION_NS}.statements.enum_"
     assert inspect.getmodule(PostgresEnumType) is not None
 
 

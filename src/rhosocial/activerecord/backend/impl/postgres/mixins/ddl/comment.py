@@ -5,7 +5,7 @@ from enum import Enum
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.comment import PostgresCommentOnStatement
+    from ...expression.statements.ddl.comment import PostgresCommentOnStatement
 
 
 class PostgresCommentMixin:

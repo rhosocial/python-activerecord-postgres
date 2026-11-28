@@ -60,7 +60,7 @@ if __name__ == "__main__":
     from rhosocial.activerecord.backend.expression import (
         Column, Parameter, FunctionCall, Subquery,
     )
-    from rhosocial.activerecord.backend.expression.core import CastExpression
+    from rhosocial.activerecord.backend.expression.functions.cast_expression import CastExpression
     from rhosocial.activerecord.backend.expression.objects import Table
     from rhosocial.activerecord.backend.expression.operators import (
         BinaryExpression,

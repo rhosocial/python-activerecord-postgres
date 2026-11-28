@@ -14,7 +14,7 @@ from typing import Any, Dict, List, Optional
 
 from rhosocial.activerecord.backend.expression.objects import Index, Table
 
-from ...expression.ddl.index_definition import PostgresCreateIndexExpression
+from ...expression.statements.ddl.index_definition import PostgresCreateIndexExpression
 
 # Groonga option values are SQL string literals built here. Validation is a
 # character-level scan against allow-lists -- the backend's src tree contains

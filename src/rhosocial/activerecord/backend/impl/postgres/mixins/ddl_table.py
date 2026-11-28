@@ -2,7 +2,7 @@
 from typing import Any, Dict, List, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     CreateTableOptions,
 )
@@ -134,7 +134,7 @@ class PostgresTableMixin:
         from rhosocial.activerecord.backend.dialect.exceptions import (
             UnsupportedFeatureError,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.table_options import (
             PostgresCreateTableOptions,
         )
 
@@ -165,7 +165,7 @@ class PostgresTableMixin:
             # Validate through the PartitionClause -> format_partition_clause chain.
             expr.partition.to_sql()
 
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.table_options import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.table_options import (
             PostgresCreateTableOptions,
         )
 
@@ -267,7 +267,7 @@ class PostgresTableMixin:
         ``PostgresColumnDefinition``; the latter's PostgreSQL-only attributes
         (``compression`` / ``storage`` / ``statistics``) are rendered here.
         """
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl.column import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.column import (
             PostgresColumnDefinition,
         )
 

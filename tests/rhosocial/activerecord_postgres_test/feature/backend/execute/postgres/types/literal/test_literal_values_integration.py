@@ -27,8 +27,8 @@ whose DEFAULT clauses embed the rendered literals, read back through
 import datetime
 import uuid as uuid_module
 
-from rhosocial.activerecord.backend.expression.core import Parameter
-from rhosocial.activerecord.backend.expression.execution_testing import (
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.statements.execution_testing import (
     ExecutionOutcome,
     classify_execution,
 )

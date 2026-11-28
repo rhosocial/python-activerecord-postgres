@@ -6,7 +6,7 @@ Tests for expression-level COLLATE support on PostgreSQL.
 import pytest
 
 from rhosocial.activerecord.backend.expression import Column, Parameter
-from rhosocial.activerecord.backend.expression.collation import collate
+from rhosocial.activerecord.backend.expression.functions.collation import collate
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.collation import PostgresCollation
 

@@ -8,7 +8,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Database
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.statements.ddl_database import (
+    from rhosocial.activerecord.backend.expression.statements import (
         AlterDatabaseStatement,
         CreateDatabaseStatement,
         DropDatabaseStatement,
@@ -211,7 +211,7 @@ class PostgresDatabaseMixin:
                 f"SET TABLESPACE {self.format_identifier(expr.target)}",
                 (),
             )
-        from rhosocial.activerecord.backend.expression.statements.ddl_database import (
+        from rhosocial.activerecord.backend.expression.statements import (
             AlterDatabaseAction,
         )
 

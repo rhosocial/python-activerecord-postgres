@@ -29,7 +29,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_index import (
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.impl.postgres.functions import create_index_pg
 from rhosocial.activerecord.backend.impl.postgres.mixins.ddl.index import PostgresIndexMixin
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresAlterIndexStatement,
     PostgresAlterIndexActionType,
     PostgresReindexStatement,

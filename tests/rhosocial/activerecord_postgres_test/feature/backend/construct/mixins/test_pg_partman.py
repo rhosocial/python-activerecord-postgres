@@ -9,7 +9,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_partman import (
     create_parent,
     run_maintenance,
@@ -29,7 +29,7 @@ class TestPgPartmanMixin:
         """create_parent should return FunctionCall with create_parent."""
         dialect = PostgresDialect((14, 0, 0))
         result = create_parent(dialect, 'public.events', 'created_at', '1 day')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "create_parent" in sql.lower()
 
@@ -40,7 +40,7 @@ class TestPgPartmanMixin:
             dialect, 'public.events', 'created_at', '1 day',
             partition_type='native', premake=6,
         )
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "create_parent" in sql.lower()
         # Should have 5 parameters
@@ -50,7 +50,7 @@ class TestPgPartmanMixin:
         """run_maintenance should return FunctionCall with run_maintenance."""
         dialect = PostgresDialect((14, 0, 0))
         result = run_maintenance(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "run_maintenance" in sql.lower()
 
@@ -58,7 +58,7 @@ class TestPgPartmanMixin:
         """run_maintenance with table name should include the parameter."""
         dialect = PostgresDialect((14, 0, 0))
         result = run_maintenance(dialect, 'public.events')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "run_maintenance" in sql.lower()
         assert sql.count("%s") == 1

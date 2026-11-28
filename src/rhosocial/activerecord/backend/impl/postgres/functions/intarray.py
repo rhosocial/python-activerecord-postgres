@@ -35,7 +35,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
@@ -46,8 +48,8 @@ if TYPE_CHECKING:
 
 def intarray_contains(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    values: bases.BaseExpression,
+    column: BaseExpression,
+    values: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the intarray contains operator (@>).
 
@@ -70,15 +72,15 @@ def intarray_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        values if isinstance(values, BaseExpression) else Parameter(dialect, values),
     )
 
 
 def intarray_contained_by(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    values: bases.BaseExpression,
+    column: BaseExpression,
+    values: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the intarray contained-by operator (<@).
 
@@ -100,15 +102,15 @@ def intarray_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        values if isinstance(values, BaseExpression) else Parameter(dialect, values),
     )
 
 
 def intarray_overlaps(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    values: bases.BaseExpression,
+    column: BaseExpression,
+    values: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for the intarray overlap operator (&&).
 
@@ -130,8 +132,8 @@ def intarray_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        values if isinstance(values, bases.BaseExpression) else core.Parameter(dialect, values),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        values if isinstance(values, BaseExpression) else Parameter(dialect, values),
     )
 
 
@@ -139,9 +141,9 @@ def intarray_overlaps(
 
 def intarray_idx(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
+    column: BaseExpression,
     value: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for the idx function.
 
     Returns the subscript of the first occurrence of the value in the
@@ -159,19 +161,19 @@ def intarray_idx(
         >>> intarray_idx(dialect, 'tags', 5)
         # Generates SQL: idx(tags, 5)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "idx",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        value if isinstance(value, BaseExpression) else Parameter(dialect, value),
     )
 
 
 def intarray_subarray(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
+    column: BaseExpression,
     start: int,
     length: Optional[int] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for the subarray function.
 
     Extracts a portion of the integer array, starting at the given
@@ -194,18 +196,18 @@ def intarray_subarray(
         # Generates SQL: subarray(tags, 2)
     """
     args = [
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        start if isinstance(start, bases.BaseExpression) else core.Parameter(dialect, start),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        start if isinstance(start, BaseExpression) else Parameter(dialect, start),
     ]
     if length is not None:
-        args.append(length if isinstance(length, bases.BaseExpression) else core.Parameter(dialect, length))
-    return core.FunctionCall(dialect, "subarray", *args)
+        args.append(length if isinstance(length, BaseExpression) else Parameter(dialect, length))
+    return FunctionCall(dialect, "subarray", *args)
 
 
 def intarray_uniq(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-) -> core.FunctionCall:
+    column: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for the uniq function.
 
     Removes duplicate elements from an integer array. The array must
@@ -222,16 +224,16 @@ def intarray_uniq(
         >>> intarray_uniq(dialect, 'tags')
         # Generates SQL: uniq(tags)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "uniq",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
     )
 
 
 def intarray_sort(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-) -> core.FunctionCall:
+    column: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for the sort function.
 
     Sorts the integer array in ascending order.
@@ -247,17 +249,17 @@ def intarray_sort(
         >>> intarray_sort(dialect, 'tags')
         # Generates SQL: sort(tags)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "sort",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
     )
 
 
 def intarray_operator(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
+    column: BaseExpression,
     operator: str,
-    value: bases.BaseExpression,
+    value: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for a generic intarray operator.
 
@@ -284,8 +286,8 @@ def intarray_operator(
     """
     return BinaryExpression(
         dialect, operator,
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        value if isinstance(value, BaseExpression) else Parameter(dialect, value),
     )
 
 

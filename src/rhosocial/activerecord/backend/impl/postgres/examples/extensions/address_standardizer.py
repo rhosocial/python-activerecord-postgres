@@ -40,7 +40,7 @@ if __name__ == "__main__":
         PostgresCreateExtensionStatement,
     )
     from rhosocial.activerecord.backend.expression import QueryStatement
-    from rhosocial.activerecord.backend.expression.core import Parameter
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
     from rhosocial.activerecord.backend.options import ExecutionOptions
     from rhosocial.activerecord.backend.schema import StatementType
     from rhosocial.activerecord.backend.impl.postgres.functions.address_standardizer import (

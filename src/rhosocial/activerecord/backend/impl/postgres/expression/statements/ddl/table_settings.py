@@ -1,0 +1,88 @@
+# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/ddl/table_settings.py
+"""
+PostgreSQL DDL expressions: ALTER TABLE table-level settings.
+
+PostgreSQL Documentation:
+- ALTER TABLE: https://www.postgresql.org/docs/current/sql-altertable.html
+
+Version Requirements:
+- SET LOGGED / SET UNLOGGED: PostgreSQL 9.6+ (exists since 9.5)
+- SET ACCESS METHOD: PostgreSQL 15+
+"""
+
+from enum import Enum
+from typing import Optional, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+__all__ = [
+    "LoggingMode",
+    "PostgresAlterTableSettingsStatement",
+]
+
+
+class LoggingMode(str, Enum):
+    """Whether a table is WAL-logged or not.
+
+    Switching between these with ``ALTER TABLE ... SET LOGGED`` /
+    ``SET UNLOGGED`` is commonly used to prototype with fast UNLOGGED tables
+    and migrate to LOGGED for production.
+    """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
+
+    LOGGED = "LOGGED"
+    UNLOGGED = "UNLOGGED"
+
+
+class PostgresAlterTableSettingsStatement(BaseExpression):
+    """PostgreSQL ``ALTER TABLE ... SET`` table-level settings.
+
+    Attributes:
+        table_name: Name of the target table.
+        schema: Optional schema for the table.
+        logging_mode: Optional ``LOGGED`` / ``UNLOGGED`` switch
+            (PostgreSQL 9.6+, exists since 9.5).
+        access_method: Optional new access method name for ``SET ACCESS
+            METHOD`` (PostgreSQL 15+). Mutually exclusive with
+            ``logging_mode``.
+
+    Example:
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+        >>> dialect = PostgresDialect((14, 0, 0))
+        >>> expr = PostgresAlterTableSettingsStatement(
+        ...     dialect, table_name="orders", mode=LoggingMode.UNLOGGED
+        ... )
+        >>> sql, params = expr.to_sql()  # doctest: +SKIP
+
+    Raises:
+        ValueError: if neither ``mode`` nor ``access_method`` is given, or
+            if both are given.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        schema: Optional[str] = None,
+        mode: Optional[LoggingMode] = None,
+        access_method: Optional[str] = None,
+    ):
+        super().__init__(dialect)
+        self.table_name = table_name
+        self.schema = schema
+        self.mode = mode
+        self.access_method = access_method
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_table_settings_statement"

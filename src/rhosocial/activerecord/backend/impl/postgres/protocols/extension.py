@@ -10,7 +10,7 @@ from typing import Protocol, runtime_checkable, Dict, Optional, Tuple, TYPE_CHEC
 from .base import PostgresExtensionInfo
 
 if TYPE_CHECKING:
-    from ..expression.ddl.extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
+    from ..expression.statements.ddl.extension import PostgresCreateExtensionStatement, PostgresDropExtensionStatement
 
 
 @runtime_checkable

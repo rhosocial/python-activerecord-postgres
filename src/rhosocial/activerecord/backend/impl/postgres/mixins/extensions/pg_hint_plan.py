@@ -5,7 +5,7 @@ Capability detection is version-aware via the shared extension feature map.
 
 Hints are values carried by a *derived* statement, not nodes of their own: the
 ``hints`` parameter lives on the PostgreSQL-derived classes in
-:mod:`...expression.hinted_statements`, so core never sees it.  This module is
+:mod:`...expression.statements.hinted_statements`, so core never sees it.  This module is
 the only place that renders it, through the private phrase helper and the
 formatter overrides of :class:`PostgresHintedStatementsMixin`.  Each override
 handles both the generic expression and the derived one (``fmt^c : {e, e'} -> S``
@@ -18,31 +18,31 @@ from typing import Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.expression.statements.ddl_table import (
+    from rhosocial.activerecord.backend.expression.statements import (
         CreateTableAsStatement,
     )
-    from rhosocial.activerecord.backend.expression.statements.ddl_view import (
+    from rhosocial.activerecord.backend.expression.statements import (
         CreateMaterializedViewStatement,
     )
-    from rhosocial.activerecord.backend.expression.statements.dml import (
+    from rhosocial.activerecord.backend.expression.statements import (
         DeleteStatement,
         InsertStatement,
         UpdateStatement,
     )
-    from rhosocial.activerecord.backend.expression.statements.dql import QueryStatement
-    from rhosocial.activerecord.backend.expression.statements.explain import ExplainStatement
+    from rhosocial.activerecord.backend.expression.statements import QueryStatement
+    from rhosocial.activerecord.backend.expression.statements import ExplainStatement
 
-from ...expression.hint import (
+from ...expression.query_parts.hint import (
     CorrectionKind,
     HintKind,
     assert_hint_payload,
     hint_payload,
 )
-from ...expression.ddl.mv import (
+from ...expression.statements.ddl.mv import (
     PostgresCreateMaterializedViewStatement,
     PostgresRefreshMaterializedViewStatement,
 )
-from ...expression.hinted_statements import (
+from ...expression.statements.hinted_statements import (
     PostgresCreateTableAsStatement,
     PostgresDeleteStatement,
     PostgresExplainStatement,
@@ -50,7 +50,7 @@ from ...expression.hinted_statements import (
     PostgresQueryStatement,
     PostgresUpdateStatement,
 )
-from ...expression.load_library import PostgresLoadLibraryExpression
+from ...expression.statements.load_library import PostgresLoadLibraryExpression
 
 #: The hinted statement kinds an outer statement may wrap. A hint belongs to
 #: the outermost statement, so finding one of these inside another statement's
@@ -217,7 +217,7 @@ class PostgresHintedStatementsMixin:
         return self._hint_comment(expr.hints) + sql, params
 
     def format_insert_statement(self, expr: "InsertStatement") -> Tuple[str, tuple]:
-        from rhosocial.activerecord.backend.expression.statements.dml import (
+        from rhosocial.activerecord.backend.expression.statements import (
             SelectSource,
         )
 

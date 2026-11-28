@@ -25,7 +25,7 @@ class PostgresPartitionAddSuggestionMixin(PostgresPartitionSuggestionBase):
         self, strategy: "PartitionByClause", plan: object
     ) -> PartitionAddSuggestion:
         """Add a partition with ``CREATE TABLE ... PARTITION OF ... FOR VALUES``."""
-        from ..expression.ddl.partition import PostgresCreatePartitionStatement
+        from ..expression.statements.ddl.partition import PostgresCreatePartitionStatement
 
         word = self._suggestion_strategy(strategy, plan)
         spec = self._suggestion_spec(plan)

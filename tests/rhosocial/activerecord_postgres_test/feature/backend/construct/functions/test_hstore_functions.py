@@ -62,8 +62,9 @@ from rhosocial.activerecord.backend.impl.postgres.functions.hstore import (
     hstore_subscript_set,
 )
 from rhosocial.activerecord.backend.impl.postgres.type_values.hstore import PostgresHstore
-from rhosocial.activerecord.backend.expression import bases, Parameter
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression import Parameter
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 
@@ -448,92 +449,92 @@ class TestHstoreAllFunctionsReturnExpressionObjects:
 
     def test_constructors_return_expressions(self, postgres_dialect: PostgresDialect):
         """Test constructors return BaseExpression."""
-        assert isinstance(hstore_from_record(postgres_dialect, Parameter(postgres_dialect, "t")), bases.BaseExpression)
+        assert isinstance(hstore_from_record(postgres_dialect, Parameter(postgres_dialect, "t")), BaseExpression)
         assert isinstance(
             hstore_from_key_value(postgres_dialect, Parameter(postgres_dialect, "k"), Parameter(postgres_dialect, "v")),
-            bases.BaseExpression,
+            BaseExpression,
         )
 
     def test_extraction_functions_return_expressions(self, postgres_dialect: PostgresDialect):
         """Test extraction functions return BaseExpression."""
-        assert isinstance(hstore_akeys(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_skeys(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_avals(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_svals(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_each(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
+        assert isinstance(hstore_akeys(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_skeys(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_avals(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_svals(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_each(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
 
     def test_conversion_functions_return_expressions(self, postgres_dialect: PostgresDialect):
         """Test conversion functions return BaseExpression."""
-        assert isinstance(hstore_to_array(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_to_matrix(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_to_json(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
-        assert isinstance(hstore_to_jsonb(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression)
+        assert isinstance(hstore_to_array(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_to_matrix(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_to_json(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
+        assert isinstance(hstore_to_jsonb(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression)
         assert isinstance(
-            hstore_to_json_loose(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression
+            hstore_to_json_loose(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression
         )
         assert isinstance(
-            hstore_to_jsonb_loose(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression
+            hstore_to_jsonb_loose(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression
         )
 
     def test_operator_functions_return_expressions(self, postgres_dialect: PostgresDialect):
         """Test operator functions return BaseExpression."""
         assert isinstance(
             hstore_get_value(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_get_value_as_text(
                 postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")
             ),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_get_values(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_concat(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "o")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_key_exists(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_all_keys_exist(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_any_key_exists(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_contains(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "o")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_contained_by(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "o")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_subtract_key(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_subtract_keys(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "k")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
             hstore_subtract_pairs(postgres_dialect, Parameter(postgres_dialect, "d"), Parameter(postgres_dialect, "o")),
-            bases.BaseExpression,
+            BaseExpression,
         )
         assert isinstance(
-            hstore_to_array_operator(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression
+            hstore_to_array_operator(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression
         )
         assert isinstance(
-            hstore_to_matrix_operator(postgres_dialect, Parameter(postgres_dialect, "d")), bases.BaseExpression
+            hstore_to_matrix_operator(postgres_dialect, Parameter(postgres_dialect, "d")), BaseExpression
         )
         assert isinstance(
             hstore_record_update(postgres_dialect, Parameter(postgres_dialect, "r"), Parameter(postgres_dialect, "d")),
-            bases.BaseExpression,
+            BaseExpression,
         )

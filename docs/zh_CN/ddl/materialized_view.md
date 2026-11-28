@@ -26,7 +26,7 @@
 from rhosocial.activerecord.backend.expression import Column, FunctionCall, QueryStatement
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresCreateMaterializedViewStatement,
 )
 
@@ -112,7 +112,7 @@ create = PostgresCreateMaterializedViewStatement(
 ## 刷新
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresRefreshMaterializedViewStatement,
 )
 
@@ -139,7 +139,7 @@ PostgreSQL 恰好支持 5 种动作，**不含** `SET TABLESPACE`
 （物化视图创建后无法迁移到其他表空间）。
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresRenameMaterializedViewAction,
@@ -179,7 +179,7 @@ ALTER MATERIALIZED VIEW "reporting"."sales_summary" OWNER TO CURRENT_USER
 ## 删除
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresDropMaterializedViewExpression,
 )
 

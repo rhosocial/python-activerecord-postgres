@@ -5,7 +5,7 @@ from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.objects import Procedure
 
-from ...expression.ddl import (
+from ...expression.statements.ddl import (
     PostgresCallProcedureStatement,
     PostgresCreateProcedureStatement,
     PostgresDropProcedureStatement,

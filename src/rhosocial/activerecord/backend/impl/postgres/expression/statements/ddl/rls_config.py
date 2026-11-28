@@ -1,0 +1,127 @@
+# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/ddl/rls_config.py
+"""
+PostgreSQL DDL expressions: Row-Level Security configuration.
+
+PostgreSQL Documentation:
+- ALTER TABLE: https://www.postgresql.org/docs/current/sql-altertable.html
+
+Version Requirements:
+- ENABLE / DISABLE ROW LEVEL SECURITY: PostgreSQL 9.5+
+- ENABLE ALWAYS / FORCE / NO FORCE ROW LEVEL SECURITY: PostgreSQL 9.5+
+
+Note: These statements are PostgreSQL extensions (non-SQL-standard). They
+live in this backend package, together with the POLICY statements that build
+the complete Row-Level Security ecosystem.
+"""
+
+from enum import Enum
+from typing import Optional, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+__all__ = [
+    "RlsConfigurationMode",
+    "PostgresAlterTableRlsStatement",
+    "PostgresForceRlsStatement",
+]
+
+
+class RlsConfigurationMode(str, Enum):
+    """The ``ENABLE``/``DISABLE`` forms of row-level security on a table.
+
+    PostgreSQL maps these onto ``ALTER TABLE ... ENABLE ROW LEVEL SECURITY``
+    / ``ALTER TABLE ... DISABLE ROW LEVEL SECURITY``.
+    """
+    #: A member *is* the word it carries, so ``str()`` -- what the artifact
+    #: and every f-string spell a closed value with -- names the value rather
+    #: than the member (rules §11.3: ``(str, Enum)`` alone is not enough --
+    #: ``Enum.__str__`` wins unless it is replaced).
+    __str__ = str.__str__
+
+    ENABLE = "ENABLE"
+    DISABLE = "DISABLE"
+
+
+class PostgresAlterTableRlsStatement(BaseExpression):
+    """PostgreSQL ``ALTER TABLE ... {ENABLE|DISABLE} ROW LEVEL SECURITY``.
+
+    A single expression drives both states through the ``mode`` field. The
+    ``ENABLE ALWAYS`` variant is a separate keyword on the same statement and
+    is produced by :attr:`always` (see class :class:`PostgresForceRlsStatement`
+    for the related ``FORCE`` forms).
+
+    Attributes:
+        table_name: Name of the target table.
+        schema: Optional schema for the table.
+        mode: ``ENABLE`` or ``DISABLE``.
+        always: If True (and ``mode`` is ENABLE), emit ``ENABLE ALWAYS``.
+            ``ALWAYS`` has no meaning with ``DISABLE`` and raises an error.
+
+    Example:
+        >>> from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
+        >>> dialect = PostgresDialect((14, 0, 0))
+        >>> expr = PostgresAlterTableRlsStatement(
+        ...     dialect, table_name="orders", mode=RlsConfigurationMode.ENABLE
+        ... )
+        >>> sql, params = expr.to_sql()  # doctest: +SKIP
+
+    Raises:
+        ValueError: if ``always`` is True with ``mode == DISABLE``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        mode: RlsConfigurationMode,
+        schema: Optional[str] = None,
+        always: bool = False,
+    ):
+        super().__init__(dialect)
+        self.table_name = table_name
+        self.schema = schema
+        self.mode = mode
+        self.always = always
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_alter_table_rls_statement"
+
+
+class PostgresForceRlsStatement(BaseExpression):
+    """PostgreSQL ``ALTER TABLE ... {FORCE|NO FORCE} ROW LEVEL SECURITY``.
+
+    ``FORCE ROW LEVEL SECURITY`` causes the table owner to also be subject to
+    row-level security policies (the default exempts the table owner unless
+    ``ENABLE ALWAYS``). ``NO FORCE`` reverts to the default behaviour. Both are
+    PostgreSQL 9.5+.
+
+    Attributes:
+        table_name: Name of the target table.
+        schema: Optional schema for the table.
+        force: When True emit ``FORCE``; when False emit ``NO FORCE``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        table_name: str,
+        force: bool = True,
+        schema: Optional[str] = None,
+    ):
+        super().__init__(dialect)
+        self.table_name = table_name
+        self.schema = schema
+        self.force = force
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_force_rls_statement"

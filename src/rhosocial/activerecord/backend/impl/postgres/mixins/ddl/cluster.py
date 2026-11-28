@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl.cluster import PostgresClusterStatement
+    from ...expression.statements.ddl.cluster import PostgresClusterStatement
 
 
 class PostgresClusterMixin:

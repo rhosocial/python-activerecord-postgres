@@ -29,7 +29,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -40,7 +42,7 @@ if TYPE_CHECKING:
 def hypopg_create_index(
     dialect: "SQLDialectBase",
     index_def: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Create a hypothetical index.
 
     Creates a hypothetical (virtual) index from an index definition string.
@@ -62,15 +64,15 @@ def hypopg_create_index(
         >>> hypopg_create_index(dialect, 'CREATE INDEX ON users USING btree (email)')
         >>> hypopg_create_index(dialect, 'CREATE INDEX ON orders USING btree (created_at)')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "hypopg_create_index",
-        index_def if isinstance(index_def, bases.BaseExpression) else core.Parameter(dialect, index_def),
+        index_def if isinstance(index_def, BaseExpression) else Parameter(dialect, index_def),
     )
 
 
 def hypopg_reset(
     dialect: "SQLDialectBase",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Remove all hypothetical indexes.
 
     Removes all hypothetical indexes that have been created in the current
@@ -86,12 +88,12 @@ def hypopg_reset(
     Example:
         >>> hypopg_reset(dialect)
     """
-    return core.FunctionCall(dialect, "hypopg_reset")
+    return FunctionCall(dialect, "hypopg_reset")
 
 
 def hypopg_show_indexes(
     dialect: "SQLDialectBase",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """List all hypothetical indexes.
 
     Returns information about all hypothetical indexes that have been created
@@ -110,13 +112,13 @@ def hypopg_show_indexes(
     Example:
         >>> hypopg_show_indexes(dialect)
     """
-    return core.FunctionCall(dialect, "hypopg")
+    return FunctionCall(dialect, "hypopg")
 
 
 def hypopg_estimate_size(
     dialect: "SQLDialectBase",
     index_id: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Estimate the disk size of a hypothetical index.
 
     Returns the estimated size in bytes that the hypothetical index would
@@ -136,9 +138,9 @@ def hypopg_estimate_size(
     Example:
         >>> hypopg_estimate_size(dialect, 12345)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "hypopg_relation_size",
-        index_id if isinstance(index_id, bases.BaseExpression) else core.Parameter(dialect, index_id),
+        index_id if isinstance(index_id, BaseExpression) else Parameter(dialect, index_id),
     )
 
 

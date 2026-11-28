@@ -29,7 +29,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, Union, List, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -41,7 +43,7 @@ def pglogical_create_node(
     dialect: "SQLDialectBase",
     node_name: str,
     dsn: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Create a pglogical node for logical replication.
 
     Creates a new pglogical node that can act as a provider and/or
@@ -60,10 +62,10 @@ def pglogical_create_node(
         >>> dialect = PostgresDialect()
         >>> pglogical_create_node(dialect, 'provider_node', 'host=127.0.0.1 dbname=mydb')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pglogical.create_node",
-        node_name if isinstance(node_name, bases.BaseExpression) else core.Parameter(dialect, node_name),
-        dsn if isinstance(dsn, bases.BaseExpression) else core.Parameter(dialect, dsn),
+        node_name if isinstance(node_name, BaseExpression) else Parameter(dialect, node_name),
+        dsn if isinstance(dsn, BaseExpression) else Parameter(dialect, dsn),
     )
 
 
@@ -72,9 +74,9 @@ def pglogical_create_node(
 def pglogical_create_publication(
     dialect: "SQLDialectBase",
     pub_name: str,
-    tables: Union[str, List[str], "bases.BaseExpression"],
-    replication_sets: Optional[Union[List[str], "bases.BaseExpression"]] = None,
-) -> core.FunctionCall:
+    tables: Union[str, List[str], "BaseExpression"],
+    replication_sets: Optional[Union[List[str], "BaseExpression"]] = None,
+) -> FunctionCall:
     """Create a pglogical publication for replication.
 
     Creates a new publication that makes specified tables available
@@ -98,14 +100,14 @@ def pglogical_create_publication(
         >>> pglogical_create_publication(dialect, 'my_pub', '{users, orders}', '{default}')
     """
     args = [
-        pub_name if isinstance(pub_name, bases.BaseExpression) else core.Parameter(dialect, pub_name),
-        tables if isinstance(tables, bases.BaseExpression) else core.Parameter(dialect, tables),
+        pub_name if isinstance(pub_name, BaseExpression) else Parameter(dialect, pub_name),
+        tables if isinstance(tables, BaseExpression) else Parameter(dialect, tables),
     ]
     if replication_sets is not None:
         args.append(
-            replication_sets if isinstance(replication_sets, bases.BaseExpression)
-            else core.Parameter(dialect, replication_sets))
-    return core.FunctionCall(dialect, "pglogical.create_publication", *args)
+            replication_sets if isinstance(replication_sets, BaseExpression)
+            else Parameter(dialect, replication_sets))
+    return FunctionCall(dialect, "pglogical.create_publication", *args)
 
 
 # ============== Subscription Management ==============
@@ -114,9 +116,9 @@ def pglogical_create_subscription(
     dialect: "SQLDialectBase",
     sub_name: str,
     provider_dsn: str,
-    publication_names: Union[str, List[str], "bases.BaseExpression"],
-    replication_sets: Optional[Union[List[str], "bases.BaseExpression"]] = None,
-) -> core.FunctionCall:
+    publication_names: Union[str, List[str], "BaseExpression"],
+    replication_sets: Optional[Union[List[str], "BaseExpression"]] = None,
+) -> FunctionCall:
     """Create a pglogical subscription to a publication.
 
     Creates a new subscription that replicates data from the specified
@@ -141,22 +143,22 @@ def pglogical_create_subscription(
         ...     dialect, 'my_sub', 'host=provider.db dbname=mydb', '{my_pub}', '{default}')
     """
     args = [
-        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
-        provider_dsn if isinstance(provider_dsn, bases.BaseExpression) else core.Parameter(dialect, provider_dsn),
-        publication_names if isinstance(publication_names, bases.BaseExpression)
-        else core.Parameter(dialect, publication_names),
+        sub_name if isinstance(sub_name, BaseExpression) else Parameter(dialect, sub_name),
+        provider_dsn if isinstance(provider_dsn, BaseExpression) else Parameter(dialect, provider_dsn),
+        publication_names if isinstance(publication_names, BaseExpression)
+        else Parameter(dialect, publication_names),
     ]
     if replication_sets is not None:
         args.append(
-            replication_sets if isinstance(replication_sets, bases.BaseExpression)
-            else core.Parameter(dialect, replication_sets))
-    return core.FunctionCall(dialect, "pglogical.create_subscription", *args)
+            replication_sets if isinstance(replication_sets, BaseExpression)
+            else Parameter(dialect, replication_sets))
+    return FunctionCall(dialect, "pglogical.create_subscription", *args)
 
 
 def pglogical_show_subscription_status(
     dialect: "SQLDialectBase",
     sub_name: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Show the status of pglogical subscriptions.
 
     Returns the current status of one or all subscriptions on the
@@ -176,11 +178,11 @@ def pglogical_show_subscription_status(
         >>> pglogical_show_subscription_status(dialect, 'my_sub')
     """
     if sub_name is not None:
-        return core.FunctionCall(
+        return FunctionCall(
             dialect, "pglogical.show_subscription_status",
-            sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
+            sub_name if isinstance(sub_name, BaseExpression) else Parameter(dialect, sub_name),
         )
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pglogical.show_subscription_status",
     )
 
@@ -189,7 +191,7 @@ def pglogical_alter_subscription_synchronize(
     dialect: "SQLDialectBase",
     sub_name: str,
     truncate: Optional[bool] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Synchronize a pglogical subscription.
 
     Starts the synchronization process for the specified subscription.
@@ -210,11 +212,11 @@ def pglogical_alter_subscription_synchronize(
         >>> pglogical_alter_subscription_synchronize(dialect, 'my_sub', truncate=True)
     """
     args = [
-        sub_name if isinstance(sub_name, bases.BaseExpression) else core.Parameter(dialect, sub_name),
+        sub_name if isinstance(sub_name, BaseExpression) else Parameter(dialect, sub_name),
     ]
     if truncate is not None:
-        args.append(truncate if isinstance(truncate, bases.BaseExpression) else core.Parameter(dialect, truncate))
-    return core.FunctionCall(
+        args.append(truncate if isinstance(truncate, BaseExpression) else Parameter(dialect, truncate))
+    return FunctionCall(
         dialect, "pglogical.alter_subscription_synchronize", *args,
     )
 

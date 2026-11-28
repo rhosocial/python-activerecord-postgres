@@ -9,14 +9,14 @@ from datetime import date, datetime, timezone
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import (
     DropTableStatement,
     PartitionClause,
 )
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresCreatePartitionStatement,
     PostgresPartitionTreeQueryStatement,
 )

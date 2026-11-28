@@ -38,12 +38,15 @@ group reduction, not a row-wise comparison of operands).
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core, functions as core_functions
+from rhosocial.activerecord.backend.expression import functions as core_functions
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 # The math node classes ride in the ``math`` submodule: the functions package
 # exports the aggregate and string classes at its top level but only the
 # factories for the math family. Importing the two classes this factory
 # constructs directly keeps the classed entry points explicit.
-from rhosocial.activerecord.backend.expression.functions.math import (
+from rhosocial.activerecord.backend.expression.functions import (
     RoundFunction,
     TruncateFunction,
 )
@@ -54,9 +57,9 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def round_(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
+    expr: "BaseExpression",
     precision: int = 0,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Create a ROUND node.
 
     Rounds a numeric value to the specified number of decimal places.
@@ -83,8 +86,8 @@ def round_(
     """
     precision_expr = (
         precision
-        if isinstance(precision, bases.BaseExpression)
-        else core.Parameter(dialect, precision)
+        if isinstance(precision, BaseExpression)
+        else Parameter(dialect, precision)
     )
     return RoundFunction.for_operand(
         dialect, type(expr), expr, precision_expr
@@ -93,9 +96,9 @@ def round_(
 
 def pow(
     dialect: "SQLDialectBase",
-    base: "bases.BaseExpression",
-    exponent: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    base: "BaseExpression",
+    exponent: "BaseExpression",
+) -> "BaseExpression":
     """Create a POWER node.
 
     Returns the value of base raised to the power of exponent. The factory
@@ -123,9 +126,9 @@ def pow(
 
 def power(
     dialect: "SQLDialectBase",
-    base: "bases.BaseExpression",
-    exponent: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    base: "BaseExpression",
+    exponent: "BaseExpression",
+) -> "BaseExpression":
     """Create a POWER node.
 
     Returns the value of base raised to the power of exponent.
@@ -152,8 +155,8 @@ def power(
 
 def sqrt(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    expr: "BaseExpression",
+) -> "BaseExpression":
     """Create a SQRT node.
 
     Returns the square root of the argument.
@@ -179,9 +182,9 @@ def sqrt(
 
 def mod(
     dialect: "SQLDialectBase",
-    dividend: "bases.BaseExpression",
-    divisor: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    dividend: "BaseExpression",
+    divisor: "BaseExpression",
+) -> "BaseExpression":
     """Create a MOD node.
 
     Returns the remainder of dividend divided by divisor.
@@ -208,8 +211,8 @@ def mod(
 
 def ceil(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    expr: "BaseExpression",
+) -> "BaseExpression":
     """Create a CEIL node.
 
     Returns the smallest integer greater than or equal to the argument.
@@ -236,8 +239,8 @@ def ceil(
 
 def floor(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    expr: "BaseExpression",
+) -> "BaseExpression":
     """Create a FLOOR node.
 
     Returns the largest integer less than or equal to the argument.
@@ -264,9 +267,9 @@ def floor(
 
 def trunc(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
+    expr: "BaseExpression",
     precision: int = 0,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Create a TRUNC node.
 
     Returns the value truncated to the specified number of decimal places.
@@ -296,8 +299,8 @@ def trunc(
     """
     precision_expr = (
         precision
-        if isinstance(precision, bases.BaseExpression)
-        else core.Parameter(dialect, precision)
+        if isinstance(precision, BaseExpression)
+        else Parameter(dialect, precision)
     )
     return TruncateFunction.for_operand(
         dialect, type(expr), expr, precision_expr
@@ -306,10 +309,10 @@ def trunc(
 
 def max_(
     dialect: "SQLDialectBase",
-    expr1: "bases.BaseExpression",
-    expr2: "bases.BaseExpression",
-    *more: "bases.BaseExpression",
-) -> "core.FunctionCall":
+    expr1: "BaseExpression",
+    expr2: "BaseExpression",
+    *more: "BaseExpression",
+) -> "FunctionCall":
     """Create a GREATEST function call.
 
     Returns the maximum value among the arguments.
@@ -340,15 +343,15 @@ def max_(
     exprs = [expr1, expr2]
     for m in more:
         exprs.append(m)
-    return core.FunctionCall(dialect, "GREATEST", *exprs)
+    return FunctionCall(dialect, "GREATEST", *exprs)
 
 
 def min_(
     dialect: "SQLDialectBase",
-    expr1: "bases.BaseExpression",
-    expr2: "bases.BaseExpression",
-    *more: "bases.BaseExpression",
-) -> "core.FunctionCall":
+    expr1: "BaseExpression",
+    expr2: "BaseExpression",
+    *more: "BaseExpression",
+) -> "FunctionCall":
     """Create a LEAST function call.
 
     Returns the minimum value among the arguments.
@@ -376,13 +379,13 @@ def min_(
     exprs = [expr1, expr2]
     for m in more:
         exprs.append(m)
-    return core.FunctionCall(dialect, "LEAST", *exprs)
+    return FunctionCall(dialect, "LEAST", *exprs)
 
 
 def avg(
     dialect: "SQLDialectBase",
-    expr: "bases.BaseExpression",
-) -> "bases.BaseExpression":
+    expr: "BaseExpression",
+) -> "BaseExpression":
     """Create an AVG aggregate node.
 
     Returns the average value of all non-NULL values in a group.

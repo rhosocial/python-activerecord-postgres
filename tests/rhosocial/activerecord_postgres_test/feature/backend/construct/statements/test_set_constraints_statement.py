@@ -9,7 +9,7 @@ PostgreSQL parses it as.
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.transaction import (
     PostgresSetConstraintsStatement,
 )
 

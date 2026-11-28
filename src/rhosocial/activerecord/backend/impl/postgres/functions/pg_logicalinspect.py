@@ -7,7 +7,9 @@ Expression nodes.
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -15,19 +17,19 @@ if TYPE_CHECKING:  # pragma: no cover
 
 def _expr(dialect: "SQLDialectBase", value):
     """Expressions pass through; other values become bound parameters."""
-    if isinstance(value, bases.BaseExpression):
+    if isinstance(value, BaseExpression):
         return value
-    return core.Parameter(dialect, value)
+    return Parameter(dialect, value)
 
 
-def pg_get_logical_snapshot_meta(dialect: "SQLDialectBase", filename) -> core.FunctionCall:
+def pg_get_logical_snapshot_meta(dialect: "SQLDialectBase", filename) -> FunctionCall:
     """``pg_get_logical_snapshot_meta(filename)``."""
-    return core.FunctionCall(dialect, "pg_get_logical_snapshot_meta", _expr(dialect, filename))
+    return FunctionCall(dialect, "pg_get_logical_snapshot_meta", _expr(dialect, filename))
 
 
-def pg_get_logical_snapshot_info(dialect: "SQLDialectBase", filename) -> core.FunctionCall:
+def pg_get_logical_snapshot_info(dialect: "SQLDialectBase", filename) -> FunctionCall:
     """``pg_get_logical_snapshot_info(filename)``."""
-    return core.FunctionCall(dialect, "pg_get_logical_snapshot_info", _expr(dialect, filename))
+    return FunctionCall(dialect, "pg_get_logical_snapshot_info", _expr(dialect, filename))
 
 
 __all__ = ["pg_get_logical_snapshot_meta", "pg_get_logical_snapshot_info"]

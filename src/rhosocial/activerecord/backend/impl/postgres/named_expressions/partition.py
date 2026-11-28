@@ -19,7 +19,7 @@ from datetime import date
 from typing import Optional, Tuple
 
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresCreatePartitionStatement,
 )
 

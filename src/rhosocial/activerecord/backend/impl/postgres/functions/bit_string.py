@@ -28,7 +28,9 @@ Supported functions:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import (
     BinaryExpression,
     ConcatenationOperation,
@@ -43,8 +45,8 @@ if TYPE_CHECKING:
 
 def bit_concat(
     dialect: "SQLDialectBase",
-    bit1: bases.BaseExpression,
-    bit2: bases.BaseExpression,
+    bit1: BaseExpression,
+    bit2: BaseExpression,
 ) -> ConcatenationOperation:
     """Generate SQL for bit string concatenation.
 
@@ -58,15 +60,15 @@ def bit_concat(
     """
     return ConcatenationOperation(
         dialect,
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
+        bit1 if isinstance(bit1, BaseExpression) else Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, BaseExpression) else Parameter(dialect, bit2),
     )
 
 
 def bit_and(
     dialect: "SQLDialectBase",
-    bit1: bases.BaseExpression,
-    bit2: bases.BaseExpression,
+    bit1: BaseExpression,
+    bit2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL for bitwise AND operation.
 
@@ -80,15 +82,15 @@ def bit_and(
     """
     return BinaryExpression(
         dialect, "&",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
+        bit1 if isinstance(bit1, BaseExpression) else Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, BaseExpression) else Parameter(dialect, bit2),
     )
 
 
 def bit_or(
     dialect: "SQLDialectBase",
-    bit1: bases.BaseExpression,
-    bit2: bases.BaseExpression,
+    bit1: BaseExpression,
+    bit2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL for bitwise OR operation.
 
@@ -102,15 +104,15 @@ def bit_or(
     """
     return BinaryExpression(
         dialect, "|",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
+        bit1 if isinstance(bit1, BaseExpression) else Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, BaseExpression) else Parameter(dialect, bit2),
     )
 
 
 def bit_xor(
     dialect: "SQLDialectBase",
-    bit1: bases.BaseExpression,
-    bit2: bases.BaseExpression,
+    bit1: BaseExpression,
+    bit2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL for bitwise XOR operation.
 
@@ -124,14 +126,14 @@ def bit_xor(
     """
     return BinaryExpression(
         dialect, "#",
-        bit1 if isinstance(bit1, bases.BaseExpression) else core.Parameter(dialect, bit1),
-        bit2 if isinstance(bit2, bases.BaseExpression) else core.Parameter(dialect, bit2),
+        bit1 if isinstance(bit1, BaseExpression) else Parameter(dialect, bit1),
+        bit2 if isinstance(bit2, BaseExpression) else Parameter(dialect, bit2),
     )
 
 
 def bit_not(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
+    bit: BaseExpression,
 ) -> UnaryExpression:
     """Generate SQL for bitwise NOT operation.
 
@@ -144,14 +146,14 @@ def bit_not(
     """
     return UnaryExpression(
         dialect, "~",
-        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
+        bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit),
         pos="before",
     )
 
 
 def bit_shift_left(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
+    bit: BaseExpression,
     n: int,
 ) -> BinaryExpression:
     """Generate SQL for bitwise left shift operation.
@@ -166,14 +168,14 @@ def bit_shift_left(
     """
     return BinaryExpression(
         dialect, "<<",
-        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
+        bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit),
+        n if isinstance(n, BaseExpression) else Parameter(dialect, n),
     )
 
 
 def bit_shift_right(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
+    bit: BaseExpression,
     n: int,
 ) -> BinaryExpression:
     """Generate SQL for bitwise right shift operation.
@@ -188,8 +190,8 @@ def bit_shift_right(
     """
     return BinaryExpression(
         dialect, ">>",
-        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
+        bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit),
+        n if isinstance(n, BaseExpression) else Parameter(dialect, n),
     )
 
 
@@ -197,8 +199,8 @@ def bit_shift_right(
 
 def bit_length(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
-) -> core.FunctionCall:
+    bit: BaseExpression,
+) -> FunctionCall:
     """Generate SQL for length function on bit string.
 
     Note: PostgreSQL uses length() for bit strings, not bit_length().
@@ -210,14 +212,14 @@ def bit_length(
     Returns:
         FunctionCall for length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
-    return core.FunctionCall(dialect, "length", bit_expr)
+    bit_expr = bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit)
+    return FunctionCall(dialect, "length", bit_expr)
 
 
 def bit_length_func(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
-) -> core.FunctionCall:
+    bit: BaseExpression,
+) -> FunctionCall:
     """Generate SQL for bit_length function on bit string.
 
     Args:
@@ -227,14 +229,14 @@ def bit_length_func(
     Returns:
         FunctionCall for bit_length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
-    return core.FunctionCall(dialect, "bit_length", bit_expr)
+    bit_expr = bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit)
+    return FunctionCall(dialect, "bit_length", bit_expr)
 
 
 def bit_octet_length(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
-) -> core.FunctionCall:
+    bit: BaseExpression,
+) -> FunctionCall:
     """Generate SQL for octet_length function on bit string.
 
     Args:
@@ -244,15 +246,15 @@ def bit_octet_length(
     Returns:
         FunctionCall for octet_length(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
-    return core.FunctionCall(dialect, "octet_length", bit_expr)
+    bit_expr = bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit)
+    return FunctionCall(dialect, "octet_length", bit_expr)
 
 
 def bit_get_bit(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
+    bit: BaseExpression,
     n: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL for get_bit function.
 
     Args:
@@ -263,19 +265,19 @@ def bit_get_bit(
     Returns:
         FunctionCall for get_bit(bit, n)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "get_bit",
-        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
+        bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit),
+        n if isinstance(n, BaseExpression) else Parameter(dialect, n),
     )
 
 
 def bit_set_bit(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
+    bit: BaseExpression,
     n: int,
     value: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL for set_bit function.
 
     Args:
@@ -287,18 +289,18 @@ def bit_set_bit(
     Returns:
         FunctionCall for set_bit(bit, n, value)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "set_bit",
-        bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit),
-        n if isinstance(n, bases.BaseExpression) else core.Parameter(dialect, n),
-        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
+        bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit),
+        n if isinstance(n, BaseExpression) else Parameter(dialect, n),
+        value if isinstance(value, BaseExpression) else Parameter(dialect, value),
     )
 
 
 def bit_count(
     dialect: "SQLDialectBase",
-    bit: bases.BaseExpression,
-) -> core.FunctionCall:
+    bit: BaseExpression,
+) -> FunctionCall:
     """Generate SQL for bit_count function (PostgreSQL 14+).
 
     Args:
@@ -308,8 +310,8 @@ def bit_count(
     Returns:
         FunctionCall for bit_count(bit)
     """
-    bit_expr = bit if isinstance(bit, bases.BaseExpression) else core.Parameter(dialect, bit)
-    return core.FunctionCall(dialect, "bit_count", bit_expr)
+    bit_expr = bit if isinstance(bit, BaseExpression) else Parameter(dialect, bit)
+    return FunctionCall(dialect, "bit_count", bit_expr)
 
 
 __all__ = [

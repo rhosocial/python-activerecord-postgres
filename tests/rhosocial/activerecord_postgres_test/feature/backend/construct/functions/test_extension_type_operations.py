@@ -39,7 +39,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresMacAddrType,
     PostgresTsTzRangeType,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.values import (
+from rhosocial.activerecord.backend.impl.postgres.expression.value_types.values import (
     PostgresNetworkValue,
     operations_class_for,
     value_expression_for,

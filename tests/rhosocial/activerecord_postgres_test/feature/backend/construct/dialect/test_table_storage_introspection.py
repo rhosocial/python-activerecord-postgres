@@ -16,9 +16,11 @@ from types import SimpleNamespace
 
 from rhosocial.activerecord.backend.expression.introspection import TableListQueryStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
+from rhosocial.activerecord.backend.impl.postgres.expression.functions.introspection import (
     PostgresIndexesSizeFunction,
     PostgresRelationSizeFunction,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
     PostgresTableStorageQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.introspection.introspector import (

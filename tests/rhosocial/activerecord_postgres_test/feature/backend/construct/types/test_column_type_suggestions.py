@@ -321,7 +321,7 @@ def test_the_complex_families_are_named_by_this_backend(dialect):
     from rhosocial.activerecord.backend.impl.postgres.expression import column_types as pg
 
     for column_class in dialect.suggest_extra_column_types().table.values():
-        assert column_class.__module__ == pg.__name__
+        assert column_class.__module__ == pg.__name__ + ".column_types"
         assert column_class.__name__.startswith("Postgres")
 
 

@@ -35,7 +35,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -47,7 +49,7 @@ def st_rast_from_hexwkb(
     dialect: "SQLDialectBase",
     raster_data: str,
     srid: int = 4326,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for constructing a raster from HexWKB data with SRID.
 
     Constructs a raster value from hexadecimal Well-Known Binary (HexWKB) data
@@ -73,23 +75,23 @@ def st_rast_from_hexwkb(
         >>> st_rast_from_hexwkb(dialect, raster_data)
         # Generates: ST_SetSRID(ST_RastFromHexWKB(raster_data), 4326)
     """
-    inner = core.FunctionCall(
+    inner = FunctionCall(
         dialect, "ST_RastFromHexWKB",
-        raster_data if isinstance(raster_data, bases.BaseExpression) else core.Parameter(dialect, raster_data),
+        raster_data if isinstance(raster_data, BaseExpression) else Parameter(dialect, raster_data),
     )
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_SetSRID",
         inner,
-        srid if isinstance(srid, bases.BaseExpression) else core.Parameter(dialect, srid),
+        srid if isinstance(srid, BaseExpression) else Parameter(dialect, srid),
     )
 
 
 def st_value(
     dialect: "SQLDialectBase",
-    raster_expr: bases.BaseExpression,
+    raster_expr: BaseExpression,
     x: int,
     y: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for the ST_Value function.
 
     Returns the value of a raster pixel at the specified column (x) and
@@ -111,18 +113,18 @@ def st_value(
         >>> st_value(dialect, raster_column, 1, 1)
         # Generates: ST_Value(raster_column, 1, 1)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Value",
-        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Parameter(dialect, raster_expr),
-        x if isinstance(x, bases.BaseExpression) else core.Parameter(dialect, x),
-        y if isinstance(y, bases.BaseExpression) else core.Parameter(dialect, y),
+        raster_expr if isinstance(raster_expr, BaseExpression) else Parameter(dialect, raster_expr),
+        x if isinstance(x, BaseExpression) else Parameter(dialect, x),
+        y if isinstance(y, BaseExpression) else Parameter(dialect, y),
     )
 
 
 def st_summary(
     dialect: "SQLDialectBase",
-    raster_expr: bases.BaseExpression,
-) -> core.FunctionCall:
+    raster_expr: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for the ST_Summary function.
 
     Returns a text summary of the raster, including dimensions, pixel type,
@@ -142,9 +144,9 @@ def st_summary(
         >>> st_summary(dialect, raster_column)
         # Generates: ST_Summary(raster_column)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "ST_Summary",
-        raster_expr if isinstance(raster_expr, bases.BaseExpression) else core.Parameter(dialect, raster_expr),
+        raster_expr if isinstance(raster_expr, BaseExpression) else Parameter(dialect, raster_expr),
     )
 
 

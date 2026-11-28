@@ -2,7 +2,7 @@
 """pg_stat_statements queries are expression nodes from factories."""
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions import (
     pg_stat_statements_reset,
     query_stats_statement,
@@ -29,7 +29,7 @@ class TestPgStatStatementsMixin:
     def test_reset_stats_statement(self):
         d = PostgresDialect((14, 0, 0))
         result = pg_stat_statements_reset(d)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, _ = result.to_sql()
         assert "pg_stat_statements_reset" in sql.lower()
 

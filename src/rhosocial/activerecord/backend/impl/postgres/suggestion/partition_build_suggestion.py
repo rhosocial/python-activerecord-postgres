@@ -33,7 +33,7 @@ class PostgresPartitionBuildSuggestionMixin(PostgresPartitionSuggestionBase):
         single operation returned here. Strategies outside RANGE/LIST/HASH and
         plans with no key columns have no PostgreSQL mechanism.
         """
-        from ....expression.core import Column
+        from rhosocial.activerecord.backend.expression.column_types import Column
         from ....expression.statements import PartitionClause
 
         word = self._suggestion_strategy(strategy, plan)

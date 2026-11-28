@@ -20,13 +20,15 @@ automatically selects the appropriate function based on server version.
 import uuid as _uuid
 from typing import Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def uuid_generate_v1(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_generate_v1(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Generate a version 1 (time-based) UUID.
 
@@ -40,10 +42,10 @@ def uuid_generate_v1(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_generate_v1()', ())
     """
-    return core.FunctionCall(dialect, "uuid_generate_v1")
+    return FunctionCall(dialect, "uuid_generate_v1")
 
 
-def uuid_generate_v1mc(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_generate_v1mc(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Generate a version 1 UUID using a random multicast MAC address.
 
@@ -57,14 +59,14 @@ def uuid_generate_v1mc(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_generate_v1mc()', ())
     """
-    return core.FunctionCall(dialect, "uuid_generate_v1mc")
+    return FunctionCall(dialect, "uuid_generate_v1mc")
 
 
 def uuid_generate_v3(
     dialect: "SQLDialectBase",
-    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
+    namespace: Union[_uuid.UUID, str, "BaseExpression"],
     name: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """
     Generate a version 3 (MD5 hash-based) UUID in the given namespace.
 
@@ -84,19 +86,19 @@ def uuid_generate_v3(
         ('uuid_generate_v3(%s, %s)', ('dns', 'example.com'))
     """
     ns_expr = (
-        namespace if isinstance(namespace, bases.BaseExpression)
-        else core.Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
-        else core.Parameter(dialect, namespace)
+        namespace if isinstance(namespace, BaseExpression)
+        else Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else Parameter(dialect, namespace)
     )
     name_expr = (
-        name if isinstance(name, bases.BaseExpression)
-        else core.Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
-        else core.Parameter(dialect, name)
+        name if isinstance(name, BaseExpression)
+        else Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else Parameter(dialect, name)
     )
-    return core.FunctionCall(dialect, "uuid_generate_v3", ns_expr, name_expr)
+    return FunctionCall(dialect, "uuid_generate_v3", ns_expr, name_expr)
 
 
-def uuid_generate_v4(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_generate_v4(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Generate a version 4 (random) UUID.
 
@@ -110,14 +112,14 @@ def uuid_generate_v4(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_generate_v4()', ())
     """
-    return core.FunctionCall(dialect, "uuid_generate_v4")
+    return FunctionCall(dialect, "uuid_generate_v4")
 
 
 def uuid_generate_v5(
     dialect: "SQLDialectBase",
-    namespace: Union[_uuid.UUID, str, "bases.BaseExpression"],
+    namespace: Union[_uuid.UUID, str, "BaseExpression"],
     name: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """
     Generate a version 5 (SHA-1 hash-based) UUID in the given namespace.
 
@@ -137,19 +139,19 @@ def uuid_generate_v5(
         ('uuid_generate_v5(%s, %s)', ('dns', 'example.com'))
     """
     ns_expr = (
-        namespace if isinstance(namespace, bases.BaseExpression)
-        else core.Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
-        else core.Parameter(dialect, namespace)
+        namespace if isinstance(namespace, BaseExpression)
+        else Parameter(dialect, str(namespace)) if isinstance(namespace, _uuid.UUID)
+        else Parameter(dialect, namespace)
     )
     name_expr = (
-        name if isinstance(name, bases.BaseExpression)
-        else core.Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
-        else core.Parameter(dialect, name)
+        name if isinstance(name, BaseExpression)
+        else Parameter(dialect, str(name)) if isinstance(name, _uuid.UUID)
+        else Parameter(dialect, name)
     )
-    return core.FunctionCall(dialect, "uuid_generate_v5", ns_expr, name_expr)
+    return FunctionCall(dialect, "uuid_generate_v5", ns_expr, name_expr)
 
 
-def uuid_ns_dns(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_ns_dns(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the DNS namespace UUID constant for use with uuid_generate_v3/v5.
 
@@ -163,10 +165,10 @@ def uuid_ns_dns(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_ns_dns()', ())
     """
-    return core.FunctionCall(dialect, "uuid_ns_dns")
+    return FunctionCall(dialect, "uuid_ns_dns")
 
 
-def uuid_ns_url(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_ns_url(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the URL namespace UUID constant for use with uuid_generate_v3/v5.
 
@@ -175,10 +177,10 @@ def uuid_ns_url(dialect: "SQLDialectBase") -> core.FunctionCall:
     Returns:
         FunctionCall: SQL expression for uuid_ns_url()
     """
-    return core.FunctionCall(dialect, "uuid_ns_url")
+    return FunctionCall(dialect, "uuid_ns_url")
 
 
-def uuid_ns_oid(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_ns_oid(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the OID namespace UUID constant for use with uuid_generate_v3/v5.
 
@@ -187,10 +189,10 @@ def uuid_ns_oid(dialect: "SQLDialectBase") -> core.FunctionCall:
     Returns:
         FunctionCall: SQL expression for uuid_ns_oid()
     """
-    return core.FunctionCall(dialect, "uuid_ns_oid")
+    return FunctionCall(dialect, "uuid_ns_oid")
 
 
-def uuid_ns_x500(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_ns_x500(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the X.500 namespace UUID constant for use with uuid_generate_v3/v5.
 
@@ -199,10 +201,10 @@ def uuid_ns_x500(dialect: "SQLDialectBase") -> core.FunctionCall:
     Returns:
         FunctionCall: SQL expression for uuid_ns_x500()
     """
-    return core.FunctionCall(dialect, "uuid_ns_x500")
+    return FunctionCall(dialect, "uuid_ns_x500")
 
 
-def uuid_nil(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_nil(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the nil UUID (all zeros).
 
@@ -214,10 +216,10 @@ def uuid_nil(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_nil()', ())
     """
-    return core.FunctionCall(dialect, "uuid_nil")
+    return FunctionCall(dialect, "uuid_nil")
 
 
-def uuid_max(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_max(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Return the maximum UUID (all ones except the first byte).
 
@@ -229,10 +231,10 @@ def uuid_max(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('uuid_max()', ())
     """
-    return core.FunctionCall(dialect, "uuid_max")
+    return FunctionCall(dialect, "uuid_max")
 
 
-def gen_random_uuid(dialect: "SQLDialectBase") -> core.FunctionCall:
+def gen_random_uuid(dialect: "SQLDialectBase") -> FunctionCall:
     """
     Generate a version 4 (random) UUID.
 
@@ -249,10 +251,10 @@ def gen_random_uuid(dialect: "SQLDialectBase") -> core.FunctionCall:
         >>> func.to_sql()
         ('gen_random_uuid()', ())
     """
-    return core.FunctionCall(dialect, "gen_random_uuid")
+    return FunctionCall(dialect, "gen_random_uuid")
 
 
-def uuid_default_generator(dialect: "SQLDialectBase") -> core.FunctionCall:
+def uuid_default_generator(dialect: "SQLDialectBase") -> FunctionCall:
     """Return the appropriate UUID generation function based on dialect version.
 
     This is the recommended way to obtain a UUID default value generator

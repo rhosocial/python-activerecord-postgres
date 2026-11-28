@@ -8,7 +8,7 @@ which provide advanced query planning statistics for better performance.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl import PostgresCreateStatisticsStatement, PostgresDropStatisticsStatement
+    from ...expression.statements.ddl import PostgresCreateStatisticsStatement, PostgresDropStatisticsStatement
 
 
 @runtime_checkable

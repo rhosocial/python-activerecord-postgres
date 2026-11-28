@@ -52,7 +52,7 @@ if __name__ == "__main__":
     )
     from rhosocial.activerecord.backend.expression.objects import Table
     from rhosocial.activerecord.backend.expression.statements import ValuesSource
-    from rhosocial.activerecord.backend.expression.core import Parameter
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
     from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
     from rhosocial.activerecord.backend.expression.predicates import ComparisonPredicate
     from rhosocial.activerecord.backend.options import ExecutionOptions

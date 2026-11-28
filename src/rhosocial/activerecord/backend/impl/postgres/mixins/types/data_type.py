@@ -15,7 +15,7 @@ Methods retained in this mixin:
 
 from typing import Tuple, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression.statements.ddl_type import CreateTypeStatement
+from rhosocial.activerecord.backend.expression.statements import CreateTypeStatement
 
 
 class PostgresDataTypeMixin:

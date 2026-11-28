@@ -11,7 +11,7 @@ self-describing on the artifact wire.
 
 from typing import TYPE_CHECKING, Sequence, Union
 
-from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
+from rhosocial.activerecord.backend.impl.postgres.expression.query_parts import (
     CorrectionKind,
     HintGroup,
     HintPayload,
@@ -20,7 +20,7 @@ from rhosocial.activerecord.backend.impl.postgres.expression.hint import (
     hint_target,
     make_hint_payload,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.load_library import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
     PostgresLoadLibraryExpression,
 )
 

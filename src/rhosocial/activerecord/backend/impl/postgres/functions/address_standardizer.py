@@ -36,7 +36,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -46,8 +48,8 @@ if TYPE_CHECKING:
 
 def parse_address(
     dialect: "SQLDialectBase",
-    address: bases.BaseExpression,
-) -> core.FunctionCall:
+    address: BaseExpression,
+) -> FunctionCall:
     """Parse an address string into its component parts.
 
     Takes a single-line address string and returns a normalized_address
@@ -68,9 +70,9 @@ def parse_address(
         >>> parse_address(dialect, '123 Main St, Springfield, IL 62701')
         >>> parse_address(dialect, Parameter(dialect, '456 Oak Avenue'))
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "parse_address",
-        address if isinstance(address, bases.BaseExpression) else core.Parameter(dialect, address),
+        address if isinstance(address, BaseExpression) else Parameter(dialect, address),
     )
 
 
@@ -79,8 +81,8 @@ def standardize_address(
     lextab: str,
     gaztab: str,
     rultab: str,
-    address: bases.BaseExpression,
-) -> core.FunctionCall:
+    address: BaseExpression,
+) -> FunctionCall:
     """Standardize an address string using lookup tables.
 
     Takes a single-line address string and returns a standardized
@@ -109,12 +111,12 @@ def standardize_address(
         >>> standardize_address(dialect, 'pagc_lex', 'pagc_gaz', 'pagc_rules',
         ...                      '123 Main St, Springfield, IL 62701')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "standardize_address",
-        lextab if isinstance(lextab, bases.BaseExpression) else core.Parameter(dialect, lextab),
-        gaztab if isinstance(gaztab, bases.BaseExpression) else core.Parameter(dialect, gaztab),
-        rultab if isinstance(rultab, bases.BaseExpression) else core.Parameter(dialect, rultab),
-        address if isinstance(address, bases.BaseExpression) else core.Parameter(dialect, address),
+        lextab if isinstance(lextab, BaseExpression) else Parameter(dialect, lextab),
+        gaztab if isinstance(gaztab, BaseExpression) else Parameter(dialect, gaztab),
+        rultab if isinstance(rultab, BaseExpression) else Parameter(dialect, rultab),
+        address if isinstance(address, BaseExpression) else Parameter(dialect, address),
     )
 
 

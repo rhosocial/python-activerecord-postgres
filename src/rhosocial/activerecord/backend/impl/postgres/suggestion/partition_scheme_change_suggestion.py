@@ -89,7 +89,7 @@ class PostgresPartitionSchemeChangeSuggestionMixin:
         if not columns:
             return _UNUSABLE
 
-        from ....expression.core import Column
+        from rhosocial.activerecord.backend.expression.column_types import Column
         from ....expression.statements import PartitionClause
 
         strategy = PartitionClause(self, word, [Column(self, name) for name in columns])

@@ -55,7 +55,9 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Table  # noqa: F811
-    from rhosocial.activerecord.backend.expression.core import FunctionCall, Parameter, Subquery
+    from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+    from rhosocial.activerecord.backend.expression.sources.subquery import Subquery
     from rhosocial.activerecord.backend.expression.functions import RoundFunction
     from rhosocial.activerecord.backend.expression.operators import BinaryExpression
     from rhosocial.activerecord.backend.expression.query_parts import OrderByClause

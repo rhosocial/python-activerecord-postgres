@@ -9,7 +9,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.tablefunc import (
     crosstab,
     connectby,
@@ -24,7 +24,7 @@ class TestTablefuncMixin:
         """crosstab should return FunctionCall with crosstab."""
         dialect = PostgresDialect((14, 0, 0))
         result = crosstab(dialect, "SELECT row_name, cat, value FROM table")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "crosstab" in sql.lower()
 
@@ -36,7 +36,7 @@ class TestTablefuncMixin:
             "SELECT row_name, cat, value FROM table",
             "SELECT DISTINCT cat FROM table ORDER BY 1"
         )
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "crosstab" in sql.lower()
 
@@ -44,7 +44,7 @@ class TestTablefuncMixin:
         """connectby should return FunctionCall with connectby."""
         dialect = PostgresDialect((14, 0, 0))
         result = connectby(dialect, 'tree', 'id', 'parent_id', '1')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "connectby" in sql.lower()
 
@@ -52,7 +52,7 @@ class TestTablefuncMixin:
         """connectby with max_depth should return FunctionCall with connectby."""
         dialect = PostgresDialect((14, 0, 0))
         result = connectby(dialect, 'tree', 'id', 'parent_id', '1', max_depth=3)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "connectby" in sql.lower()
 
@@ -60,6 +60,6 @@ class TestTablefuncMixin:
         """normal_rand should return FunctionCall with normal_rand."""
         dialect = PostgresDialect((14, 0, 0))
         result = normal_rand(dialect, 100, 0, 1)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "normal_rand" in sql.lower()

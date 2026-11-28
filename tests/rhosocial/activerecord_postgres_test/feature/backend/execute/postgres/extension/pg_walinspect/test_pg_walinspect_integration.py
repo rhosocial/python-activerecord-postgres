@@ -26,7 +26,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
-from rhosocial.activerecord.backend.expression.core import FunctionCall
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_walinspect import (
     pg_get_wal_records_info,
     pg_get_wal_blocks_info,

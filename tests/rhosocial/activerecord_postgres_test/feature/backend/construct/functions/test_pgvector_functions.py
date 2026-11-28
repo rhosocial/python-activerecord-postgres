@@ -21,7 +21,7 @@ from rhosocial.activerecord.backend.expression.operators import (
     ArithmeticOperation,
     BinaryExpression,
 )
-from rhosocial.activerecord.backend.expression import bases
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
 
 
 class TestPgvectorDistanceFunctions:
@@ -94,7 +94,7 @@ class TestPgvectorLiteralFunction:
     def test_vector_literal_with_values(self, postgres_dialect: PostgresDialect):
         """Test constructing vector literal from values."""
         result = vector_literal(postgres_dialect, [1.0, 2.0, 3.0])
-        assert isinstance(result, bases.BaseExpression)
+        assert isinstance(result, BaseExpression)
         sql, params = result.to_sql()
         assert "VECTOR(3)" in sql
 
@@ -107,13 +107,13 @@ class TestPgvectorLiteralFunction:
     def test_vector_literal_returns_expression(self, postgres_dialect: PostgresDialect):
         """Test that vector_literal returns a BaseExpression."""
         result = vector_literal(postgres_dialect, [1.0, 2.0])
-        assert isinstance(result, bases.BaseExpression)
+        assert isinstance(result, BaseExpression)
 
     def test_all_functions_return_expression_objects(self, postgres_dialect: PostgresDialect):
         """Test that all pgvector functions return Expression objects (not strings)."""
         vec = [1.0, 2.0, 3.0]
-        assert isinstance(vector_l2_distance(postgres_dialect, "col", vec), bases.BaseExpression)
-        assert isinstance(vector_cosine_distance(postgres_dialect, "col", vec), bases.BaseExpression)
-        assert isinstance(vector_inner_product(postgres_dialect, "col", vec), bases.BaseExpression)
-        assert isinstance(vector_cosine_similarity(postgres_dialect, "col", vec), bases.BaseExpression)
-        assert isinstance(vector_literal(postgres_dialect, vec), bases.BaseExpression)
+        assert isinstance(vector_l2_distance(postgres_dialect, "col", vec), BaseExpression)
+        assert isinstance(vector_cosine_distance(postgres_dialect, "col", vec), BaseExpression)
+        assert isinstance(vector_inner_product(postgres_dialect, "col", vec), BaseExpression)
+        assert isinstance(vector_cosine_similarity(postgres_dialect, "col", vec), BaseExpression)
+        assert isinstance(vector_literal(postgres_dialect, vec), BaseExpression)

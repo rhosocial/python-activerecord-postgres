@@ -8,7 +8,7 @@ defines the interface for PostgreSQL's native CLUSTER command.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.cluster import PostgresClusterStatement
+    from ...expression.statements.ddl.cluster import PostgresClusterStatement
 
 
 @runtime_checkable

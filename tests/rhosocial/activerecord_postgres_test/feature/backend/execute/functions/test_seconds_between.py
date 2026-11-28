@@ -15,7 +15,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
     seconds_between,
 )
-from rhosocial.activerecord.backend.expression.datetime import SecondsBetweenExpression
+from rhosocial.activerecord.backend.expression.functions.datetime import SecondsBetweenExpression
 from rhosocial.activerecord.backend.expression.value_types import NumericValue
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType

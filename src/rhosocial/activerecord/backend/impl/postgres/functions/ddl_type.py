@@ -3,7 +3,7 @@
 
 from typing import Optional, Sequence
 
-from ..expression.ddl import (
+from ..expression.statements.ddl import (
     PostgresCreateEnumTypeExpression,
     PostgresDropTypeNameExpression,
 )

@@ -29,7 +29,9 @@ Supported functions:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
@@ -40,8 +42,8 @@ if TYPE_CHECKING:
 
 def geometry_distance(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL distance operator expression.
 
@@ -57,15 +59,15 @@ def geometry_distance(
     """
     return BinaryExpression(
         dialect, "<->",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_contains(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL contains operator expression.
 
@@ -81,15 +83,15 @@ def geometry_contains(
     """
     return BinaryExpression(
         dialect, "@>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_contained_by(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL contained by operator expression.
 
@@ -105,15 +107,15 @@ def geometry_contained_by(
     """
     return BinaryExpression(
         dialect, "<@",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_overlaps(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL overlaps operator expression.
 
@@ -129,15 +131,15 @@ def geometry_overlaps(
     """
     return BinaryExpression(
         dialect, "&&",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_strictly_left(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL strictly left operator expression.
 
@@ -153,15 +155,15 @@ def geometry_strictly_left(
     """
     return BinaryExpression(
         dialect, "<<",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_strictly_right(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL strictly right operator expression.
 
@@ -177,15 +179,15 @@ def geometry_strictly_right(
     """
     return BinaryExpression(
         dialect, ">>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_not_extend_right(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL does not extend to the right operator.
 
@@ -201,15 +203,15 @@ def geometry_not_extend_right(
     """
     return BinaryExpression(
         dialect, "&<",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
 def geometry_not_extend_left(
     dialect: "SQLDialectBase",
-    geom1: bases.BaseExpression,
-    geom2: bases.BaseExpression,
+    geom1: BaseExpression,
+    geom2: BaseExpression,
 ) -> BinaryExpression:
     """Generate PostgreSQL does not extend to the left operator.
 
@@ -225,8 +227,8 @@ def geometry_not_extend_left(
     """
     return BinaryExpression(
         dialect, "&>",
-        geom1 if isinstance(geom1, bases.BaseExpression) else core.Parameter(dialect, geom1),
-        geom2 if isinstance(geom2, bases.BaseExpression) else core.Parameter(dialect, geom2),
+        geom1 if isinstance(geom1, BaseExpression) else Parameter(dialect, geom1),
+        geom2 if isinstance(geom2, BaseExpression) else Parameter(dialect, geom2),
     )
 
 
@@ -234,8 +236,8 @@ def geometry_not_extend_left(
 
 def geometry_area(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL area function expression.
 
     Computes the area of a geometric object.
@@ -247,14 +249,14 @@ def geometry_area(
     Returns:
         FunctionCall for area(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "area", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "area", geom_expr)
 
 
 def geometry_center(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL center function expression.
 
     Computes the center point of a geometric object.
@@ -266,14 +268,14 @@ def geometry_center(
     Returns:
         FunctionCall for center(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "center", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "center", geom_expr)
 
 
 def geometry_length(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL length function expression.
 
     Computes the length of a path or line segment.
@@ -285,14 +287,14 @@ def geometry_length(
     Returns:
         FunctionCall for length(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "length", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "length", geom_expr)
 
 
 def geometry_width(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL width function expression.
 
     Computes the horizontal size of a box.
@@ -304,14 +306,14 @@ def geometry_width(
     Returns:
         FunctionCall for width(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "width", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "width", geom_expr)
 
 
 def geometry_height(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL height function expression.
 
     Computes the vertical size of a box.
@@ -323,14 +325,14 @@ def geometry_height(
     Returns:
         FunctionCall for height(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "height", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "height", geom_expr)
 
 
 def geometry_npoints(
     dialect: "SQLDialectBase",
-    geom: bases.BaseExpression,
-) -> core.FunctionCall:
+    geom: BaseExpression,
+) -> FunctionCall:
     """Generate PostgreSQL npoints function expression.
 
     Returns the number of points in a path or polygon.
@@ -342,8 +344,8 @@ def geometry_npoints(
     Returns:
         FunctionCall for npoints(geom)
     """
-    geom_expr = geom if isinstance(geom, bases.BaseExpression) else core.Parameter(dialect, geom)
-    return core.FunctionCall(dialect, "npoints", geom_expr)
+    geom_expr = geom if isinstance(geom, BaseExpression) else Parameter(dialect, geom)
+    return FunctionCall(dialect, "npoints", geom_expr)
 
 
 __all__ = [

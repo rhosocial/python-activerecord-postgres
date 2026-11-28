@@ -53,11 +53,9 @@ if __name__ == "__main__":
         ColumnNotNullConstraint,
         ColumnPrimaryKeyConstraint,
     )
-    from rhosocial.activerecord.backend.expression.core import (
-        Parameter,
-        FunctionCall,
-        Subquery,
-    )
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+    from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
+    from rhosocial.activerecord.backend.expression.sources.subquery import Subquery
     from rhosocial.activerecord.backend.expression.statements.dml import (
         InsertStatement,
     )

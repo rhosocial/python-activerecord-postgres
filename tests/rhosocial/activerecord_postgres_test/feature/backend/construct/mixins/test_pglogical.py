@@ -11,7 +11,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pglogical import (
     pglogical_create_node,
     pglogical_create_publication,
@@ -28,7 +28,7 @@ class TestPostgresPgLogicalFunctions:
         """pglogical_create_node should return FunctionCall with pglogical.create_node."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_create_node(dialect, "node1", "host=db")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pglogical.create_node" in sql.lower()
 
@@ -36,7 +36,7 @@ class TestPostgresPgLogicalFunctions:
         """pglogical_create_publication should return FunctionCall with pglogical.create_publication."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_create_publication(dialect, "pub1", "{users, orders}")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pglogical.create_publication" in sql.lower()
 
@@ -44,7 +44,7 @@ class TestPostgresPgLogicalFunctions:
         """pglogical_create_subscription should return FunctionCall with pglogical.create_subscription."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_create_subscription(dialect, "sub1", "host=pub", "{pub1}")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pglogical.create_subscription" in sql.lower()
 
@@ -52,7 +52,7 @@ class TestPostgresPgLogicalFunctions:
         """pglogical_show_subscription_status should return FunctionCall with pglogical.show_subscription_status."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_show_subscription_status(dialect)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pglogical.show_subscription_status" in sql.lower()
 
@@ -61,6 +61,6 @@ class TestPostgresPgLogicalFunctions:
         FunctionCall with pglogical.alter_subscription_synchronize."""
         dialect = PostgresDialect((14, 0, 0))
         result = pglogical_alter_subscription_synchronize(dialect, "sub1")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "pglogical.alter_subscription_synchronize" in sql.lower()

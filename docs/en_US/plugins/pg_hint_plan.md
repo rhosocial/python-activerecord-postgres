@@ -44,14 +44,14 @@ The last two were already PostgreSQL-derived before hint support and were extend
 Pass the payloads through the statement's `hints=` keyword:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import (
     hint_seq_scan, hint_hash_join, hint_leading, hint_rows,
     hint_parallel, hint_set,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.hint import HintGroup
+from rhosocial.activerecord.backend.impl.postgres.expression.query_parts.hint import HintGroup
 
 query = PostgresQueryStatement(
     dialect,
@@ -71,7 +71,7 @@ backend.execute(sql, params, options=ExecutionOptions(stmt_type=StatementType.DQ
 `PostgresExplainStatement` writes the comment before the `EXPLAIN` keyword, which is the position pg_hint_plan documents:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresExplainStatement,
 )
 
@@ -87,7 +87,7 @@ An `EXPLAIN` — generic or PostgreSQL — refuses a wrapped statement that alre
 The same `hints=` keyword is accepted by the three statements PostgreSQL plans when it runs them: `PostgresCreateTableAsStatement` (`CREATE TABLE ... AS`), `PostgresCreateMaterializedViewStatement` (`CREATE MATERIALIZED VIEW ... AS`) and `PostgresRefreshMaterializedViewStatement` (`REFRESH MATERIALIZED VIEW`). Measured against pg_hint_plan 1.8.1 on PG 18, each reports `used hint` for a head comment and picks a different plan:
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresCreateTableAsStatement,
 )
 

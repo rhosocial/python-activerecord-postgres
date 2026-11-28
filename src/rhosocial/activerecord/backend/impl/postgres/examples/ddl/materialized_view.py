@@ -46,19 +46,16 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Index, MaterializedView, Table
-from rhosocial.activerecord.backend.expression.core import (
-    Parameter,
-    Column,
-    AllColumnsWildcard,
-    RowCountWildcard,
-)
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.column_types.column import Column
+from rhosocial.activerecord.backend.expression.value_types.wildcards import AllColumnsWildcard, RowCountWildcard
 from rhosocial.activerecord.backend.expression.query_parts import OrderByClause
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,
 )
 from rhosocial.activerecord.backend.impl.postgres.storage_parameters import PostgresStorageParameter
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresAlterMaterializedViewStatement,
     PostgresChangeMaterializedViewOwnerAction,
     PostgresCreateMaterializedViewStatement,

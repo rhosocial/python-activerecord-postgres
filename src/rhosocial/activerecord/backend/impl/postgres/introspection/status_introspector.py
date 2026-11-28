@@ -24,10 +24,10 @@ from rhosocial.activerecord.backend.introspection.status import (
     AbstractStatusIntrospector,
     AsyncAbstractStatusIntrospector,
 )
-from ..expression.status import (
+from ..expression.statements.status import PostgresShowStatement
+from ..expression.introspection.status import (
     PostgresSettingsQuery,
     PostgresActivityCountQuery,
-    PostgresShowStatement,
     PostgresDatabaseListQuery,
     PostgresSchemaStatsQuery,
     PostgresCurrentDatabaseQuery,

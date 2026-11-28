@@ -8,7 +8,7 @@ which defines the interface for PostgreSQL's native CREATE/DROP FOREIGN TABLE.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.foreign_table import (
+    from ...expression.statements.ddl.foreign_table import (
         PostgresCreateForeignTableStatement,
         PostgresDropForeignTableStatement,
     )

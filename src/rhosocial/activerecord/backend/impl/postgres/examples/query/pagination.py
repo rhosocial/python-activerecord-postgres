@@ -21,12 +21,10 @@ from rhosocial.activerecord.backend.expression import (
     ColumnPrimaryKeyConstraint,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import (
-    Parameter,
-    RowCountWildcard,
-    CountFunction,
-    FunctionCall,
-)
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.value_types.wildcards import RowCountWildcard
+from rhosocial.activerecord.backend.expression.functions import CountFunction
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.expression.statements import (
     ColumnDefinition,
     ColumnConstraint,

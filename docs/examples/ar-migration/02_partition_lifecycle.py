@@ -17,7 +17,7 @@ PostgreSQL lifecycle answers:
 
 from datetime import date
 
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.statements import (
     PartitionByHashClause,
     PartitionByListClause,

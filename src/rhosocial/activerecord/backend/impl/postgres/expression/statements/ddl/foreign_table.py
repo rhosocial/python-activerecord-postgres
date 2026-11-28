@@ -1,0 +1,96 @@
+# src/rhosocial/activerecord/backend/impl/postgres/expression/statements/ddl/foreign_table.py
+"""
+PostgreSQL DDL expressions: FOREIGN TABLE.
+
+PostgreSQL Documentation:
+- CREATE FOREIGN TABLE: https://www.postgresql.org/docs/current/sql-createforeigntable.html
+- DROP FOREIGN TABLE:   https://www.postgresql.org/docs/current/sql-dropforeigntable.html
+
+Version Requirements:
+- CREATE/DROP FOREIGN TABLE: PostgreSQL 9.6+
+"""
+
+from typing import List, Optional, TYPE_CHECKING
+
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
+
+if TYPE_CHECKING:
+    from rhosocial.activerecord.backend.dialect import SQLDialectBase
+
+
+__all__ = ["PostgresCreateForeignTableStatement", "PostgresDropForeignTableStatement"]
+
+
+class PostgresCreateForeignTableStatement(BaseExpression):
+    """PostgreSQL CREATE FOREIGN TABLE statement expression.
+
+    Defines a foreign table backed by a foreign server (FDW).
+
+    Attributes:
+        name: Name of the foreign table.
+        schema: Optional schema for the table.
+        columns: Optional list of column definition strings.
+        server_name: Name of the foreign server to bind.
+        options: Optional ``OPTIONS ( option 'value', ... )`` list of
+            ``"option 'value'"`` strings.
+        if_not_exists: When True, add ``IF NOT EXISTS``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        server_name: str,
+        schema: Optional[str] = None,
+        columns: Optional[List[str]] = None,
+        options: Optional[List[str]] = None,
+        if_not_exists: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.server_name = server_name
+        self.columns = columns or []
+        self.options = options or []
+        self.if_not_exists = if_not_exists
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_create_foreign_table_statement"
+
+
+class PostgresDropForeignTableStatement(BaseExpression):
+    """PostgreSQL DROP FOREIGN TABLE statement expression.
+
+    Attributes:
+        name: Name of the foreign table to drop.
+        schema: Optional schema for the foreign table.
+        if_exists: When True, add ``IF EXISTS``.
+        cascade: When True, add ``CASCADE``.
+        restrict: When True, add ``RESTRICT``. Mutually exclusive with
+            ``cascade``.
+
+    """
+
+    def __init__(
+        self,
+        dialect: "SQLDialectBase",
+        name: str,
+        schema: Optional[str] = None,
+        if_exists: bool = False,
+        cascade: bool = False,
+        restrict: bool = False,
+    ):
+        super().__init__(dialect)
+        self.name = name
+        self.schema = schema
+        self.if_exists = if_exists
+        self.cascade = cascade
+        self.restrict = restrict
+
+    @property
+    def format_method(self) -> str:
+        """The dialect formatting method that renders this expression."""
+        return "format_drop_foreign_table_statement"

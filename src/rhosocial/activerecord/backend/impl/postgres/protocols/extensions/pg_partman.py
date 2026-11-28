@@ -12,7 +12,7 @@ Reference:
 from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresPgPartmanCreateParentExpression,
         PostgresPgPartmanRunMaintenanceExpression,
         PostgresPgPartmanUpdateConfigExpression,

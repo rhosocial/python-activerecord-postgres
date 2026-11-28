@@ -31,7 +31,7 @@ from enum import Enum
 
 import pytest
 
-from rhosocial.activerecord.backend.expression.bases import BaseExpression
+from rhosocial.activerecord.backend.expression.bases.bases import BaseExpression
 
 PG_EXPR_PKG = "rhosocial.activerecord.backend.impl.postgres.expression"
 CORE_EXPR_PKG = "rhosocial.activerecord.backend.expression"
@@ -135,29 +135,29 @@ def test_backend_kinds_carry_the_backend_name(backend_classes, core_kinds):
 #: identity; where a family necessarily shares an entry, the deviation is
 #: recorded here with its reason instead of being left to look accidental.
 FAMILY_FORMATTERS = {
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv."
     "PostgresChangeMaterializedViewOwnerAction": (
         "one of five ALTER MATERIALIZED VIEW actions sharing the action formatter"
     ),
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv."
     "PostgresRenameMaterializedViewAction": "one of five ALTER MATERIALIZED VIEW actions",
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv."
     "PostgresResetMaterializedViewPropertiesAction": "one of five ALTER MATERIALIZED VIEW actions",
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv."
     "PostgresSetMaterializedViewPropertiesAction": "one of five ALTER MATERIALIZED VIEW actions",
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.mv."
     "PostgresSetMaterializedViewSchemaAction": "one of five ALTER MATERIALIZED VIEW actions",
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.type."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.type."
     "PostgresAlterEnumTypeAddValueExpression": "a CREATE/ALTER/DROP TYPE statement, rendered by core's type formatter",
-    "rhosocial.activerecord.backend.impl.postgres.expression.ddl.type."
+    "rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.type."
     "PostgresDropEnumTypeExpression": "a DROP TYPE statement, rendered by core's type formatter",
-    "rhosocial.activerecord.backend.impl.postgres.expression.values."
+    "rhosocial.activerecord.backend.impl.postgres.expression.value_types.values."
     "PostgresHstoreValue": "renders the FunctionCall it wraps, deliberately verbatim",
-    "rhosocial.activerecord.backend.impl.postgres.expression.values."
+    "rhosocial.activerecord.backend.impl.postgres.expression.value_types.values."
     "PostgresLtreeValue": "renders the FunctionCall it wraps, deliberately verbatim",
-    "rhosocial.activerecord.backend.impl.postgres.expression.values."
+    "rhosocial.activerecord.backend.impl.postgres.expression.value_types.values."
     "PostgresNetworkValue": "renders the FunctionCall it wraps, deliberately verbatim",
-    "rhosocial.activerecord.backend.impl.postgres.expression.values."
+    "rhosocial.activerecord.backend.impl.postgres.expression.value_types.values."
     "PostgresRangeValue": "renders the FunctionCall it wraps, deliberately verbatim",
 }
 

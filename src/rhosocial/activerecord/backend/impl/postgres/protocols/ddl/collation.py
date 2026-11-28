@@ -9,7 +9,7 @@ existing ``PostgresCollationSupport``.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.collation import (
+    from ...expression.statements.ddl.collation import (
         PostgresCreateCollationStatement,
         PostgresDropCollationStatement,
     )

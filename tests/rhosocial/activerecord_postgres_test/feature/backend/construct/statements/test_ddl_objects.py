@@ -13,7 +13,7 @@ from rhosocial.activerecord.backend.expression.objects import Domain, Type
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.expression.statements.ddl_domain import (
     AlterDomainStatement,
     CreateDomainStatement,
@@ -31,7 +31,7 @@ from rhosocial.activerecord.backend.expression.statements.ddl_type import (
     CreateTypeStatement,
 )
 from rhosocial.activerecord.backend.expression.types import IntegerType, TextType
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresVacuumStatement,  # noqa: F401
     PostgresAnalyzeStatement,  # noqa: F401
     AlterDomainActionType,

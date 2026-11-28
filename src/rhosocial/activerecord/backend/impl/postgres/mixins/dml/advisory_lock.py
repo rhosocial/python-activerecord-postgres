@@ -9,7 +9,7 @@ application-level locks managed by the database server.
 from typing import Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
         PostgresAdvisoryLockExpression,
         PostgresAdvisoryUnlockExpression,
         PostgresAdvisoryUnlockAllExpression,

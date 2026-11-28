@@ -10,7 +10,7 @@ Tests for PostgresBloomMixin format methods:
 from rhosocial.activerecord.backend.expression import CreateIndexStatement
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.expression.objects import Index, Table
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresCreateIndexExpression,
 )
 

@@ -58,7 +58,9 @@ if __name__ == "__main__":
         ColumnPrimaryKeyConstraint,
     )
     from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.expression.core import CastExpression, Parameter, Subquery
+    from rhosocial.activerecord.backend.expression.functions.cast_expression import CastExpression
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+    from rhosocial.activerecord.backend.expression.sources.subquery import Subquery
     from rhosocial.activerecord.backend.expression.operators import (
         BinaryExpression,
     )

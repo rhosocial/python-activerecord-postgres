@@ -7,7 +7,7 @@ from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeature
 from rhosocial.activerecord.backend.expression.objects import Table
 
 if TYPE_CHECKING:
-    from ...expression.ddl.multirange import (
+    from ...expression.statements.ddl.multirange import (
         PostgresCreateMultirangeTypeExpression,
         PostgresMultirangeAggFunctionExpression,
     )

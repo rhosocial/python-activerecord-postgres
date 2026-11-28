@@ -14,7 +14,7 @@ from rhosocial.activerecord.backend.expression.objects import Table
 from rhosocial.activerecord.backend.expression.statements import PartitionClause
 
 if TYPE_CHECKING:
-    from ...expression.ddl import (
+    from ...expression.statements.ddl import (
         PostgresPartitionValue,
         PostgresCreatePartitionStatement,
         PostgresDetachPartitionStatement,
@@ -425,7 +425,7 @@ class PostgresPartitionMixin:
                 "nested rows are not supported"
             )
 
-        from ...expression.ddl import PostgresPartitionValue
+        from ...expression.statements.ddl import PostgresPartitionValue
 
         value_sql_parts = []
         params: List[Any] = []
@@ -480,7 +480,7 @@ class PostgresPartitionMixin:
         parts.append(f"PARTITION OF {parent_name}")
 
         params: List[Any] = []
-        from ...expression.ddl import PostgresPartitionValue
+        from ...expression.statements.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")
@@ -647,7 +647,7 @@ class PostgresPartitionMixin:
         parts.extend((parent_name, "ATTACH PARTITION", partition_name))
 
         params: List[Any] = []
-        from ...expression.ddl import PostgresPartitionValue
+        from ...expression.statements.ddl import PostgresPartitionValue
 
         if default_marker:
             parts.append("DEFAULT")

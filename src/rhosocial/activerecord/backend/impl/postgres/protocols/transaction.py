@@ -4,11 +4,11 @@
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:  # pragma: no cover
-    from rhosocial.activerecord.backend.expression.transaction import (
+    from rhosocial.activerecord.backend.expression.statements import (
         BeginTransactionStatement,
         SetTransactionStatement,
     )
-    from rhosocial.activerecord.backend.impl.postgres.expression.transaction import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresSetConstraintsStatement,
     )
 

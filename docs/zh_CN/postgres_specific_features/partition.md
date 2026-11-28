@@ -13,7 +13,7 @@ PostgreSQL 自 10 版本起支持声明式分区，11+ 版本功能显著增强�
 ## 创建分区表
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresCreatePartitionStatement, PostgresPartitionValue,
 )
 
@@ -73,7 +73,7 @@ leaf = PostgresCreatePartitionStatement(
 
 ```python
 from datetime import datetime, timezone
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.statements import (
     PartitionByHashClause, PartitionByRangeClause,
 )
@@ -131,7 +131,7 @@ PostgreSQL 不支持 `ATTACH PARTITION CONCURRENTLY`。PostgreSQL 14+ 支持
 ### ATTACH / DETACH PARTITION
 
 ```python
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.partition import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.partition import (
     PostgresAttachPartitionStatement, PostgresDetachPartitionStatement,
 )
 

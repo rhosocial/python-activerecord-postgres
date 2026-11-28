@@ -10,7 +10,7 @@ POLICY (CREATE/ALTER/DROP) is a PostgreSQL extension — not SQL standard.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.policy import (
+    from ...expression.statements.ddl.policy import (
         PostgresAlterPolicyStatement,
         PostgresCreatePolicyStatement,
         PostgresDropPolicyStatement,

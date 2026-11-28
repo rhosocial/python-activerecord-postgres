@@ -9,7 +9,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_cron import (
     cron_schedule,
     cron_unschedule,
@@ -24,7 +24,7 @@ class TestPostgresPgCronFunctions:
         """cron_schedule should return FunctionCall with cron.schedule."""
         dialect = PostgresDialect((14, 0, 0))
         result = cron_schedule(dialect, "0 * * * *", "SELECT 1")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cron.schedule" in sql.lower()
 
@@ -32,7 +32,7 @@ class TestPostgresPgCronFunctions:
         """cron_schedule with comment should return FunctionCall with cron.schedule."""
         dialect = PostgresDialect((14, 0, 0))
         result = cron_schedule(dialect, "0 * * * *", "SELECT 1", comment="hourly job")
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cron.schedule" in sql.lower()
 
@@ -40,7 +40,7 @@ class TestPostgresPgCronFunctions:
         """cron_unschedule should return FunctionCall with cron.unschedule."""
         dialect = PostgresDialect((14, 0, 0))
         result = cron_unschedule(dialect, job_id=1)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cron.unschedule" in sql.lower()
 
@@ -48,6 +48,6 @@ class TestPostgresPgCronFunctions:
         """cron_run should return FunctionCall with cron.run."""
         dialect = PostgresDialect((14, 0, 0))
         result = cron_run(dialect, job_id=1)
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "cron.run" in sql.lower()

@@ -15,30 +15,33 @@ The extension must be enabled first::
 
 from typing import Any, Sequence, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.column_types import Column
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression, RawSQL
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
-Operand = Union[str, bases.BaseExpression]
+Operand = Union[str, BaseExpression]
 
 
-def _column(dialect: "SQLDialectBase", column: Operand) -> bases.BaseExpression:
+def _column(dialect: "SQLDialectBase", column: Operand) -> BaseExpression:
     """A string names a column; an Expression is used as given."""
-    return core.Column(dialect, column) if isinstance(column, str) else column
+    return Column(dialect, column) if isinstance(column, str) else column
 
 
-def _literal(dialect: "SQLDialectBase", value: Any) -> bases.BaseExpression:
+def _literal(dialect: "SQLDialectBase", value: Any) -> BaseExpression:
     """A string is a bound value; an Expression is used as given."""
-    return core.Parameter(dialect, value) if not isinstance(value, bases.BaseExpression) else value
+    return Parameter(dialect, value) if not isinstance(value, BaseExpression) else value
 
 
-def _array(dialect: "SQLDialectBase", values: Sequence[Any]) -> bases.BaseExpression:
+def _array(dialect: "SQLDialectBase", values: Sequence[Any]) -> BaseExpression:
     """Bind a sequence as one array parameter (or pass an Expression through)."""
-    if isinstance(values, bases.BaseExpression):
+    if isinstance(values, BaseExpression):
         return values
-    return core.Parameter(dialect, list(values))
+    return Parameter(dialect, list(values))
 
 
 def _binary(
@@ -123,13 +126,13 @@ def pgroonga_equal_query(
 # === functions ===
 
 
-def pgroonga_score(dialect: "SQLDialectBase") -> core.FunctionCall:
+def pgroonga_score(dialect: "SQLDialectBase") -> FunctionCall:
     """Score of the current row for PGroonga ranking.
 
     Produces ``pgroonga_score(tableoid, ctid)`` -- use it in SELECT / ORDER BY
     together with a match predicate in WHERE.
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect,
         "pgroonga_score",
         RawSQL(dialect, "tableoid"),
@@ -139,7 +142,7 @@ def pgroonga_score(dialect: "SQLDialectBase") -> core.FunctionCall:
 
 def _keywords(
     dialect: "SQLDialectBase", keywords: Sequence[Any]
-) -> bases.BaseExpression:
+) -> BaseExpression:
     return _array(dialect, keywords)
 
 
@@ -147,27 +150,27 @@ def pgroonga_snippet_html(
     dialect: "SQLDialectBase",
     target: Operand,
     keywords: Sequence[Any],
-) -> core.FunctionCall:
+) -> FunctionCall:
     """HTML snippet with the matched keywords wrapped in tags."""
-    return core.FunctionCall(dialect, "pgroonga_snippet_html", _column(dialect, target), _keywords(dialect, keywords))
+    return FunctionCall(dialect, "pgroonga_snippet_html", _column(dialect, target), _keywords(dialect, keywords))
 
 
 def pgroonga_highlight_html(
     dialect: "SQLDialectBase",
     target: Operand,
     keywords: Sequence[Any],
-) -> core.FunctionCall:
+) -> FunctionCall:
     """HTML text with the matched keywords highlighted."""
-    return core.FunctionCall(dialect, "pgroonga_highlight_html", _column(dialect, target), _keywords(dialect, keywords))
+    return FunctionCall(dialect, "pgroonga_highlight_html", _column(dialect, target), _keywords(dialect, keywords))
 
 
 def pgroonga_match_positions_byte(
     dialect: "SQLDialectBase",
     target: Operand,
     keywords: Sequence[Any],
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Match positions in bytes (for byte-oriented slicing)."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgroonga_match_positions_byte", _column(dialect, target), _keywords(dialect, keywords)
     )
 
@@ -176,30 +179,30 @@ def pgroonga_match_positions_character(
     dialect: "SQLDialectBase",
     target: Operand,
     keywords: Sequence[Any],
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Match positions in characters (safe for CJK text)."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgroonga_match_positions_character", _column(dialect, target), _keywords(dialect, keywords)
     )
 
 
-def pgroonga_query_escape(dialect: "SQLDialectBase", value: Any) -> core.FunctionCall:
+def pgroonga_query_escape(dialect: "SQLDialectBase", value: Any) -> FunctionCall:
     """Escape a string so it is treated as a literal keyword in query syntax."""
-    return core.FunctionCall(dialect, "pgroonga_query_escape", _literal(dialect, value))
+    return FunctionCall(dialect, "pgroonga_query_escape", _literal(dialect, value))
 
 
 def pgroonga_query_extract_keywords(
     dialect: "SQLDialectBase", query: Any
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Extract keywords from a query-language string."""
-    return core.FunctionCall(dialect, "pgroonga_query_extract_keywords", _literal(dialect, query))
+    return FunctionCall(dialect, "pgroonga_query_extract_keywords", _literal(dialect, query))
 
 
 def pgroonga_command(
     dialect: "SQLDialectBase", name: Any, *arguments: Any
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Run a Groonga command directly (advanced escape hatch)."""
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "pgroonga_command", _literal(dialect, name), *(_literal(dialect, arg) for arg in arguments)
     )
 

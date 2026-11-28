@@ -8,7 +8,7 @@ This module provides two categories of functions:
    composing jsonpath expressions. These do not take a dialect parameter
    since they build path objects, not SQL strings.
 
-2. **JSONB query functions** - Return core.FunctionCall Expression objects
+2. **JSONB query functions** - Return FunctionCall Expression objects
    that integrate with the Expression/Dialect architecture. These accept
    a dialect parameter as their first argument.
 
@@ -18,7 +18,9 @@ PostgreSQL Documentation: https://www.postgresql.org/docs/current/functions-json
 import json
 from typing import Any, Dict, Optional, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -27,8 +29,8 @@ if TYPE_CHECKING:
 
 def _convert_jsonpath(
     dialect: "SQLDialectBase",
-    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
-) -> "bases.BaseExpression":
+    path: Union["PostgresJsonPath", str, "BaseExpression"],
+) -> "BaseExpression":
     """Convert a jsonpath value to an appropriate BaseExpression.
 
     Handles PostgresJsonPath objects, strings, and existing
@@ -44,11 +46,11 @@ def _convert_jsonpath(
     from ..type_values.json import PostgresJsonPath
 
     if isinstance(path, PostgresJsonPath):
-        return core.Parameter(dialect, str(path))
-    elif isinstance(path, bases.BaseExpression):
+        return Parameter(dialect, str(path))
+    elif isinstance(path, BaseExpression):
         return path
     else:
-        return core.Parameter(dialect, str(path))
+        return Parameter(dialect, str(path))
 
 
 # ============== Path Builder Functions ==============
@@ -174,11 +176,11 @@ def json_path_filter(path: Union["PostgresJsonPath", str], condition: str) -> "P
 
 def jsonb_path_query(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    column: BaseExpression,
+    path: Union["PostgresJsonPath", str, "BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate jsonb_path_query function expression.
 
     This function extracts all JSON values that match the jsonpath
@@ -207,24 +209,24 @@ def jsonb_path_query(
         >>> func.to_sql()
         ('jsonb_path_query(%s, %s, %s)', ('data', '$.items[*]', True))
     """
-    col_expr = column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column)
+    col_expr = column if isinstance(column, BaseExpression) else Parameter(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
-        vars_expr = core.Parameter(dialect, json.dumps(vars))
+        vars_expr = Parameter(dialect, json.dumps(vars))
         args.append(vars_expr)
     if silent:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "jsonb_path_query", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "jsonb_path_query", *args)
 
 
 def jsonb_path_query_first(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    column: BaseExpression,
+    path: Union["PostgresJsonPath", str, "BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate jsonb_path_query_first function expression.
 
     This function extracts the first JSON value that matches the
@@ -249,24 +251,24 @@ def jsonb_path_query_first(
         >>> func.to_sql()
         ('jsonb_path_query_first(%s, %s, %s)', ('data', '$.name', '{"lang": "en"}'))
     """
-    col_expr = column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column)
+    col_expr = column if isinstance(column, BaseExpression) else Parameter(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
-        vars_expr = core.Parameter(dialect, json.dumps(vars))
+        vars_expr = Parameter(dialect, json.dumps(vars))
         args.append(vars_expr)
     if silent:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "jsonb_path_query_first", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "jsonb_path_query_first", *args)
 
 
 def jsonb_path_exists(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    column: BaseExpression,
+    path: Union["PostgresJsonPath", str, "BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate jsonb_path_exists function expression.
 
     This function checks whether the jsonpath expression returns
@@ -291,24 +293,24 @@ def jsonb_path_exists(
         >>> func.to_sql()
         ('jsonb_path_exists(%s, %s, %s)', ('data', '$.items[*]', '{"min": 5}'))
     """
-    col_expr = column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column)
+    col_expr = column if isinstance(column, BaseExpression) else Parameter(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
-        vars_expr = core.Parameter(dialect, json.dumps(vars))
+        vars_expr = Parameter(dialect, json.dumps(vars))
         args.append(vars_expr)
     if silent:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "jsonb_path_exists", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "jsonb_path_exists", *args)
 
 
 def jsonb_path_match(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    path: Union["PostgresJsonPath", str, "bases.BaseExpression"],
+    column: BaseExpression,
+    path: Union["PostgresJsonPath", str, "BaseExpression"],
     vars: Optional[Dict[str, Any]] = None,
     silent: bool = False,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate jsonb_path_match function expression.
 
     This function returns true if the jsonpath predicate is satisfied
@@ -336,15 +338,15 @@ def jsonb_path_match(
         >>> func.to_sql()
         ('jsonb_path_match(%s, %s, %s)', ('data', '$.count > $threshold', '{"threshold": 5}'))
     """
-    col_expr = column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column)
+    col_expr = column if isinstance(column, BaseExpression) else Parameter(dialect, column)
     path_expr = _convert_jsonpath(dialect, path)
     args = [col_expr, path_expr]
     if vars is not None:
-        vars_expr = core.Parameter(dialect, json.dumps(vars))
+        vars_expr = Parameter(dialect, json.dumps(vars))
         args.append(vars_expr)
     if silent:
-        args.append(core.Parameter(dialect, True))
-    return core.FunctionCall(dialect, "jsonb_path_match", *args)
+        args.append(Parameter(dialect, True))
+    return FunctionCall(dialect, "jsonb_path_match", *args)
 
 
 def create_jsonb_index(
@@ -383,12 +385,12 @@ def create_jsonb_index(
         A ready-to-execute ``PostgresCreateIndexExpression``.
     """
     from rhosocial.activerecord.backend.expression.objects import Index, Table
-    from rhosocial.activerecord.backend.expression.functions.json import (
+    from rhosocial.activerecord.backend.expression.functions import (
         json_extract,
         json_extract_text,
     )
 
-    from ..expression.ddl import PostgresCreateIndexExpression
+    from ..expression.statements.ddl import PostgresCreateIndexExpression
 
     path = key if key.startswith("$") else f"$.{key}"
     builder = json_extract_text if as_text else json_extract

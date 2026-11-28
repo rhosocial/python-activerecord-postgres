@@ -34,7 +34,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -49,7 +51,7 @@ def create_parent(
     interval: str,
     partition_type: str = "native",
     premake: int = 4,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Create a partition set for a parent table.
 
     Sets up partitioning for the specified parent table using pg_partman.
@@ -82,20 +84,20 @@ def create_parent(
         >>> create_parent(dialect, 'public.events', 'event_time', '1 hour',
         ...               partition_type='native', premake=6)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "create_parent",
-        parent_table if isinstance(parent_table, bases.BaseExpression) else core.Parameter(dialect, parent_table),
-        control if isinstance(control, bases.BaseExpression) else core.Parameter(dialect, control),
-        interval if isinstance(interval, bases.BaseExpression) else core.Parameter(dialect, interval),
-        partition_type if isinstance(partition_type, bases.BaseExpression) else core.Parameter(dialect, partition_type),
-        premake if isinstance(premake, bases.BaseExpression) else core.Parameter(dialect, premake),
+        parent_table if isinstance(parent_table, BaseExpression) else Parameter(dialect, parent_table),
+        control if isinstance(control, BaseExpression) else Parameter(dialect, control),
+        interval if isinstance(interval, BaseExpression) else Parameter(dialect, interval),
+        partition_type if isinstance(partition_type, BaseExpression) else Parameter(dialect, partition_type),
+        premake if isinstance(premake, BaseExpression) else Parameter(dialect, premake),
     )
 
 
 def run_maintenance(
     dialect: "SQLDialectBase",
     parent_table: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Run partition maintenance to create new partitions and drop old ones.
 
     Executes the pg_partman maintenance procedure, which creates new child
@@ -124,9 +126,9 @@ def run_maintenance(
     args = []
     if parent_table is not None:
         args.append(
-            parent_table if isinstance(parent_table, bases.BaseExpression)
-            else core.Parameter(dialect, parent_table))
-    return core.FunctionCall(dialect, "run_maintenance", *args)
+            parent_table if isinstance(parent_table, BaseExpression)
+            else Parameter(dialect, parent_table))
+    return FunctionCall(dialect, "run_maintenance", *args)
 
 
 __all__ = [

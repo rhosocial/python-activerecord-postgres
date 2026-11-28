@@ -13,7 +13,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Any, List, Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.types import CustomType
 from rhosocial.activerecord.backend.impl.postgres.expression.types import (
     PostgresXID8Type,
@@ -26,7 +28,7 @@ if TYPE_CHECKING:
 def xid8_literal(
     dialect: "SQLDialectBase",
     value: int,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Create an xid8 (64-bit transaction ID) literal expression.
 
     Wraps an integer value as a Parameter expression with an xid8 type cast,
@@ -45,14 +47,14 @@ def xid8_literal(
         >>> xid8_literal(dialect, 123456789)
         # Produces: 123456789::xid8
     """
-    return core.CastExpression(dialect, core.Parameter(dialect, value), PostgresXID8Type(dialect))
+    return CastExpression(dialect, Parameter(dialect, value), PostgresXID8Type(dialect))
 
 
 def array_literal(
     dialect: "SQLDialectBase",
     elements: List[Any],
     element_type: Optional[str] = None,
-) -> "bases.BaseExpression":
+) -> "BaseExpression":
     """Construct an array literal expression.
 
     Uses PostgreSQL array literal format ``'{elem1,elem2}'`` with optional
@@ -80,12 +82,12 @@ def array_literal(
     """
     if not elements:
         if element_type:
-            return core.CastExpression(
+            return CastExpression(
                 dialect,
-                core.Parameter(dialect, "{}"),
+                Parameter(dialect, "{}"),
                 CustomType(dialect, raw=f"{element_type}[]"),
             )
-        return core.Parameter(dialect, "{}")
+        return Parameter(dialect, "{}")
 
     formatted = []
     for e in elements:
@@ -97,9 +99,9 @@ def array_literal(
             formatted.append(str(e))
 
     array_str = "{" + ",".join(formatted) + "}"
-    result = core.Parameter(dialect, array_str)
+    result = Parameter(dialect, array_str)
     if element_type:
-        return core.CastExpression(
+        return CastExpression(
             dialect, result, CustomType(dialect, raw=f"{element_type}[]")
         )
     return result

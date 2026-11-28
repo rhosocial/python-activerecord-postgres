@@ -8,8 +8,8 @@ from rhosocial.activerecord.backend.expression import Column
 from rhosocial.activerecord.backend.expression.objects import Table, View
 from rhosocial.activerecord.backend.expression.sources import NamedRelationRef
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.hint import HINT_FIELDS, hint_payload
-from rhosocial.activerecord.backend.impl.postgres.expression.hinted_statements import (
+from rhosocial.activerecord.backend.impl.postgres.expression.query_parts.hint import HINT_FIELDS, hint_payload
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.hinted_statements import (
     PostgresQueryStatement,
 )
 from rhosocial.activerecord.backend.impl.postgres.functions import (

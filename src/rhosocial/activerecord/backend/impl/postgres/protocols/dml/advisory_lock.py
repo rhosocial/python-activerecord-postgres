@@ -11,7 +11,7 @@ from typing import Protocol, Tuple, TYPE_CHECKING
 from typing import runtime_checkable
 
 if TYPE_CHECKING:
-    from rhosocial.activerecord.backend.impl.postgres.expression.advisory import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.functions import (
         PostgresAdvisoryLockExpression,
         PostgresAdvisoryUnlockExpression,
         PostgresAdvisoryUnlockAllExpression,

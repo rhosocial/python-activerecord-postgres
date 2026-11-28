@@ -47,7 +47,9 @@ Examples:
 
 from typing import List, Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
@@ -59,9 +61,9 @@ if TYPE_CHECKING:
 
 def to_tsvector(
     dialect: "SQLDialectBase",
-    document: bases.BaseExpression,
+    document: BaseExpression,
     config: str = "english",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL to_tsvector function.
 
     Converts a text document to a tsvector for full-text search.
@@ -78,18 +80,18 @@ def to_tsvector(
         >>> to_tsvector(dialect, 'hello world')
         >>> to_tsvector(dialect, 'hello world', config='simple')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "to_tsvector",
-        core.Parameter(dialect, config),
-        document if isinstance(document, bases.BaseExpression) else core.Parameter(dialect, document),
+        Parameter(dialect, config),
+        document if isinstance(document, BaseExpression) else Parameter(dialect, document),
     )
 
 
 def to_tsquery(
     dialect: "SQLDialectBase",
-    query: bases.BaseExpression,
+    query: BaseExpression,
     config: str = "english",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL to_tsquery function.
 
     Converts a query string to a tsquery for full-text search.
@@ -106,18 +108,18 @@ def to_tsquery(
         >>> to_tsquery(dialect, 'hello & world')
         >>> to_tsquery(dialect, 'hello & world', config='simple')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "to_tsquery",
-        core.Parameter(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        Parameter(dialect, config),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def plainto_tsquery(
     dialect: "SQLDialectBase",
-    query: bases.BaseExpression,
+    query: BaseExpression,
     config: str = "english",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL plainto_tsquery function.
 
     Converts plain text to tsquery, handling special characters.
@@ -134,18 +136,18 @@ def plainto_tsquery(
         >>> plainto_tsquery(dialect, 'hello world')
         >>> plainto_tsquery(dialect, 'hello world', config='simple')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "plainto_tsquery",
-        core.Parameter(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        Parameter(dialect, config),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def phraseto_tsquery(
     dialect: "SQLDialectBase",
-    query: bases.BaseExpression,
+    query: BaseExpression,
     config: str = "english",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL phraseto_tsquery function.
 
     Converts text to tsquery for phrase search.
@@ -162,18 +164,18 @@ def phraseto_tsquery(
         >>> phraseto_tsquery(dialect, 'hello world')
         >>> phraseto_tsquery(dialect, 'hello world', config='simple')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "phraseto_tsquery",
-        core.Parameter(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        Parameter(dialect, config),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def websearch_to_tsquery(
     dialect: "SQLDialectBase",
-    query: bases.BaseExpression,
+    query: BaseExpression,
     config: str = "english",
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL websearch_to_tsquery function.
 
     Converts web search style query to tsquery (PostgreSQL 11+).
@@ -190,19 +192,19 @@ def websearch_to_tsquery(
         >>> websearch_to_tsquery(dialect, 'hello -world')
         >>> websearch_to_tsquery(dialect, 'hello -world', config='simple')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "websearch_to_tsquery",
-        core.Parameter(dialect, config),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        Parameter(dialect, config),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def ts_rank(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-    query: bases.BaseExpression,
+    vector: BaseExpression,
+    query: BaseExpression,
     weights: Optional[List[float]] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL ts_rank function.
 
     Calculates relevance rank for tsvector matching tsquery.
@@ -223,18 +225,18 @@ def ts_rank(
     args: list = []
     if weights is not None:
         weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
-        args.append(core.Parameter(dialect, weights_str))
-    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector))
-    args.append(query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query))
-    return core.FunctionCall(dialect, "ts_rank", *args)
+        args.append(Parameter(dialect, weights_str))
+    args.append(vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector))
+    args.append(query if isinstance(query, BaseExpression) else Parameter(dialect, query))
+    return FunctionCall(dialect, "ts_rank", *args)
 
 
 def ts_rank_cd(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-    query: bases.BaseExpression,
+    vector: BaseExpression,
+    query: BaseExpression,
     weights: Optional[List[float]] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL ts_rank_cd function.
 
     Calculates relevance rank using cover density.
@@ -255,19 +257,19 @@ def ts_rank_cd(
     args: list = []
     if weights is not None:
         weights_str = "ARRAY[" + ", ".join(str(w) for w in weights) + "]"
-        args.append(core.Parameter(dialect, weights_str))
-    args.append(vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector))
-    args.append(query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query))
-    return core.FunctionCall(dialect, "ts_rank_cd", *args)
+        args.append(Parameter(dialect, weights_str))
+    args.append(vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector))
+    args.append(query if isinstance(query, BaseExpression) else Parameter(dialect, query))
+    return FunctionCall(dialect, "ts_rank_cd", *args)
 
 
 def ts_headline(
     dialect: "SQLDialectBase",
-    document: bases.BaseExpression,
-    query: bases.BaseExpression,
+    document: BaseExpression,
+    query: BaseExpression,
     config: str = "english",
     options: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for PostgreSQL ts_headline function.
 
     Displays query matches in document with highlighting.
@@ -290,19 +292,19 @@ def ts_headline(
         >>> ts_headline(dialect, 'content', "to_tsquery('hello')", options='StartSel=<b>, StopSel=</b>')
     """
     args: list = [
-        core.Parameter(dialect, config),
-        document if isinstance(document, bases.BaseExpression) else core.Parameter(dialect, document),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        Parameter(dialect, config),
+        document if isinstance(document, BaseExpression) else Parameter(dialect, document),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     ]
     if options is not None:
-        args.append(options if isinstance(options, bases.BaseExpression) else core.Parameter(dialect, options))
-    return core.FunctionCall(dialect, "ts_headline", *args)
+        args.append(options if isinstance(options, BaseExpression) else Parameter(dialect, options))
+    return FunctionCall(dialect, "ts_headline", *args)
 
 
 def tsvector_strip(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-) -> core.FunctionCall:
+    vector: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for strip function.
 
     Removes positions and weights from tsvector.
@@ -319,17 +321,17 @@ def tsvector_strip(
     Example:
         >>> tsvector_strip(dialect, 'title_tsvector')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "strip",
-        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
+        vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector),
     )
 
 
 def tsvector_setweight(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
+    vector: BaseExpression,
     weight: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate SQL expression for setweight function.
 
     Sets weight for all lexemes in tsvector.
@@ -347,17 +349,17 @@ def tsvector_setweight(
     Example:
         >>> tsvector_setweight(dialect, 'title_tsvector', 'A')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "setweight",
-        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
-        weight if isinstance(weight, bases.BaseExpression) else core.Parameter(dialect, weight),
+        vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector),
+        weight if isinstance(weight, BaseExpression) else Parameter(dialect, weight),
     )
 
 
 def tsvector_length(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-) -> core.FunctionCall:
+    vector: BaseExpression,
+) -> FunctionCall:
     """Generate SQL expression for length function.
 
     Returns the number of lexemes in tsvector.
@@ -374,9 +376,9 @@ def tsvector_length(
     Example:
         >>> tsvector_length(dialect, 'title_tsvector')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "length",
-        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
+        vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector),
     )
 
 
@@ -385,8 +387,8 @@ def tsvector_length(
 
 def ts_matches(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-    query: bases.BaseExpression,
+    vector: BaseExpression,
+    query: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for tsvector @@ tsquery match operator.
 
@@ -403,15 +405,15 @@ def ts_matches(
     """
     return BinaryExpression(
         dialect, "@@",
-        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def ts_matches_expr(
     dialect: "SQLDialectBase",
-    vector: bases.BaseExpression,
-    query: bases.BaseExpression,
+    vector: BaseExpression,
+    query: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for tsvector @@@ tsquery match operator.
 
@@ -430,15 +432,15 @@ def ts_matches_expr(
     """
     return BinaryExpression(
         dialect, "@@@",
-        vector if isinstance(vector, bases.BaseExpression) else core.Parameter(dialect, vector),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        vector if isinstance(vector, BaseExpression) else Parameter(dialect, vector),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
 def tsvector_concat(
     dialect: "SQLDialectBase",
-    vec1: bases.BaseExpression,
-    vec2: bases.BaseExpression,
+    vec1: BaseExpression,
+    vec2: BaseExpression,
 ) -> BinaryExpression:
     """Generate SQL expression for tsvector concatenation.
 
@@ -455,8 +457,8 @@ def tsvector_concat(
     """
     return BinaryExpression(
         dialect, "||",
-        vec1 if isinstance(vec1, bases.BaseExpression) else core.Parameter(dialect, vec1),
-        vec2 if isinstance(vec2, bases.BaseExpression) else core.Parameter(dialect, vec2),
+        vec1 if isinstance(vec1, BaseExpression) else Parameter(dialect, vec1),
+        vec2 if isinstance(vec2, BaseExpression) else Parameter(dialect, vec2),
     )
 
 

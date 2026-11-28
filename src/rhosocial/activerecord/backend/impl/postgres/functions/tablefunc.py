@@ -28,7 +28,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import Optional, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -40,7 +42,7 @@ def crosstab(
     dialect: "SQLDialectBase",
     source_sql: str,
     categories_sql: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Produce a pivot table (crosstab) display from query results.
 
     The crosstab function produces a pivot table display of data.
@@ -77,15 +79,15 @@ def crosstab(
         ...     'SELECT DISTINCT category FROM data ORDER BY category')
     """
     if categories_sql is not None:
-        return core.FunctionCall(
+        return FunctionCall(
             dialect, "crosstab",
-            source_sql if isinstance(source_sql, bases.BaseExpression) else core.Parameter(dialect, source_sql),
-            categories_sql if isinstance(categories_sql, bases.BaseExpression)
-            else core.Parameter(dialect, categories_sql),
+            source_sql if isinstance(source_sql, BaseExpression) else Parameter(dialect, source_sql),
+            categories_sql if isinstance(categories_sql, BaseExpression)
+            else Parameter(dialect, categories_sql),
         )
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "crosstab",
-        source_sql if isinstance(source_sql, bases.BaseExpression) else core.Parameter(dialect, source_sql),
+        source_sql if isinstance(source_sql, BaseExpression) else Parameter(dialect, source_sql),
     )
 
 
@@ -99,7 +101,7 @@ def connectby(
     start_value: str,
     max_depth: Optional[int] = None,
     branch_delim: Optional[str] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Produce a tree-structured display of hierarchical data.
 
     The connectby function displays a hierarchical tree structure from
@@ -129,18 +131,18 @@ def connectby(
         >>> connectby(dialect, 'employees', 'emp_id', 'manager_id', '1', max_depth=3, branch_delim='~')
     """
     args = [
-        table_name if isinstance(table_name, bases.BaseExpression) else core.Parameter(dialect, table_name),
-        key_column if isinstance(key_column, bases.BaseExpression) else core.Parameter(dialect, key_column),
-        parent_column if isinstance(parent_column, bases.BaseExpression) else core.Parameter(dialect, parent_column),
-        start_value if isinstance(start_value, bases.BaseExpression) else core.Parameter(dialect, start_value),
+        table_name if isinstance(table_name, BaseExpression) else Parameter(dialect, table_name),
+        key_column if isinstance(key_column, BaseExpression) else Parameter(dialect, key_column),
+        parent_column if isinstance(parent_column, BaseExpression) else Parameter(dialect, parent_column),
+        start_value if isinstance(start_value, BaseExpression) else Parameter(dialect, start_value),
     ]
     if max_depth is not None:
-        args.append(max_depth if isinstance(max_depth, bases.BaseExpression) else core.Parameter(dialect, max_depth))
+        args.append(max_depth if isinstance(max_depth, BaseExpression) else Parameter(dialect, max_depth))
     if branch_delim is not None:
         args.append(
-            branch_delim if isinstance(branch_delim, bases.BaseExpression)
-            else core.Parameter(dialect, branch_delim))
-    return core.FunctionCall(dialect, "connectby", *args)
+            branch_delim if isinstance(branch_delim, BaseExpression)
+            else Parameter(dialect, branch_delim))
+    return FunctionCall(dialect, "connectby", *args)
 
 
 # ============== Random Data Functions ==============
@@ -151,7 +153,7 @@ def normal_rand(
     mean: float,
     stddev: float,
     seed: Optional[int] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate a set of normally distributed random values.
 
     Returns a set of random values following a normal (Gaussian)
@@ -173,20 +175,20 @@ def normal_rand(
         >>> normal_rand(dialect, 50, 0, 1, seed=42)
     """
     args = [
-        num_values if isinstance(num_values, bases.BaseExpression) else core.Parameter(dialect, num_values),
-        mean if isinstance(mean, bases.BaseExpression) else core.Parameter(dialect, mean),
-        stddev if isinstance(stddev, bases.BaseExpression) else core.Parameter(dialect, stddev),
+        num_values if isinstance(num_values, BaseExpression) else Parameter(dialect, num_values),
+        mean if isinstance(mean, BaseExpression) else Parameter(dialect, mean),
+        stddev if isinstance(stddev, BaseExpression) else Parameter(dialect, stddev),
     ]
     if seed is not None:
-        args.append(seed if isinstance(seed, bases.BaseExpression) else core.Parameter(dialect, seed))
-    return core.FunctionCall(dialect, "normal_rand", *args)
+        args.append(seed if isinstance(seed, BaseExpression) else Parameter(dialect, seed))
+    return FunctionCall(dialect, "normal_rand", *args)
 
 
 def crosstab_with_definition(
     dialect, source_sql: str, output_columns: str, categories_sql: str = None
 ):
     """Build a crosstab query with typed output columns."""
-    from ..expression.tablefunc import PostgresCrosstabWithDefinitionStatement
+    from ..expression.statements.tablefunc import PostgresCrosstabWithDefinitionStatement
 
     return PostgresCrosstabWithDefinitionStatement(
         dialect, source_sql, output_columns, categories_sql
@@ -203,7 +205,7 @@ def connectby_full(
     branch_delim: str = "~",
 ):
     """Build a connectby query with typed output columns."""
-    from ..expression.tablefunc import PostgresConnectbyFullStatement
+    from ..expression.statements.tablefunc import PostgresConnectbyFullStatement
 
     return PostgresConnectbyFullStatement(
         dialect, table_name, key_column, parent_column,

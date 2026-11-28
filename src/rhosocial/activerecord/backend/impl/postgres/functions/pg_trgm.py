@@ -27,7 +27,9 @@ Supported operators:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.expression.operators import BinaryExpression
 
 if TYPE_CHECKING:
@@ -38,9 +40,9 @@ if TYPE_CHECKING:
 
 def similarity(
     dialect: "SQLDialectBase",
-    text1: bases.BaseExpression,
-    text2: bases.BaseExpression,
-) -> core.FunctionCall:
+    text1: BaseExpression,
+    text2: BaseExpression,
+) -> FunctionCall:
     """Calculate the similarity between two texts.
 
     Returns a number between 0 and 1 indicating how similar the two
@@ -64,18 +66,18 @@ def similarity(
         >>> similarity(dialect, 'name_col', 'search_term')
         >>> # Generates: similarity(name_col, 'search_term')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "similarity",
-        text1 if isinstance(text1, bases.BaseExpression) else core.Parameter(dialect, text1),
-        text2 if isinstance(text2, bases.BaseExpression) else core.Parameter(dialect, text2),
+        text1 if isinstance(text1, BaseExpression) else Parameter(dialect, text1),
+        text2 if isinstance(text2, BaseExpression) else Parameter(dialect, text2),
     )
 
 
 def word_similarity(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
+    column: BaseExpression,
     query: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Calculate the word similarity between a document column and a query.
 
     Returns a number between 0 and 1 indicating the greatest similarity
@@ -99,10 +101,10 @@ def word_similarity(
         >>> word_similarity(dialect, 'title_col', 'search')
         >>> # Generates: word_similarity(title_col, 'search')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "word_similarity",
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        query if isinstance(query, bases.BaseExpression) else core.Parameter(dialect, query),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        query if isinstance(query, BaseExpression) else Parameter(dialect, query),
     )
 
 
@@ -110,8 +112,8 @@ def word_similarity(
 
 def show_trgm(
     dialect: "SQLDialectBase",
-    text: bases.BaseExpression,
-) -> core.FunctionCall:
+    text: BaseExpression,
+) -> FunctionCall:
     """Show the trigrams of a text string.
 
     Returns an array of all trigrams found in the given string.
@@ -131,9 +133,9 @@ def show_trgm(
         >>> show_trgm(dialect, 'hello')
         >>> # Generates: show_trgm('hello')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "show_trgm",
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
     )
 
 
@@ -141,8 +143,8 @@ def show_trgm(
 
 def similarity_operator(
     dialect: "SQLDialectBase",
-    column: bases.BaseExpression,
-    text: bases.BaseExpression,
+    column: BaseExpression,
+    text: BaseExpression,
     negate: bool = False,
 ) -> BinaryExpression:
     """Generate SQL expression for the similarity operator (%).
@@ -174,8 +176,8 @@ def similarity_operator(
     operator = "!%" if negate else "%"
     return BinaryExpression(
         dialect, operator,
-        column if isinstance(column, bases.BaseExpression) else core.Parameter(dialect, column),
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
+        column if isinstance(column, BaseExpression) else Parameter(dialect, column),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
     )
 
 
@@ -189,7 +191,7 @@ def trgm_index(
     schema: str = None,
 ):
     """Collect arguments for a trigram index; the formatter validates them."""
-    from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+    from rhosocial.activerecord.backend.impl.postgres.expression.statements import (
         PostgresTrgmIndexExpression,
     )
 

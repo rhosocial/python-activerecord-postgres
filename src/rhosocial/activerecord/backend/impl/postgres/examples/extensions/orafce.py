@@ -50,7 +50,7 @@ if __name__ == "__main__":
         ColumnConstraint,
         ColumnPrimaryKeyConstraint,
     )
-    from rhosocial.activerecord.backend.expression.core import Parameter
+    from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
     from rhosocial.activerecord.backend.expression.statements.dml import (
         InsertStatement,
     )

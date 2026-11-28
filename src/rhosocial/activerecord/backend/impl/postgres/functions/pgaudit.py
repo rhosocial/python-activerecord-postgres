@@ -31,7 +31,9 @@ All functions follow the expression-dialect separation architecture:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -42,7 +44,7 @@ if TYPE_CHECKING:
 def pgaudit_set_role(
     dialect: "SQLDialectBase",
     role: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Set the pgaudit.role configuration parameter.
 
     Sets the role that pgaudit will use to determine which objects
@@ -67,18 +69,18 @@ def pgaudit_set_role(
         >>> pgaudit_set_role(dialect, 'audit_role')
         # Generates: set_config('pgaudit.role', 'audit_role', false)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "set_config",
-        core.Parameter(dialect, "pgaudit.role"),
-        role if isinstance(role, bases.BaseExpression) else core.Parameter(dialect, role),
-        core.Parameter(dialect, "false"),
+        Parameter(dialect, "pgaudit.role"),
+        role if isinstance(role, BaseExpression) else Parameter(dialect, role),
+        Parameter(dialect, "false"),
     )
 
 
 def pgaudit_log_level(
     dialect: "SQLDialectBase",
     level: str,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Set the pgaudit.log_level configuration parameter.
 
     Sets the log level that pgaudit will use when writing audit
@@ -106,18 +108,18 @@ def pgaudit_log_level(
         >>> pgaudit_log_level(dialect, 'notice')
         # Generates: set_config('pgaudit.log_level', 'notice', false)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "set_config",
-        core.Parameter(dialect, "pgaudit.log_level"),
-        level if isinstance(level, bases.BaseExpression) else core.Parameter(dialect, level),
-        core.Parameter(dialect, "false"),
+        Parameter(dialect, "pgaudit.log_level"),
+        level if isinstance(level, BaseExpression) else Parameter(dialect, level),
+        Parameter(dialect, "false"),
     )
 
 
 def pgaudit_include_catalog(
     dialect: "SQLDialectBase",
     include: bool,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Set the pgaudit.log_catalog configuration parameter.
 
     Controls whether pgaudit generates audit records for operations
@@ -144,15 +146,15 @@ def pgaudit_include_catalog(
     """
     if isinstance(include, bool):
         value = "all" if include else "none"
-    elif isinstance(include, bases.BaseExpression):
+    elif isinstance(include, BaseExpression):
         value = include
     else:
         value = include
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "set_config",
-        core.Parameter(dialect, "pgaudit.log_catalog"),
-        value if isinstance(value, bases.BaseExpression) else core.Parameter(dialect, value),
-        core.Parameter(dialect, "false"),
+        Parameter(dialect, "pgaudit.log_catalog"),
+        value if isinstance(value, BaseExpression) else Parameter(dialect, value),
+        Parameter(dialect, "false"),
     )
 
 

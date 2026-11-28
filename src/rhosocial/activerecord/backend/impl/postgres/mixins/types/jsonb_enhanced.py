@@ -436,7 +436,7 @@ class PostgresJSONBEnhancedMixin:
                 server older than 12.0. Both are refusals of something the
                 server cannot do -- never of something it can.
         """
-        from rhosocial.activerecord.backend.expression.advanced_functions import JSONPathMode
+        from rhosocial.activerecord.backend.expression.functions import JSONPathMode
 
         mode: JSONPathMode = expr.mode
 
@@ -461,7 +461,7 @@ class PostgresJSONBEnhancedMixin:
         variable -- is refused with a named error rather than rendered into
         SQL that quietly reads the wrong key.
         """
-        from rhosocial.activerecord.backend.expression import bases
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
         if not self.supports_json_arrow_operators():
             raise UnsupportedFeatureError(
@@ -471,7 +471,7 @@ class PostgresJSONBEnhancedMixin:
                 "operators. Use the default path mode instead.",
             )
 
-        if isinstance(expr.column, bases.BaseExpression):
+        if isinstance(expr.column, BaseExpression):
             col_sql, params = expr.column.to_sql()
         else:
             col_sql, params = self.format_identifier(str(expr.column)), ()
@@ -518,7 +518,7 @@ class PostgresJSONBEnhancedMixin:
         itself on 12.0+, and as one bound element per key before that -- so a
         document-driven path cannot alter the statement's shape either way.
         """
-        from rhosocial.activerecord.backend.expression import bases
+        from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
         if not self.supports_json_path():
             raise UnsupportedFeatureError(
@@ -530,7 +530,7 @@ class PostgresJSONBEnhancedMixin:
                 "Python instead.",
             )
 
-        if isinstance(expr.column, bases.BaseExpression):
+        if isinstance(expr.column, BaseExpression):
             col_sql, col_params = expr.column.to_sql()
         else:
             col_sql, col_params = self.format_identifier(str(expr.column)), ()

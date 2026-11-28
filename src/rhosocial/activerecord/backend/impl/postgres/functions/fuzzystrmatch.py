@@ -26,7 +26,9 @@ Supported functions:
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -36,9 +38,9 @@ if TYPE_CHECKING:
 
 def levenshtein(
     dialect: "SQLDialectBase",
-    source: bases.BaseExpression,
-    target: bases.BaseExpression,
-) -> core.FunctionCall:
+    source: BaseExpression,
+    target: BaseExpression,
+) -> FunctionCall:
     """Calculate the Levenshtein distance between two strings.
 
     The Levenshtein distance is the minimum number of single-character
@@ -58,19 +60,19 @@ def levenshtein(
         >>> dialect = PostgresDialect()
         >>> levenshtein(dialect, 'name_col', 'search_term')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "levenshtein",
-        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
+        source if isinstance(source, BaseExpression) else Parameter(dialect, source),
+        target if isinstance(target, BaseExpression) else Parameter(dialect, target),
     )
 
 
 def levenshtein_less_equal(
     dialect: "SQLDialectBase",
-    source: bases.BaseExpression,
-    target: bases.BaseExpression,
+    source: BaseExpression,
+    target: BaseExpression,
     threshold: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Calculate the Levenshtein distance with a maximum threshold.
 
     This function computes the Levenshtein distance but stops when the
@@ -90,12 +92,12 @@ def levenshtein_less_equal(
     Example:
         >>> levenshtein_less_equal(dialect, 'name_col', 'search_term', 3)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "levenshtein_less_equal",
-        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
-        threshold if isinstance(threshold, bases.BaseExpression)
-        else core.Parameter(dialect, threshold),
+        source if isinstance(source, BaseExpression) else Parameter(dialect, source),
+        target if isinstance(target, BaseExpression) else Parameter(dialect, target),
+        threshold if isinstance(threshold, BaseExpression)
+        else Parameter(dialect, threshold),
     )
 
 
@@ -103,8 +105,8 @@ def levenshtein_less_equal(
 
 def soundex(
     dialect: "SQLDialectBase",
-    text: bases.BaseExpression,
-) -> core.FunctionCall:
+    text: BaseExpression,
+) -> FunctionCall:
     """Calculate the Soundex code for a string.
 
     The Soundex system converts similar-sounding strings into the same
@@ -120,17 +122,17 @@ def soundex(
     Example:
         >>> soundex(dialect, 'name_col')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "soundex",
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
     )
 
 
 def difference(
     dialect: "SQLDialectBase",
-    source: bases.BaseExpression,
-    target: bases.BaseExpression,
-) -> core.FunctionCall:
+    source: BaseExpression,
+    target: BaseExpression,
+) -> FunctionCall:
     """Calculate the difference between two Soundex codes.
 
     Converts both strings to Soundex codes and returns the number of
@@ -148,10 +150,10 @@ def difference(
     Example:
         >>> difference(dialect, 'name_col', 'search_term')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "difference",
-        source if isinstance(source, bases.BaseExpression) else core.Parameter(dialect, source),
-        target if isinstance(target, bases.BaseExpression) else core.Parameter(dialect, target),
+        source if isinstance(source, BaseExpression) else Parameter(dialect, source),
+        target if isinstance(target, BaseExpression) else Parameter(dialect, target),
     )
 
 
@@ -159,9 +161,9 @@ def difference(
 
 def metaphone(
     dialect: "SQLDialectBase",
-    text: bases.BaseExpression,
+    text: BaseExpression,
     max_length: int,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Calculate the Metaphone code for a string.
 
     The Metaphone system is an improvement over Soundex for phonetic
@@ -179,18 +181,18 @@ def metaphone(
     Example:
         >>> metaphone(dialect, 'name_col', 6)
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "metaphone",
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
-        max_length if isinstance(max_length, bases.BaseExpression)
-        else core.Parameter(dialect, max_length),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
+        max_length if isinstance(max_length, BaseExpression)
+        else Parameter(dialect, max_length),
     )
 
 
 def dmetaphone(
     dialect: "SQLDialectBase",
-    text: bases.BaseExpression,
-) -> core.FunctionCall:
+    text: BaseExpression,
+) -> FunctionCall:
     """Calculate the primary Double Metaphone code for a string.
 
     The Double Metaphone system produces two codes for each input string
@@ -207,16 +209,16 @@ def dmetaphone(
     Example:
         >>> dmetaphone(dialect, 'name_col')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "dmetaphone",
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
     )
 
 
 def dmetaphone_alt(
     dialect: "SQLDialectBase",
-    text: bases.BaseExpression,
-) -> core.FunctionCall:
+    text: BaseExpression,
+) -> FunctionCall:
     """Calculate the alternate Double Metaphone code for a string.
 
     Returns the alternate code from the Double Metaphone algorithm,
@@ -234,9 +236,9 @@ def dmetaphone_alt(
     Example:
         >>> dmetaphone_alt(dialect, 'name_col')
     """
-    return core.FunctionCall(
+    return FunctionCall(
         dialect, "dmetaphone_alt",
-        text if isinstance(text, bases.BaseExpression) else core.Parameter(dialect, text),
+        text if isinstance(text, BaseExpression) else Parameter(dialect, text),
     )
 
 

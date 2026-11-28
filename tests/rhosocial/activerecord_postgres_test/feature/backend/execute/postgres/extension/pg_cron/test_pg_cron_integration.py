@@ -19,7 +19,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
 from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.pg_cron import (
     cron_schedule,
     cron_unschedule,

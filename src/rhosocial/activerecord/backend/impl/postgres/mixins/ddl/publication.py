@@ -14,7 +14,7 @@ from typing import List, Tuple, TYPE_CHECKING
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
 
 if TYPE_CHECKING:
-    from ...expression.ddl.publication import (
+    from ...expression.statements.ddl.publication import (
         PostgresCreatePublicationStatement,
         PostgresCreateSubscriptionStatement,
         PostgresDropPublicationStatement,

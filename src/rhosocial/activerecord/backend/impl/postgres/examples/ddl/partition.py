@@ -30,7 +30,9 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import Table
-from rhosocial.activerecord.backend.expression.core import Parameter, AllColumnsWildcard, Column
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
+from rhosocial.activerecord.backend.expression.value_types.wildcards import AllColumnsWildcard
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.types import DateType, DecimalType, VarCharType
 from rhosocial.activerecord.backend.options import ExecutionOptions
 from rhosocial.activerecord.backend.schema import StatementType

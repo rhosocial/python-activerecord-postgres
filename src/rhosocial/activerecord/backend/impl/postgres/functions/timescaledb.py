@@ -9,16 +9,19 @@ and column names are inline SQL literals so PostgreSQL resolves TimescaleDB's
 
 from typing import TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import CastExpression
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 from rhosocial.activerecord.backend.impl.postgres.expression.types import PostgresRegClassType
 
 if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
 
 
-def _inline(dialect: "SQLDialectBase", value) -> core.Parameter:
+def _inline(dialect: "SQLDialectBase", value) -> Parameter:
     """An inline literal, used for DDL positions that accept no bind parameters."""
-    return value if isinstance(value, core.Parameter) else core.Parameter(dialect, value, inline=True)
+    return value if isinstance(value, Parameter) else Parameter(dialect, value, inline=True)
 
 
 def create_hypertable(
@@ -28,7 +31,7 @@ def create_hypertable(
     *,
     partitioning_column=None,
     number_partitions=None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Build ``create_hypertable(relation, time_column[, partition column, n])``.
 
     Args:
@@ -39,11 +42,11 @@ def create_hypertable(
         number_partitions: Number of space partitions; requires
             ``partitioning_column``.
     """
-    relation_expr = relation if isinstance(relation, bases.BaseExpression) else core.Parameter(
+    relation_expr = relation if isinstance(relation, BaseExpression) else Parameter(
         dialect, relation
     )
     arguments = [
-        core.CastExpression(dialect, relation_expr, PostgresRegClassType(dialect)),
+        CastExpression(dialect, relation_expr, PostgresRegClassType(dialect)),
         _inline(dialect, time_column),
     ]
     if partitioning_column is not None:
@@ -55,10 +58,10 @@ def create_hypertable(
                 or number_partitions < 0
             ):
                 raise ValueError("number_partitions must be a non-negative integer")
-            arguments.append(core.Parameter(dialect, number_partitions))
+            arguments.append(Parameter(dialect, number_partitions))
     elif number_partitions is not None:
         raise ValueError("number_partitions requires partitioning_column")
-    return core.FunctionCall(dialect, "create_hypertable", *arguments)
+    return FunctionCall(dialect, "create_hypertable", *arguments)
 
 
 __all__ = ["create_hypertable"]

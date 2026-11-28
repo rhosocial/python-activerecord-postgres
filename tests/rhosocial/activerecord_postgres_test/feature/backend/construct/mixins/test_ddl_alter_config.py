@@ -24,7 +24,7 @@ from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 from rhosocial.activerecord.backend.dialect.exceptions import (
     UnsupportedFeatureError,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresVacuumStatement,  # noqa: F401
     PostgresAnalyzeStatement,  # noqa: F401
     LoggingMode,
@@ -414,7 +414,7 @@ class TestConstraintDeferral:
             TableCheckConstraint,
             TableForeignKeyConstraint,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresAlterConstraintAction,
         )
 
@@ -552,7 +552,7 @@ class TestConstraintEnforcement:
             TablePrimaryKeyConstraint,
             TableUniqueConstraint,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import PostgresExcludeConstraint
 
         dialect = PostgresDialect((18, 0, 0))
         constraint = ForeignKeyConstraint(
@@ -618,7 +618,7 @@ class TestConstraintEnforcement:
         from rhosocial.activerecord.backend.expression.statements import (
             ValidateConstraintAction,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresAlterConstraintAction,
         )
 
@@ -663,7 +663,7 @@ class TestConstraintEnforcement:
             CreateTableStatement,
         )
         from rhosocial.activerecord.backend.expression.types import IntegerType
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import PostgresExcludeConstraint
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import PostgresExcludeConstraint
 
         dialect = PostgresDialect((18, 0, 0))
         with pytest.raises(ValueError, match="at least one element"):
@@ -721,7 +721,7 @@ class TestConstraintEnforcement:
             RawSQL,
             RawSQLPredicate,
         )
-        from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+        from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
             PostgresExcludeConstraint,
         )
         dialect = PostgresDialect((18, 0, 0))

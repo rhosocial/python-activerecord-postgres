@@ -9,8 +9,10 @@ whole statement; these tests pin the rendered bytes each of them owes.
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
+from rhosocial.activerecord.backend.impl.postgres.expression.functions.introspection import (
     PostgresDatabaseSizeFunction,
+)
+from rhosocial.activerecord.backend.impl.postgres.expression.introspection import (
     PostgresDatabaseSizeQueryStatement,
 )
 

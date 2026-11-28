@@ -7,16 +7,16 @@ connection) and assert on the generated SQL, so they run without a server.
 import pytest
 
 from rhosocial.activerecord.backend.dialect.exceptions import UnsupportedFeatureError
-from rhosocial.activerecord.backend.expression.core import Column
+from rhosocial.activerecord.backend.expression.column_types.column import Column
 from rhosocial.activerecord.backend.expression.predicates import ILikePredicate
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.type import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.type import (
     PostgresEnumTypeNameExpression,
     PostgresEnumValuesExpression,
     PostgresCreateEnumTypeExpression,
     PostgresDropEnumTypeExpression,
     PostgresAlterEnumAddValueExpression,
 )
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl.multirange import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl.multirange import (
     PostgresCreateMultirangeTypeExpression,
     PostgresMultirangeAggFunctionExpression,
 )

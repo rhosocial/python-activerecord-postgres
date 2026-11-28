@@ -19,7 +19,7 @@ from rhosocial.activerecord_postgres_test.feature.backend.utils import (
     ensure_extension_installed,
 )
 from rhosocial.activerecord.backend.expression import QueryStatement
-from rhosocial.activerecord.backend.expression.core import Parameter
+from rhosocial.activerecord.backend.expression.value_types.parameter import Parameter
 from rhosocial.activerecord.backend.impl.postgres.functions.address_standardizer import (
     parse_address,
     standardize_address,

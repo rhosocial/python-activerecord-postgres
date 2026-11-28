@@ -12,7 +12,7 @@ from rhosocial.activerecord.backend.expression import (
     QueryStatement,
 )
 from rhosocial.activerecord.backend.expression.objects import MaterializedView, Table
-from rhosocial.activerecord.backend.impl.postgres.expression.ddl import (
+from rhosocial.activerecord.backend.impl.postgres.expression.statements.ddl import (
     PostgresCreateMaterializedViewStatement,
 )
 from rhosocial.activerecord.backend.options import ExecutionOptions

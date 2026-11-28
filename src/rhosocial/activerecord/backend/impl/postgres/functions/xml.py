@@ -16,7 +16,9 @@ Supported functions:
 
 from typing import Dict, Optional, Union, TYPE_CHECKING
 
-from rhosocial.activerecord.backend.expression import bases, core
+from rhosocial.activerecord.backend.expression.functions import FunctionCall
+from rhosocial.activerecord.backend.expression.value_types import Parameter
+from rhosocial.activerecord.backend.expression.bases import BaseExpression
 
 if TYPE_CHECKING:
     from rhosocial.activerecord.backend.dialect import SQLDialectBase
@@ -27,72 +29,72 @@ from ..type_values.xml import PostgresXML
 def _namespaces_to_expression(
     dialect: "SQLDialectBase",
     namespaces: Dict[str, str],
-) -> bases.BaseExpression:
+) -> BaseExpression:
     namespace_pairs = [[prefix, uri] for prefix, uri in namespaces.items()]
-    return core.Parameter(dialect, namespace_pairs)
+    return Parameter(dialect, namespace_pairs)
 
 
 def xpath_query(
     dialect: "SQLDialectBase",
     xpath: str,
-    xml_value: Union[PostgresXML, str, "bases.BaseExpression"],
+    xml_value: Union[PostgresXML, str, "BaseExpression"],
     namespaces: Optional[Dict[str, str]] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate PostgreSQL xpath expression."""
     xpath_expr = (
-        xpath if isinstance(xpath, bases.BaseExpression)
-        else core.Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
-        else core.Parameter(dialect, xpath)
+        xpath if isinstance(xpath, BaseExpression)
+        else Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else Parameter(dialect, xpath)
     )
     xml_expr = (
-        xml_value if isinstance(xml_value, bases.BaseExpression)
-        else core.Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
-        else core.Parameter(dialect, xml_value)
+        xml_value if isinstance(xml_value, BaseExpression)
+        else Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else Parameter(dialect, xml_value)
     )
 
     args = [xpath_expr, xml_expr]
     if namespaces:
         args.append(_namespaces_to_expression(dialect, namespaces))
 
-    return core.FunctionCall(dialect, "xpath", *args)
+    return FunctionCall(dialect, "xpath", *args)
 
 
 def xpath_exists(
     dialect: "SQLDialectBase",
     xpath: str,
-    xml_value: Union[PostgresXML, str, "bases.BaseExpression"],
+    xml_value: Union[PostgresXML, str, "BaseExpression"],
     namespaces: Optional[Dict[str, str]] = None,
-) -> core.FunctionCall:
+) -> FunctionCall:
     """Generate PostgreSQL xpath_exists expression."""
     xpath_expr = (
-        xpath if isinstance(xpath, bases.BaseExpression)
-        else core.Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
-        else core.Parameter(dialect, xpath)
+        xpath if isinstance(xpath, BaseExpression)
+        else Parameter(dialect, xpath.content) if isinstance(xpath, PostgresXML)
+        else Parameter(dialect, xpath)
     )
     xml_expr = (
-        xml_value if isinstance(xml_value, bases.BaseExpression)
-        else core.Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
-        else core.Parameter(dialect, xml_value)
+        xml_value if isinstance(xml_value, BaseExpression)
+        else Parameter(dialect, xml_value.content) if isinstance(xml_value, PostgresXML)
+        else Parameter(dialect, xml_value)
     )
 
     args = [xpath_expr, xml_expr]
     if namespaces:
         args.append(_namespaces_to_expression(dialect, namespaces))
 
-    return core.FunctionCall(dialect, "xpath_exists", *args)
+    return FunctionCall(dialect, "xpath_exists", *args)
 
 
 def xml_is_well_formed(
     dialect: "SQLDialectBase",
-    content: Union[PostgresXML, str, "bases.BaseExpression"],
-) -> core.FunctionCall:
+    content: Union[PostgresXML, str, "BaseExpression"],
+) -> FunctionCall:
     """Generate PostgreSQL xml_is_well_formed expression."""
     content_expr = (
-        content if isinstance(content, bases.BaseExpression)
-        else core.Parameter(dialect, content.content) if isinstance(content, PostgresXML)
-        else core.Parameter(dialect, content)
+        content if isinstance(content, BaseExpression)
+        else Parameter(dialect, content.content) if isinstance(content, PostgresXML)
+        else Parameter(dialect, content)
     )
-    return core.FunctionCall(dialect, "xml_is_well_formed", content_expr)
+    return FunctionCall(dialect, "xml_is_well_formed", content_expr)
 
 
 __all__ = [

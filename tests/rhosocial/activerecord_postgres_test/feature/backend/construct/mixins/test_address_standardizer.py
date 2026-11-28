@@ -7,7 +7,7 @@ Tests for:
 """
 
 from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
-from rhosocial.activerecord.backend.expression import core
+from rhosocial.activerecord.backend.expression.functions.function_call import FunctionCall
 from rhosocial.activerecord.backend.impl.postgres.functions.address_standardizer import (
     standardize_address,
     parse_address,
@@ -23,7 +23,7 @@ class TestAddressStandardizerFunctions:
         result = standardize_address(
             dialect, 'pagc_lex', 'pagc_gaz', 'pagc_rules', '123 Main St'
         )
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "standardize_address" in sql.lower()
         # Should have 4 parameters (lextab, gaztab, rultab, address)
@@ -33,7 +33,7 @@ class TestAddressStandardizerFunctions:
         """parse_address should return FunctionCall with 1 parameter."""
         dialect = PostgresDialect((14, 0, 0))
         result = parse_address(dialect, '123 Main St')
-        assert isinstance(result, core.FunctionCall)
+        assert isinstance(result, FunctionCall)
         sql, params = result.to_sql()
         assert "parse_address" in sql.lower()
         # Should have 1 parameter (address)

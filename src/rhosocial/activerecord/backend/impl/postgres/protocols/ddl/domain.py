@@ -9,8 +9,8 @@ from rhosocial.activerecord.backend.dialect.protocols import (
     DropDomainSupport,
 )
 from rhosocial.activerecord.backend.expression.bases import BaseExpression
-from rhosocial.activerecord.backend.expression.statements.ddl_domain import AlterDomainStatement
-from rhosocial.activerecord.backend.expression.statements.ddl_domain import DomainAlterAction
+from rhosocial.activerecord.backend.expression.statements import AlterDomainStatement
+from rhosocial.activerecord.backend.expression.statements import DomainAlterAction
 
 __all__ = ["PostgresDomainSupport"]
 

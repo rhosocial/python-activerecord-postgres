@@ -9,7 +9,7 @@ SUBSCRIPTION DDL commands.
 from typing import Protocol, runtime_checkable, Tuple, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...expression.ddl.publication import (
+    from ...expression.statements.ddl.publication import (
         PostgresCreatePublicationStatement,
         PostgresCreateSubscriptionStatement,
         PostgresDropPublicationStatement,
