@@ -5,6 +5,10 @@ import importlib
 
 import pytest
 
+from rhosocial.activerecord.backend.expression_registry import ExpressionRegistry
+from rhosocial.activerecord.backend.impl.postgres.expression_registry import (
+    POSTGRES_EXPRESSION_REGISTRY,
+)
 from rhosocial.activerecord.testsuite.feature.rules.backend.support import impl_root_of
 from rhosocial.activerecord.testsuite.feature.rules.contracts.subject import (
     ExpressionSubject,
@@ -27,3 +31,9 @@ def subject() -> ExpressionSubject:
         open_package_root=root,
         impl_module_prefix=IMPL,
     )
+
+
+@pytest.fixture
+def registry() -> ExpressionRegistry:
+    """postgres's published expression table, supplied to the shared contract."""
+    return POSTGRES_EXPRESSION_REGISTRY
