@@ -38,7 +38,7 @@ def handle(args):
     from rhosocial.activerecord.backend.impl.postgres.dialect import PostgresDialect
 
     def _get_requested_version():
-        ver = getattr(args, "dialect_version", None)
+        ver = args.dialect_version
         if ver:
             return tuple(int(p) for p in ver.split("."))
         return None
@@ -69,7 +69,7 @@ def handle(args):
         if backend and backend._connection:
             backend.disconnect()
 
-    is_async = getattr(args, "is_async", False)
+    is_async = args.is_async
     if is_async:
         async_backend = None
 

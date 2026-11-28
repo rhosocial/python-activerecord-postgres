@@ -36,7 +36,26 @@ from rhosocial.activerecord.backend.impl.postgres.functions import ltree as _ltr
 from rhosocial.activerecord.backend.impl.postgres.functions import network as _network
 from rhosocial.activerecord.backend.impl.postgres.functions import range as _range
 from rhosocial.activerecord.backend.expression.core import CastExpression, Parameter
-from rhosocial.activerecord.backend.expression.types import BigIntType, IntegerType
+from rhosocial.activerecord.backend.expression.types import (
+    ArrayType,
+    BigIntType,
+    DataType,
+    IntegerType,
+)
+
+#: Element-type dispatch name -> the integer width its elements need. The names
+#: are declared here rather than discovered on an arbitrary object: only a
+#: DataType's declared name can choose a cast, and the two spellings of each
+#: width are listed side by side so a new spelling has to be added on purpose.
+_ELEMENT_WIDTH_BY_NAME = {
+    "postgres_int4": "int4",
+    "integer": "int4",
+    "int4": "int4",
+    "int": "int4",
+    "postgres_int8": "int8",
+    "bigint": "int8",
+    "int8": "int8",
+}
 
 
 def _typed_element(dialect, element_type, element):
@@ -62,24 +81,27 @@ def _typed_element(dialect, element_type, element):
     down with it.
     """
     if isinstance(element, Parameter):
-        value = getattr(element, "value", None)
+        # Parameter always carries the value it binds, so it is read directly.
+        value = element.value
         if isinstance(value, bool) or not isinstance(value, (int, float)):
             return element
         element = value
     if not isinstance(element, int) or isinstance(element, bool):
         return element
-    name = getattr(element_type, "name", "")
+
+    # A DataType always declares its dispatch name, and an ArrayType always
+    # holds its element type. Reading them off the declared classes keeps the
+    # width a property of the type, not of whatever an object happens to carry.
+    name = element_type.name if isinstance(element_type, DataType) else ""
     if name == "postgres_array":
         # An array compares elementwise, so its element type is the one that
         # decides the width.
-        name = getattr(getattr(element_type, "element_type", None), "name", "")
-    # Both spellings are accepted: the element type may be a core type named
-    # "integer" or a PostgreSQL one named "postgres_int4", and both mean the
-    # same width. Only the width matters here, not which module declared it.
-    if name in ("postgres_int4", "integer", "int4", "int"):
+        inner = element_type.element_type if isinstance(element_type, ArrayType) else None
+        name = inner.name if isinstance(inner, DataType) else ""
+    width = _ELEMENT_WIDTH_BY_NAME.get(name)
+    if width == "int4":
         return CastExpression(dialect, Parameter(dialect, element), IntegerType(dialect))
-
-    if name in ("postgres_int8", "bigint", "int8"):
+    if width == "int8":
         return CastExpression(dialect, Parameter(dialect, element), BigIntType(dialect))
     return element
 

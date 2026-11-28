@@ -118,8 +118,10 @@ class PostgresPartitionValue(BaseExpression):
                         raise ValueError("partition value expressions must not have aliases")
                     pending.extend(current.args)
                 elif isinstance(current, (Parameter, RawSQL)):
-                    if getattr(current, "alias", None) is not None:
-                        raise ValueError("partition value expressions must not have aliases")
+                    # Neither class declares an alias. FunctionCall above is the
+                    # only node this walk can reach that carries one, so the
+                    # rejection belongs there and not on a missing attribute.
+                    continue
                 else:
                     raise TypeError(
                         "partition value expressions must be FunctionCall, Parameter, "

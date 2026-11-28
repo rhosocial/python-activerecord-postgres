@@ -50,6 +50,23 @@ if TYPE_CHECKING:  # pragma: no cover
     from rhosocial.activerecord.backend.expression.functions import FunctionCall
 
 
+#: Capability switches this module may require, each paired with the reader
+#: that binds its method on a dialect. The key is the identity reported on
+#: refusal; the reader is written out so no switch is discovered by spelling.
+_CAPABILITY_SWITCHES = {
+    "supports_postgis_spatial_functions": (
+        lambda dialect: dialect.supports_postgis_spatial_functions
+    ),
+    "supports_pgvector_similarity_search": (
+        lambda dialect: dialect.supports_pgvector_similarity_search
+    ),
+    "supports_range_operators": lambda dialect: dialect.supports_range_operators,
+    "supports_range_functions": lambda dialect: dialect.supports_range_functions,
+    "supports_multirange": lambda dialect: dialect.supports_multirange,
+    "supports_hstore_operators": lambda dialect: dialect.supports_hstore_operators,
+}
+
+
 def _require(dialect, switch: str) -> None:
     """Fail loudly, and by name, when the server does not answer a capability.
 
@@ -57,8 +74,14 @@ def _require(dialect, switch: str) -> None:
     for: that would produce SQL which fails on the first query, with the error
     pointing at the column instead of at the missing capability.
     """
-    answer = getattr(dialect, switch, None)
-    if answer is None or not answer():
+    reader = _CAPABILITY_SWITCHES.get(switch)
+    if reader is None:
+        raise UnsupportedFeatureError(
+            type(dialect).__name__,
+            switch,
+            f"{switch} is not a capability this column can require",
+        )
+    if not reader(dialect)():
         raise UnsupportedFeatureError(
             type(dialect).__name__,
             switch,
