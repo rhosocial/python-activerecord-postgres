@@ -297,12 +297,13 @@ def special_constructors():
     new names is not expressible, because ``endswith`` compares a suffix. A
     class that was split needs one entry per resulting class.
 
-    :func:`register_special_constructor` writes to the module-level
-    ``_SPECIAL_REGISTRY``, which is what :func:`make_instance` reads. Note that
-    this function rebuilds its dict on every call, so a registration made
-    elsewhere is **not** visible to a caller that invokes
-    ``special_constructors()`` directly — core's expression-contract test does
-    exactly that, and therefore sees only the literals below.
+    Each :class:`SpecialConstructorRegistry` takes a copy of this dict at
+    construction, and registration is then per-instance: what a backend adds to
+    one registry never leaks into another, so no constructor set depends on
+    import or collection order. A caller invoking ``special_constructors()``
+    directly still sees only the literals below -- that is deliberate. The
+    explicit registry, not this function, is the source of truth for
+    construction.
     """
     return {
         "statements.ddl_table.ColumnDefinition": _column_definition,
@@ -965,36 +966,69 @@ def _datetime_add_expr(dialect):
     return DatetimeAddExpression(dialect, Column(dialect, "a"), IntervalExpression(dialect, 1, "day"))
 
 
-_SPECIAL_REGISTRY: Dict[str, Callable] = special_constructors()
+class SpecialConstructorRegistry:
+    """Explicit constructors for classes whose ``__init__`` rejects placeholders.
 
+    Holds a per-instance mapping from a fully-qualified-name suffix to a
+    ``factory(dialect)`` callable. Every instance starts from a copy of
+    :func:`special_constructors`, so a backend can add its own entries without
+    affecting any other instance -- which is what makes construction independent
+    of import and collection order.
 
-def register_special_constructor(fqn_suffix: str, factory: Callable) -> None:
-    """Register an explicit constructor for an expression class.
-
-    ``fqn_suffix`` must match the tail of the class's fully qualified name
-    (e.g. ``"json.PostgresJSONObjectExpression"``). ``factory(dialect)`` must
-    return an expression instance.
+    ``make_instance`` dispatches on ``full_name.endswith(key)``, so a key that
+    matches no class is dead code: renaming a class turns its entry into a
+    literal that matches nothing, the class falls through to the heuristic, and
+    the mismatch is silent. One key cannot cover two renamed classes, because
+    ``endswith`` compares a suffix; a split needs one entry per resulting class.
     """
-    _SPECIAL_REGISTRY[fqn_suffix] = factory
+
+    def __init__(self, base=None):
+        self.entries: Dict[str, Callable] = dict(
+            special_constructors() if base is None else base
+        )
+
+    def register(self, fqn_suffix: str, factory: Callable) -> None:
+        """Add one explicit constructor keyed by the tail of a class's fqn.
+
+        ``fqn_suffix`` must match the tail of the class's fully qualified name
+        (e.g. ``"json.PostgresJSONObjectExpression"``). ``factory(dialect)`` must
+        return an expression instance.
+        """
+        self.entries[fqn_suffix] = factory
+
+    def make_instance(self, cls: Type[BaseExpression], dialect: Any):
+        """Best-effort construction using only this registry's entries.
+
+        Returns (instance, source) where source is "special", "heuristic", or
+        (None, "failed").
+        """
+        full_name = f"{cls.__module__}.{cls.__name__}"
+        special = next(
+            (fn for s, fn in self.entries.items() if full_name.endswith(s)), None
+        )
+        if special is not None:
+            try:
+                return special(dialect), "special"
+            except Exception:
+                return None, "special-failed"
+        instance = _try_construct(cls, dialect)
+        if instance is None:
+            return None, "failed"
+        return instance, "heuristic"
 
 
-def make_instance(cls: Type[BaseExpression], dialect: Any):
-    """Best-effort construction for an expression class.
+def register_special_constructor(
+    registry: SpecialConstructorRegistry, fqn_suffix: str, factory: Callable
+) -> None:
+    """Explicit-injection adapter: register *factory* on *registry*."""
+    registry.register(fqn_suffix, factory)
 
-    Returns (instance, source) where source is "special", "heuristic", or
-    (None, "failed").
-    """
-    full_name = f"{cls.__module__}.{cls.__name__}"
-    special = next((fn for s, fn in _SPECIAL_REGISTRY.items() if full_name.endswith(s)), None)
-    if special is not None:
-        try:
-            return special(dialect), "special"
-        except Exception:
-            return None, "special-failed"
-    instance = _try_construct(cls, dialect)
-    if instance is None:
-        return None, "failed"
-    return instance, "heuristic"
+
+def make_instance(
+    cls: Type[BaseExpression], dialect: Any, registry: SpecialConstructorRegistry
+):
+    """Explicit-injection adapter: construct *cls* using *registry*."""
+    return registry.make_instance(cls, dialect)
 
 
 def collect_expression_classes(package_path: str) -> Dict[str, Type[BaseExpression]]:
@@ -1178,6 +1212,7 @@ def parse_roundtrip_failures(
     dialect: Any,
     registry: Dict[str, Any],
     *,
+    special_registry: SpecialConstructorRegistry,
     widening: Optional[Dict[str, Any]] = None,
     skip: Any = (),
 ) -> Any:
@@ -1212,7 +1247,7 @@ def parse_roundtrip_failures(
             continue
         if cls.__name__ in skipped:
             continue
-        instance, source = make_instance(cls, dialect)
+        instance, source = make_instance(cls, dialect, special_registry)
         if instance is None:
             continue  # the matrix's unconstructible list owns this class
         try:
@@ -1289,6 +1324,7 @@ __all__ = [
     "parse_roundtrip_failures",
     "register_all",
     "register_special_constructor",
+    "SpecialConstructorRegistry",
     "roundtrip_expression",
     "sql_consistent",
 ]

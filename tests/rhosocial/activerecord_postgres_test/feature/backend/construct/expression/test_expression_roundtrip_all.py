@@ -361,10 +361,10 @@ from rhosocial.activerecord.backend.impl.postgres.functions.pg_hint_plan import 
     hint_seq_scan,
 )
 from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
+    SpecialConstructorRegistry,
     collect_expression_classes,
     make_instance,
     register_all,
-    register_special_constructor,
 )
 
 
@@ -600,17 +600,17 @@ VALIDATE_CONSTRAINT_SUFFIXES = (
 )
 
 
-def register_specials():
+def register_specials(registry):
     """Replace every introspective guess that would cost a real assertion."""
     # -- nodes whose ``op`` is a closed word set, not a free string ----------
     # Both nodes refuse an ``op`` outside their set at construction, so the
     # introspective guess (which supplies a placeholder string) cannot build
     # them at all. Naming one real word is what lets the matrix exercise them.
-    register_special_constructor(
+    registry.register(
         "operators.ArithmeticOperation",
         lambda d: ArithmeticOperation(d, "add", Column(d, "a"), Literal(d, 1)),
     )
-    register_special_constructor(
+    registry.register(
         "query_sources.SetOperation",
         lambda d: SetOperation(
             d,
@@ -623,7 +623,7 @@ def register_specials():
     # ``op`` is normalised through the word-form enum at construction and the
     # guess's bare string is refused -- and the same reason for wanting one:
     # PostgreSQL spells a compound SELECT, so the matrix can assert it.
-    register_special_constructor(
+    registry.register(
         "statements.dql.SetOperationStatement",
         lambda d: SetOperationStatement(d, op="union_all", parts=_compound_arms(d)),
     )
@@ -631,17 +631,17 @@ def register_specials():
     # caller error, which the formatter reports as ``TypeError`` now that the
     # constructor stopped validating; naming a real constant is what lets the
     # matrix render the node this dialect does support.
-    register_special_constructor(
+    registry.register(
         "uuid.UUIDConstantExpression",
         lambda d: UUIDConstantExpression(d, "nil"),
     )
 
     # -- the FROM side ------------------------------------------------------
-    register_special_constructor(
+    registry.register(
         "sources.relation.NamedRelationRef",
         lambda d: NamedRelationRef(d, _table_obj(d)),
     )
-    register_special_constructor(
+    registry.register(
         "query_parts.JoinClause",
         lambda d: JoinClause(
             d,
@@ -656,11 +656,11 @@ def register_specials():
     # plain string in one of these slots was rendered by whatever formatter the
     # string happened to name -- or refused. Either way the statement was never
     # the one the class describes.
-    register_special_constructor(
+    registry.register(
         "statements.ddl_alter.AddColumnAction",
         lambda d: AddColumnAction(d, _integer_column(d)),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_alter.AddTableConstraintAction",
         lambda d: AddTableConstraintAction(d, _primary_key_constraint(d)),
     )
@@ -668,19 +668,19 @@ def register_specials():
     # the drop by kind may address the constraint through ``constraint`` instead.
     # The introspective guess therefore leaves the name unset and builds an action
     # with no address at all. PostgreSQL spells the drop by name only, so name one.
-    register_special_constructor(
+    registry.register(
         "statements.ddl_alter.DropTableConstraintAction",
         lambda d: DropTableConstraintAction(d, constraint_name="c"),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_table.ColumnConstraint",
         lambda d: ColumnConstraint(d, branch=ColumnNotNullConstraint(d), name="c"),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_table.TableConstraint",
         lambda d: _primary_key_constraint(d),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_table.ForeignKeyConstraint",
         lambda d: ForeignKeyConstraint(
             d,
@@ -690,11 +690,11 @@ def register_specials():
             name="fk",
         ),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_table.ReferencesClause",
         lambda d: ReferencesClause(d, Table(d, "other"), ["b"]),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_database.AlterDatabaseStatement",
         lambda d: AlterDatabaseStatement(
             d,
@@ -703,7 +703,7 @@ def register_specials():
             target="renamed_db",
         ),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_trigger.CreateTriggerStatement",
         lambda d: CreateTriggerStatement(
             d,
@@ -719,11 +719,11 @@ def register_specials():
     # A DOMAIN CHECK is DDL. A predicate comparing a column to a literal would
     # have to become a bind parameter, and DDL carries none, so both the check
     # itself and the action that adds it need a column-to-column predicate.
-    register_special_constructor(
+    registry.register(
         "statements.ddl_domain.DomainCheckConstraint",
         lambda d: _domain_check(d),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_domain.AddDomainCheckAction",
         lambda d: AddDomainCheckAction(d, _domain_check(d)),
     )
@@ -732,9 +732,9 @@ def register_specials():
     # ``constraint_kind`` is a union of a branch class and ``str``, so the guess
     # cannot know which one is legal; the VALIDATE family needs only a name.
     for suffix in ALTER_CONSTRAINT_SUFFIXES:
-        register_special_constructor(suffix, lambda d: _alter_constraint(d))
+        registry.register(suffix, lambda d: _alter_constraint(d))
     for suffix in VALIDATE_CONSTRAINT_SUFFIXES:
-        register_special_constructor(
+        registry.register(
             suffix, lambda d: ValidateConstraintAction(d, constraint_name="c", name="c")
         )
 
@@ -742,7 +742,7 @@ def register_specials():
     # ``partition_type`` is checked against {RANGE, LIST, HASH}; ``target_type``
     # against the REINDEX targets; ``mode`` against the RLS modes. The guess
     # supplies a bare string and the formatter refuses it.
-    register_special_constructor(
+    registry.register(
         "ddl.partition.PostgresCreatePartitionStatement",
         lambda d: PostgresCreatePartitionStatement(
             d,
@@ -752,7 +752,7 @@ def register_specials():
             partition_values={"default": True},
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.partition.PostgresAttachPartitionStatement",
         lambda d: PostgresAttachPartitionStatement(
             d,
@@ -762,11 +762,11 @@ def register_specials():
             partition_values={"default": True},
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl_partition.PartitionByRangeClause",
         lambda d: PartitionByRangeClause(d, [Column(d, "a")]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.index.PostgresAlterIndexStatement",
         lambda d: PostgresAlterIndexStatement(
             d,
@@ -775,17 +775,17 @@ def register_specials():
             new_name="j",
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.index.PostgresReindexStatement",
         lambda d: PostgresReindexStatement(d, target_type="INDEX", name="i"),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.rls_config.PostgresAlterTableRlsStatement",
         lambda d: PostgresAlterTableRlsStatement(
             d, table_name="t", mode=RlsConfigurationMode.ENABLE
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.table_settings.PostgresAlterTableSettingsStatement",
         lambda d: PostgresAlterTableSettingsStatement(d, table_name="t", mode=LoggingMode.LOGGED),
     )
@@ -798,21 +798,21 @@ def register_specials():
     # each of the eight is registered below with a hint attached, so the matrix
     # proves the payload survives every encoding and that the prefix survives
     # with it. The generic base statements stay registered in their plain form.
-    register_special_constructor(
+    registry.register(
         "statements.dql.QueryStatement",
         lambda d: QueryStatement(d, [Column(d, "a")], _table_obj(d)),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_table.CreateTableAsStatement",
         lambda d: CreateTableAsStatement(d, _table_obj(d, "ct"), _one_column_query(d)),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_view.CreateMaterializedViewStatement",
         lambda d: CreateMaterializedViewStatement(
             d, MaterializedView(d, "mv"), _one_column_query(d)
         ),
     )
-    register_special_constructor(
+    registry.register(
         "statements.ddl_view.RefreshMaterializedViewStatement",
         lambda d: RefreshMaterializedViewStatement(d, MaterializedView(d, "mv")),
     )
@@ -821,7 +821,7 @@ def register_specials():
     # a ``NamedRelationRef`` for the last one, so the resolver runs on the wire --
     # and the builder normalises ``HintGroup`` to ``("a", "b")``, so the
     # round-trip proves the nested array survives every reader.
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresQueryStatement",
         lambda d: PostgresQueryStatement(
             d,
@@ -836,7 +836,7 @@ def register_specials():
             ),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresInsertStatement",
         lambda d: PostgresInsertStatement(
             d,
@@ -846,7 +846,7 @@ def register_specials():
             hints=(hint_seq_scan(d, "t"),),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresUpdateStatement",
         lambda d: PostgresUpdateStatement(
             d,
@@ -855,21 +855,21 @@ def register_specials():
             hints=(hint_seq_scan(d, "t"),),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresDeleteStatement",
         lambda d: PostgresDeleteStatement(d, _table_obj(d), hints=(hint_seq_scan(d, "t"),)),
     )
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresExplainStatement",
         lambda d: PostgresExplainStatement(d, _one_column_query(d), hints=(hint_seq_scan(d, "t"),)),
     )
-    register_special_constructor(
+    registry.register(
         "hinted_statements.PostgresCreateTableAsStatement",
         lambda d: PostgresCreateTableAsStatement(
             d, _table_obj(d, "ct"), _one_column_query(d), hints=(hint_seq_scan(d, "t"),)
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.mv.PostgresCreateMaterializedViewStatement",
         lambda d: PostgresCreateMaterializedViewStatement(
             d,
@@ -878,19 +878,19 @@ def register_specials():
             hints=(hint_seq_scan(d, "t"),),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.mv.PostgresRefreshMaterializedViewStatement",
         lambda d: PostgresRefreshMaterializedViewStatement(
             d, MaterializedView(d, "mv"), hints=(hint_seq_scan(d, "mv"),)
         ),
     )
     # -- pg_stat_statements: one of the closed standard query kinds ---------
-    register_special_constructor(
+    registry.register(
         "pg_stat.PostgresPgStatStatement",
         lambda d: PostgresPgStatStatement(d, "stats", limit=10),
     )
     # -- the named enum column type: a name plus its labels -----------------
-    register_special_constructor(
+    registry.register(
         "types.PostgresEnumColumnType",
         lambda d: PostgresEnumColumnType(d, type_name="mood", values=["sad", "ok"]),
     )
@@ -898,29 +898,29 @@ def register_specials():
     # -- PostgreSQL statements whose required slot is a non-empty member ----
     # Each of these refuses to be a statement without the member its name says it
     # modifies, so the introspective ``[]`` is refused by design.
-    register_special_constructor(
+    registry.register(
         "ddl.exclude_constraint.PostgresExcludeConstraint",
         lambda d: PostgresExcludeConstraint(d, name="ex", elements=[(Column(d, "a"), "=")]),
     )
     # The EXCLUDE *branches* need the same non-empty member list the sugar does,
     # and there are two of them: core's and PostgreSQL's.
-    register_special_constructor(
+    registry.register(
         "ddl_table.TableExcludeConstraint",
         lambda d: TableExcludeConstraint(d, ["a"], "="),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.exclude_constraint.PostgresExcludeBranch",
         lambda d: PostgresExcludeBranch(d, [(Column(d, "a"), "=")]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.pg_partman.PostgresPgPartmanUpdateConfigExpression",
         lambda d: PostgresPgPartmanUpdateConfigExpression(d, parent_table="t", retention="7 days"),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.policy.PostgresAlterPolicyStatement",
         lambda d: PostgresAlterPolicyStatement(d, name="p", table_name="t", new_name="q"),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.publication.PostgresCreatePublicationStatement",
         lambda d: PostgresCreatePublicationStatement(d, name="pub", tables=["t"]),
     )
@@ -929,39 +929,39 @@ def register_specials():
     # ``values`` / ``labels`` / ``properties`` are keyword-only behind defaulted
     # positionals, so the introspective constructor skips them and the definition
     # declares nothing.
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresCreateEnumTypeExpression",
         lambda d: PostgresCreateEnumTypeExpression(d, name="mood", values=["sad", "ok"]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresEnumValuesExpression",
         lambda d: PostgresEnumValuesExpression(d, values=["sad", "ok"]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresEnumTypeDefinition",
         lambda d: PostgresEnumTypeDefinition(d, labels=["sad", "ok"]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresSetTypePropertiesAction",
         lambda d: PostgresSetTypePropertiesAction(d, properties={"STORAGE": "plain"}),
     )
     # A base type is a shell type: it needs the two I/O functions and everything
     # else is optional, so the introspective constructor supplies nothing at all
     # because ``dialect`` is the only non-defaulted parameter.
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresBaseTypeDefinition",
         lambda d: PostgresBaseTypeDefinition(
             d, input_function="int4in", output_function="int4out", internallength=4
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.type.PostgresCompositeTypeDefinition",
         lambda d: PostgresCompositeTypeDefinition(
             d,
             attributes=[PostgresCompositeTypeAttribute("a", IntegerType(d))],
         ),
     )
-    register_special_constructor(
+    registry.register(
         "enum_.PostgresEnumType",
         lambda d: PostgresEnumType(d, name="mood", values=["sad", "ok"]),
     )
@@ -969,27 +969,27 @@ def register_specials():
     # -- columns, COPY, materialized views ---------------------------------
     # A PostgreSQL column definition's ``data_type`` is required and untyped in
     # the annotation, so the guess supplies nothing for it.
-    register_special_constructor(
+    registry.register(
         "ddl.column.PostgresColumnDefinition",
         lambda d: PostgresColumnDefinition(d, "c", IntegerType(d)),
     )
     # COPY needs a source: either a query or a table. With neither, there is no
     # statement.
-    register_special_constructor(
+    registry.register(
         "copy.PostgresCopyToStatement",
         lambda d: PostgresCopyToStatement(d, table_name="t"),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.mv.PostgresSetMaterializedViewPropertiesAction",
         lambda d: PostgresSetMaterializedViewPropertiesAction(
             d, properties={"autovacuum_enabled": "true"}
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.mv.PostgresResetMaterializedViewPropertiesAction",
         lambda d: PostgresResetMaterializedViewPropertiesAction(d, parameters=["fillfactor"]),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.mv.PostgresAlterMaterializedViewStatement",
         lambda d: PostgresAlterMaterializedViewStatement(
             d,
@@ -997,11 +997,11 @@ def register_specials():
             action=PostgresSetMaterializedViewPropertiesAction(d, properties={"fillfactor": "70"}),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.domain.PostgresAddDomainCheckAction",
         lambda d: PostgresAddDomainCheckAction(d, _domain_check(d)),
     )
-    register_special_constructor(
+    registry.register(
         "ddl.domain.PostgresAlterDomainExpression",
         lambda d: PostgresAlterDomainExpression(
             d,
@@ -1011,7 +1011,7 @@ def register_specials():
     )
 
     # -- expressions that need at least one member --------------------------
-    register_special_constructor(
+    registry.register(
         "advanced_functions.CaseExpression",
         lambda d: CaseExpression(
             d,
@@ -1019,15 +1019,15 @@ def register_specials():
             else_result=Literal(d, 0),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "advanced_functions.WindowSpecification",
         lambda d: WindowSpecification(d, partition_by=["a"]),
     )
-    register_special_constructor(
+    registry.register(
         "advanced_functions.WindowDefinition",
         lambda d: WindowDefinition(d, "w", WindowSpecification(d, partition_by=["a"])),
     )
-    register_special_constructor(
+    registry.register(
         "advanced_functions.WindowClause",
         lambda d: WindowClause(
             d, [WindowDefinition(d, "w", WindowSpecification(d, partition_by=["a"]))]
@@ -1035,7 +1035,7 @@ def register_specials():
     )
     # An empty options dict is refused by the formatter, so a time-travel clause
     # needs an actual option.
-    register_special_constructor(
+    registry.register(
         "datetime.TemporalOptionsExpression",
         lambda d: TemporalOptionsExpression(d, {"as_of": "2020-01-01"}),
     )
@@ -1045,13 +1045,13 @@ def register_specials():
     # computed value -- so the guess supplies a string and the formatter calls
     # ``.to_sql()`` on it. ILIKE is the core node: PostgreSQL spells it by
     # overriding ``format_ilike_predicate``, not by redeclaring the kind.
-    register_special_constructor(
+    registry.register(
         "predicates.ILikePredicate",
         lambda d: CoreILIKEExpression(d, Column(d, "a"), "x%"),
     )
     # LIKE carries the operator as a parameter, so the guess's ``"x"`` would
     # become the operator rather than the operand.
-    register_special_constructor(
+    registry.register(
         "predicates.LikePredicate",
         lambda d: LikePredicate(d, LikeOperator.LIKE, Column(d, "a"), Literal(d, "x%")),
     )
@@ -1060,17 +1060,17 @@ def register_specials():
     # The formatter validates the name against the backend whitelist, and the
     # guess's ``"x"`` is not on it. ``und-x-icu`` needs PostgreSQL 10+, so ``C`` is
     # the one that is legal at every version.
-    register_special_constructor(
+    registry.register(
         "collation.CollateFunction",
         lambda d: CollateFunction(d, Column(d, "a"), "C"),
     )
 
     # -- MERGE --------------------------------------------------------------
-    register_special_constructor(
+    registry.register(
         "statements.dml.MergeAction",
         lambda d: _merge_action(d),
     )
-    register_special_constructor(
+    registry.register(
         "statements.dml.MergeStatement",
         lambda d: MergeStatement(
             d,
@@ -1082,19 +1082,19 @@ def register_specials():
     )
 
     # -- SQL/XML ------------------------------------------------------------
-    register_special_constructor(
+    registry.register(
         "xml.XMLAttributesExpression",
         lambda d: XMLAttributesExpression(d, [XMLAttribute(Literal(d, "v"), "a")]),
     )
-    register_special_constructor(
+    registry.register(
         "xml.XMLForestExpression",
         lambda d: XMLForestExpression(d, [XMLForestItem(Literal(d, "v"), "a")]),
     )
-    register_special_constructor(
+    registry.register(
         "xml.XMLConcatExpression",
         lambda d: XMLConcatExpression(d, [Literal(d, "a"), Literal(d, "b")]),
     )
-    register_special_constructor(
+    registry.register(
         "xml.XMLTableExpression",
         lambda d: XMLTableExpression(
             d,
@@ -1113,35 +1113,35 @@ def register_specials():
     def path_pattern(d):
         return graph_mod.PathPattern(d, graph_mod.GraphVertex(d, "n", node_table(d)))
 
-    register_special_constructor(
+    registry.register(
         "graph.GraphVertex", lambda d: graph_mod.GraphVertex(d, "n", node_table(d))
     )
-    register_special_constructor(
+    registry.register(
         "graph.GraphEdge", lambda d: graph_mod.GraphEdge(d, "e", edge_table(d))
     )
-    register_special_constructor(
+    registry.register(
         "graph.VertexTable",
         lambda d: graph_mod.VertexTable(d, node_table(d), key_columns=["id"]),
     )
-    register_special_constructor(
+    registry.register(
         "graph.edge_table_definition",
         lambda d: graph_mod.EdgeTableDefinition(d, edge_table(d), ["src"], ["dst"]),
     )
-    register_special_constructor(
+    registry.register(
         "graph.QuantifiedPath",
         lambda d: graph_mod.QuantifiedPath(
             d, graph_mod.GraphEdge(d, "e", edge_table(d)), min_repeats=1, max_repeats=3
         ),
     )
-    register_special_constructor("graph.PathPattern", path_pattern)
-    register_special_constructor(
+    registry.register("graph.PathPattern", path_pattern)
+    registry.register(
         "graph.MatchClause", lambda d: graph_mod.MatchClause(d, path_pattern(d))
     )
-    register_special_constructor(
+    registry.register(
         "graph.ColumnsClause",
         lambda d: graph_mod.ColumnsClause(d, _graph_column(d)),
     )
-    register_special_constructor(
+    registry.register(
         "graph.GraphTableExpression",
         lambda d: graph_mod.GraphTableExpression(
             d,
@@ -1150,7 +1150,7 @@ def register_specials():
             columns=graph_mod.ColumnsClause(d, _graph_column(d)),
         ),
     )
-    register_special_constructor(
+    registry.register(
         "graph.CreatePropertyGraphStatement",
         lambda d: graph_mod.CreatePropertyGraphStatement(
             d,
@@ -1160,7 +1160,7 @@ def register_specials():
     )
     # The formatter accepts "add"/"drop" against "vertex tables"/"edge tables"/
     # "tables"; anything else is refused.
-    register_special_constructor(
+    registry.register(
         "graph.AlterPropertyGraphStatement",
         lambda d: graph_mod.AlterPropertyGraphStatement(
             d,
@@ -1170,7 +1170,7 @@ def register_specials():
             vertex_tables=[graph_mod.VertexTable(d, node_table(d))],
         ),
     )
-    register_special_constructor(
+    registry.register(
         "graph.DropPropertyGraphStatement",
         lambda d: graph_mod.DropPropertyGraphStatement(d, graph=PropertyGraph(d, "g")),
     )
@@ -1178,85 +1178,85 @@ def register_specials():
     # -- types --------------------------------------------------------------
     # The element type must be bound to the dialect, because ``to_sql`` dispatches
     # on it through its own dialect.
-    register_special_constructor(
+    registry.register(
         "types.array.ArrayType",
         lambda d: ArrayType(d, element_type=VarCharType(d, 10)),
     )
-    register_special_constructor(
+    registry.register(
         "types.PostgresArrayType",
         lambda d: PostgresArrayType(d, element_type=VarCharType(d, 10)),
     )
-    register_special_constructor(
+    registry.register(
         "types.enum_.EnumType", lambda d: EnumType(d, values=["sad", "ok"])
     )
     # ``raw`` is keyword-only and names the SQL spelling, so the guess supplies
     # nothing and the type declares no name at all.
-    register_special_constructor("types.custom.CustomType", lambda d: CustomType(d, raw="mytype"))
+    registry.register("types.custom.CustomType", lambda d: CustomType(d, raw="mytype"))
 
     # -- core nodes with a required slot the guess fills with a string -------
     # ``op`` is a closed word set and refuses the placeholder; the two datetime
     # nodes take a field name the guess turns into a bare string; ``target`` /
     # ``start`` must be values, not text; ``table`` must be the relation object.
-    register_special_constructor(
+    registry.register(
         "predicates.ComparisonPredicate",
         lambda d: ComparisonPredicate(d, "=", Column(d, "a"), Column(d, "b")),
     )
-    register_special_constructor(
+    registry.register(
         "functions.string.SubstringExpression",
         lambda d: SubstringExpression(d, Literal(d, 1), Literal(d, 2)),
     )
     # ``count`` is compared with ``<`` when it is a stated literal, so a string
     # placeholder is refused at construction. A real integer is what the
     # grammar wants anyway.
-    register_special_constructor(
+    registry.register(
         "functions.string.LeftFunction",
         lambda d: LeftFunction(d, Literal(d, "abc"), Literal(d, 2)),
     )
-    register_special_constructor(
+    registry.register(
         "functions.string.RightFunction",
         lambda d: RightFunction(d, Literal(d, "abc"), Literal(d, 2)),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.ExtractExpression",
         lambda d: ExtractExpression(d, DateTimeField.YEAR, Column(d, "a")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.ExtractFieldExpression",
         lambda d: ExtractFieldExpression(d, DateTimeField.YEAR, Column(d, "a")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime._ExtractBase",
         lambda d: _ExtractBase(d, DateTimeField.YEAR, Column(d, "a")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.DatePartExpression",
         lambda d: DatePartExpression(d, DateTimeField.YEAR, Column(d, "a")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.DateTruncExpression",
         lambda d: DateTruncExpression(d, DateTimeField.YEAR, Column(d, "a")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.IntervalExpression",
         lambda d: IntervalExpression(d, 7, IntervalUnit.DAY),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.DatetimeDiffExpression",
         lambda d: DatetimeDiffExpression(d, IntervalUnit.DAY, Column(d, "a"), Column(d, "b")),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.DatetimeSubtractExpression",
         lambda d: DatetimeSubtractExpression(
             d, Column(d, "a"), IntervalExpression(d, 1, IntervalUnit.DAY)
         ),
     )
-    register_special_constructor(
+    registry.register(
         "datetime.DatetimeAddExpression",
         lambda d: DatetimeAddExpression(
             d, Column(d, "a"), IntervalExpression(d, 1, IntervalUnit.DAY)
         ),
     )
-    register_special_constructor(
+    registry.register(
         "graph.EdgeTableDefinition",
         lambda d: graph_mod.EdgeTableDefinition(
             d,
@@ -1267,15 +1267,15 @@ def register_specials():
     )
     # A check condition must be a predicate, and DDL takes no bind parameters,
     # so the values inside it are inline literals rather than bound ones.
-    register_special_constructor(
+    registry.register(
         "ddl_table.ColumnCheckConstraint",
         lambda d: ColumnCheckConstraint(d, _inline_column_predicate(d)),
     )
-    register_special_constructor(
+    registry.register(
         "ddl_table.TableCheckConstraint",
         lambda d: TableCheckConstraint(d, _inline_column_predicate(d)),
     )
-    register_special_constructor(
+    registry.register(
         "ddl_table.ColumnGeneratedConstraint",
         lambda d: ColumnGeneratedConstraint(d, _inline_column_predicate(d)),
     )
@@ -1295,7 +1295,7 @@ def register_specials():
         "XMLAnnotation",
         "_Annotation",
     ):
-        register_special_constructor(
+        registry.register(
             f"declared.{name}",
             lambda d, _n=name: getattr(declared, _n)(d, Column(d, "a")),
         )
@@ -1305,11 +1305,11 @@ def register_specials():
     # guess must hand it a real call: a string left in ``call`` reaches
     # ``to_sql`` as a string and raises AttributeError there instead of being
     # refused at the door. The factories below are the ones the classes own.
-    register_special_constructor(
+    registry.register(
         "values.PostgresNetworkValue",
         lambda d: PostgresNetworkValue(d, pg_network.inet_client_addr(d)),
     )
-    register_special_constructor(
+    registry.register(
         "values.PostgresRangeValue",
         lambda d: PostgresRangeValue(
             d,
@@ -1317,7 +1317,7 @@ def register_specials():
             element_type=None,
         ),
     )
-    register_special_constructor(
+    registry.register(
         "values.PostgresHstoreValue",
         # A dict is what ``hstore_literal`` casts to ``hstore``; handing it a
         # ``Literal`` would have it wrap a node in a second ``Literal``, which
@@ -1326,7 +1326,7 @@ def register_specials():
             d, pg_hstore.hstore_akeys(d, pg_hstore.hstore_literal(d, {"a": "1"}))
         ),
     )
-    register_special_constructor(
+    registry.register(
         "values.PostgresLtreeValue",
         lambda d: PostgresLtreeValue(
             d,
@@ -1335,7 +1335,36 @@ def register_specials():
     )
 
 
-register_specials()
+@pytest.fixture(scope="session")
+def special_registry():
+    """The backend's special constructors, built explicitly once per session.
+
+    Registration lives here instead of at import time: the set of constructors
+    a case sees can no longer depend on which test module pytest collected
+    first, and no consumer can leave a registration behind for another.
+    """
+    registry = SpecialConstructorRegistry()
+    register_specials(registry)
+    return registry
+
+
+def test_special_registry_keys_do_not_depend_on_import_order(special_registry):
+    """A registry built before and after importing a consumer has the same keys.
+
+    ``test_object_kind_guards`` builds its registry from this module's
+    ``register_specials``. Nothing about the set of special constructors may
+    depend on which module was collected first: registration is explicit, on a
+    per-instance registry, never a write to process-global state at import time.
+    """
+    import importlib
+
+    importlib.import_module(
+        "rhosocial.activerecord_postgres_test.feature.backend.construct.dialect."
+        "test_object_kind_guards"
+    )
+    fresh = SpecialConstructorRegistry()
+    register_specials(fresh)
+    assert list(fresh.entries) == list(special_registry.entries)
 
 
 # ---------------------------------------------------------------------------
@@ -1872,10 +1901,10 @@ def assert_sql_roundtrip_classified(fqn, instance, dialect, registry):
 
 
 @pytest.fixture(params=[fqn for fqn in sorted(REGISTERED)], ids=sorted(REGISTERED))
-def expr_case(request, postgres_dialect):
+def expr_case(request, postgres_dialect, special_registry):
     fqn = request.param
     cls = REGISTERED[fqn]
-    instance, source = make_instance(cls, postgres_dialect)
+    instance, source = make_instance(cls, postgres_dialect, special_registry)
     if instance is None:
         assert fqn in UNCONSTRUCTIBLE, (
             f"{fqn} cannot be built by the generic constructor ({source}) and is "
@@ -1915,7 +1944,7 @@ class TestExpressionRoundtripAll:
 class TestMatrixIntegrity:
     """Guards on the matrix and its lists, so neither can quietly change."""
 
-    def test_unconstructible_list_is_exact(self, postgres_dialect):
+    def test_unconstructible_list_is_exact(self, postgres_dialect, special_registry):
         """Pin the unconstructible tuple against what the constructor really skips.
 
         Two directions are checked. A class named here that now builds has gained a
@@ -1924,7 +1953,11 @@ class TestMatrixIntegrity:
         """
         dialect = postgres_dialect
         actual = tuple(
-            sorted(fqn for fqn in REGISTERED if make_instance(REGISTERED[fqn], dialect)[0] is None)
+            sorted(
+                fqn
+                for fqn in REGISTERED
+                if make_instance(REGISTERED[fqn], dialect, special_registry)[0] is None
+            )
         )
         assert actual == tuple(sorted(UNCONSTRUCTIBLE)), (
             "the set of expression classes the generic constructor cannot build "
@@ -1954,14 +1987,14 @@ class TestMatrixIntegrity:
             f"LEGITIMATE_NON_RENDERS names classes that were not registered: " f"{sorted(unknown)}"
         )
 
-    def test_pinned_non_render_really_does_not_render(self, postgres_dialect):
+    def test_pinned_non_render_really_does_not_render(self, postgres_dialect, special_registry):
         """Each pinned entry still raises what it claims, for the stated reason.
 
         Without this, an entry could sit in the dict for a class that renders
         perfectly well, and the matrix would be asserting nothing about it.
         """
         for fqn, (expected_type, fragment) in LEGITIMATE_NON_RENDERS.items():
-            instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
+            instance, source = make_instance(REGISTERED[fqn], postgres_dialect, special_registry)
             assert instance is not None, (
                 f"{fqn} is pinned as a non-render but could not be constructed " f"({source})"
             )
@@ -1971,7 +2004,7 @@ class TestMatrixIntegrity:
                 f"{fqn}: expected the message to mention {fragment!r}, got: " f"{exc_info.value}"
             )
 
-    def test_unmodelled_formatter_list_is_exact(self, postgres_dialect):
+    def test_unmodelled_formatter_list_is_exact(self, postgres_dialect, special_registry):
         """Pin the unmodelled-formatter table against what the dialect lacks.
 
         Observed rather than assumed: for each class the matrix covers, either
@@ -1998,7 +2031,7 @@ class TestMatrixIntegrity:
         """
         observed = set()
         for fqn in sorted(REGISTERED):
-            instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
+            instance, source = make_instance(REGISTERED[fqn], postgres_dialect, special_registry)
             if instance is None:
                 continue
             try:
@@ -2174,12 +2207,12 @@ class TestMatrixIntegrity:
             f"the matrix covers classes the kind whitelist cannot " f"resolve: {unresolved}"
         )
 
-    def test_coverage_report(self, postgres_dialect):
+    def test_coverage_report(self, postgres_dialect, special_registry):
         """Surface what the matrix covers, so coverage stays transparent."""
         census: Dict[str, int] = {}
         constructible = []
         for fqn in sorted(REGISTERED):
-            instance, source = make_instance(REGISTERED[fqn], postgres_dialect)
+            instance, source = make_instance(REGISTERED[fqn], postgres_dialect, special_registry)
             if instance is None:
                 census["pinned-unconstructible"] = census.get("pinned-unconstructible", 0) + 1
                 continue
@@ -2328,7 +2361,7 @@ def test_pg_hint_leading_nested_pair_roundtrips(postgres_dialect):
             unvalidated.to_sql()
 
 
-def test_the_eight_hinted_statement_specials_attach_hints(postgres_dialect):
+def test_the_eight_hinted_statement_specials_attach_hints(postgres_dialect, special_registry):
     """Every hinted kind is built by its special constructor, with a payload.
 
     The round-trip above compares an instance with its own rebuild, so a
@@ -2349,7 +2382,7 @@ def test_the_eight_hinted_statement_specials_attach_hints(postgres_dialect):
         "rhosocial.activerecord.backend.impl.postgres.expression.ddl.mv.PostgresRefreshMaterializedViewStatement",
     )
     for fqn in hinted_fqns:
-        instance, source = make_instance(REGISTERED[fqn], dialect)
+        instance, source = make_instance(REGISTERED[fqn], dialect, special_registry)
         assert instance is not None, f"{fqn} could not be constructed"
         assert source == "special", (
             f"{fqn} fell through to the {source} path; its special constructor "

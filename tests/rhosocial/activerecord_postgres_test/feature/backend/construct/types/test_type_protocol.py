@@ -607,14 +607,20 @@ class TestParseRoundTripSweep:
 
     @pytest.fixture(scope="class")
     def registry(self):
-        """The round-trip module's registry, loaded from this directory's
-        parent. Executing it also registers its special constructors, which
-        the sweep's ``make_instance`` consults -- the same registrations the
-        full suite performs at collection time, repeated here so the sweep
-        also holds when this file runs alone.
+        """The round-trip module's class registry and its special constructors.
+
+        Loaded from this directory's parent. Registration is explicit, on a
+        fresh :class:`SpecialConstructorRegistry`, so the sweep sees the same
+        constructors whether this file runs alone or with the whole construct
+        area -- and no import of the round-trip module can leave a global
+        registration behind.
         """
         import importlib.util
         from pathlib import Path
+
+        from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
+            SpecialConstructorRegistry,
+        )
 
         path = Path(__file__).resolve().parent.parent / "expression" / (
             "test_expression_roundtrip_all.py"
@@ -622,18 +628,22 @@ class TestParseRoundTripSweep:
         spec = importlib.util.spec_from_file_location("postgres_rt_registry", path)
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
-        registry = getattr(module, "ALL_CLASSES", None) or module.REGISTERED
-        assert registry, "the round-trip module exposes no registry"
-        return registry
+        class_registry = getattr(module, "ALL_CLASSES", None) or module.REGISTERED
+        assert class_registry, "the round-trip module exposes no registry"
+        specials = SpecialConstructorRegistry()
+        module.register_specials(specials)
+        return class_registry, specials
 
     def test_every_rendered_type_parses_back_coherently(self, dialect, registry):
         from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
             parse_roundtrip_failures,
         )
 
+        class_registry, specials = registry
         failures = parse_roundtrip_failures(
             dialect,
-            registry,
+            class_registry,
+            special_registry=specials,
             widening=self.WIDENING_ANSWERS,
             # A *named* type renders the quoted identifier a DDL statement
             # needs (``"mood"``), while ``parse_type`` parses the declarations

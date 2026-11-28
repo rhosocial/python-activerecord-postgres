@@ -169,32 +169,20 @@ def _object_slots():
 def _build_probes(dialect):
     """``[(fqn, slot, required name, impostor name)]``, derived not listed.
 
-    Only statements whose *unmodified* instance renders are probed. A statement
-    that already fails for an unrelated reason -- the property-graph statements,
-    which PostgreSQL does not support at all, and ``CreateTriggerStatement``,
-    whose introspective construction supplies a string where an enum belongs --
-    cannot demonstrate anything about a slot: it raises either way. Including them
-    would make the table look broader while proving less, which is exactly the
-    substitution this file was written to end.
+    The table is purely structural: for every statement whose ``format_method``
+    resolves on this dialect, each object slot is paired with the first two
+    buildable kinds that are neither the required class nor a subclass of it.
+    Nothing is built through the round-trip harness here -- the list has to
+    exist at collection time for pytest to parametrise from it, and a
+    collection-time ``make_instance`` would make the probe set depend on import
+    order. Whether a statement can actually be built and rendered is decided
+    when the case runs, in the ``excluded_statements`` fixture.
     """
     renderable = _renderable(dialect)
     buildable = _buildable_kinds(dialect)
     rows = []
-    skipped = []
     for fqn, slots in sorted(_object_slots().items()):
         if fqn not in renderable:
-            skipped.append((fqn, "format_method is not resolvable on this dialect"))
-            continue
-        instance, source = make_instance(renderable[fqn], dialect)
-        if instance is None:
-            skipped.append((fqn, f"the harness cannot construct it ({source})"))
-            continue
-        try:
-            instance.to_sql()
-        except Exception as exc:  # noqa: BLE001
-            skipped.append(
-                (fqn, f"it does not render as built ({type(exc).__name__})")
-            )
             continue
         for slot, required in sorted(slots.items()):
             impostors = [
@@ -206,7 +194,7 @@ def _build_probes(dialect):
                 rows.append(
                     (fqn, slot, required.__name__, impostor.__name__)
                 )
-    return rows, skipped
+    return rows
 
 
 def _probe_dialect():
@@ -217,7 +205,61 @@ def _probe_dialect():
     return dialect_module.PostgresDialect(version=(15, 0, 0))
 
 
-PROBES, SKIPPED = _build_probes(_probe_dialect())
+PROBES = _build_probes(_probe_dialect())
+
+
+@pytest.fixture(scope="session")
+def special_registry():
+    """The backend's special constructors, built explicitly once per session.
+
+    Mirrors the round-trip module's fixture so this file also runs on its own.
+    No registration happens at import or collection time.
+    """
+    import importlib
+
+    from rhosocial.activerecord_postgres_test.feature.backend.construct.expression_roundtrip_harness import (
+        SpecialConstructorRegistry,
+    )
+
+    roundtrip = importlib.import_module(
+        "rhosocial.activerecord_postgres_test.feature.backend.construct.expression."
+        "test_expression_roundtrip_all"
+    )
+    registry = SpecialConstructorRegistry()
+    roundtrip.register_specials(registry)
+    return registry
+
+
+@pytest.fixture(scope="session")
+def excluded_statements(special_registry):
+    """Statements left out of the probe table, each with its reason.
+
+    Only statements whose *unmodified* instance renders are probed. A statement
+    that already fails for an unrelated reason -- the property-graph statements,
+    which PostgreSQL does not support at all, and ``CreateTriggerStatement``,
+    whose introspective construction supplies a string where an enum belongs --
+    cannot demonstrate anything about a slot: it raises either way. Including them
+    would make the table look broader while proving less, which is exactly the
+    substitution this file was written to end. Construction here is explicit:
+    only the injected registry is consulted.
+    """
+    dialect = _probe_dialect()
+    renderable = _renderable(dialect)
+    excluded = []
+    for fqn in sorted(_object_slots()):
+        if fqn not in renderable:
+            excluded.append((fqn, "format_method is not resolvable on this dialect"))
+            continue
+        instance, source = make_instance(renderable[fqn], dialect, special_registry)
+        if instance is None:
+            excluded.append((fqn, f"the harness cannot construct it ({source})"))
+            continue
+        try:
+            instance.to_sql()
+        except Exception as exc:  # noqa: BLE001
+            excluded.append((fqn, f"it does not render as built ({type(exc).__name__})"))
+    return excluded
+
 
 #: Labels pytest can put in a test id; a dotted fqn is already readable, so this
 #: only shortens the object name.
@@ -233,14 +275,14 @@ def test_probe_table_is_not_empty():
     )
 
 
-def test_skipped_statements_are_still_the_ones_we_think():
+def test_skipped_statements_are_still_the_ones_we_think(excluded_statements):
     """Nothing left the probe table for a new reason.
 
     The exclusions are structural -- a statement PostgreSQL cannot render at all,
     or one the harness cannot build correctly -- so a new arrival means the
     construction or the rendering changed, and the table should be revisited.
     """
-    for fqn, reason in SKIPPED:
+    for fqn, reason in excluded_statements:
         assert reason in (
             "format_method is not resolvable on this dialect",
         ) or "cannot construct it" in reason or "does not render as built" in reason, (
@@ -303,7 +345,9 @@ def _swapped(instance, cls, dialect, slot, value):
 @pytest.mark.parametrize(
     "fqn,slot,required_name,impostor_name", PROBES, ids=_IDS
 )
-def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
+def test_wrong_object_kind_is_refused(
+    fqn, slot, required_name, impostor_name, special_registry, excluded_statements
+):
     """A statement handed the wrong object kind must refuse at render time.
 
     ``TypeError`` is the contract: reaching the formatter with the wrong object is
@@ -315,9 +359,12 @@ def test_wrong_object_kind_is_refused(fqn, slot, required_name, impostor_name):
     this file exists for: well-formed SQL naming an object the caller never asked
     for.
     """
+    reason = dict(excluded_statements).get(fqn)
+    if reason is not None:
+        pytest.skip(f"{fqn}: {reason}")
     dialect = _probe_dialect()
     cls = _renderable(dialect)[fqn]
-    instance, source = make_instance(cls, dialect)
+    instance, source = make_instance(cls, dialect, special_registry)
     assert instance is not None, f"{fqn}: could not be constructed ({source})"
     impostor = getattr(objects_mod, impostor_name)
     swapped = _swapped(instance, cls, dialect, slot, impostor(dialect, "wrongkind"))
