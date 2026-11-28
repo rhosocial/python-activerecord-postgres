@@ -9,9 +9,12 @@ owners and PostgreSQL happens to answer both the same way, which is the case
 where conflating them hides the most.
 """
 
-from typing import Protocol, runtime_checkable
+from typing import Protocol, runtime_checkable, TYPE_CHECKING
 
 from rhosocial.activerecord.backend.dialect.protocols import NamespaceSupport
+
+if TYPE_CHECKING:  # pragma: no cover
+    from rhosocial.activerecord.backend.expression.objects import SchemaObject
 
 
 @runtime_checkable
@@ -36,6 +39,12 @@ class PostgresNamespaceSupport(NamespaceSupport, Protocol):
     def supports_catalog_qualification(self) -> bool: ...
 
     def supports_schema_qualification(self) -> bool: ...
+
+    def validate_catalog_presence(self, expr: "SchemaObject") -> bool: ...
+
+    def validate_catalog_qualification(self, expr: "SchemaObject") -> bool: ...
+
+    def validate_schema_qualification(self, expr: "SchemaObject") -> bool: ...
 
     def validate_catalog_name(self, expr) -> bool: ...
 
